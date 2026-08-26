@@ -47,6 +47,12 @@ public struct MainView: View {
                     TaskListView(taskVM: taskVM)
                 case .habits:
                     HabitTrackerView(habitVM: habitVM)
+                case .calendar:
+                    CalendarView(
+                        timerVM: timerVM,
+                        taskVM: taskVM,
+                        habitVM: habitVM
+                    )
                 case .scratchpad:
                     ScratchpadView(viewModel: scratchpadVM)
                 case .stats:

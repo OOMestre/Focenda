@@ -34,7 +34,13 @@ struct FocendaApp: App {
 
         #if os(macOS)
         MenuBarExtra(isInserted: .constant(true)) {
-            MenuBarCardView(timerVM: timerVM, appState: appState)
+            MenuBarCardView(
+                timerVM: timerVM,
+                taskVM: taskVM,
+                scratchpadVM: scratchpadVM,
+                habitVM: habitVM,
+                appState: appState
+            )
         } label: {
             HStack(spacing: 4) {
                 Image(systemName: "timer")

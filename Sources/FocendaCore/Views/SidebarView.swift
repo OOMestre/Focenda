@@ -164,6 +164,16 @@ private struct SidebarRowItem: View {
                                 .fill(isSelected ? AppTheme.accent.opacity(0.15) : AppTheme.cardBackgroundSubtle)
                         )
                         .contentTransition(.numericText())
+                } else if tab == .calendar {
+                    Text("\(Calendar.current.component(.day, from: Date()))")
+                        .font(.caption2.bold())
+                        .foregroundStyle(isSelected ? AppTheme.textPrimary : AppTheme.textSecondary)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(
+                            Capsule()
+                                .fill(isSelected ? AppTheme.accent.opacity(0.15) : AppTheme.cardBackgroundSubtle)
+                        )
                 } else if tab == .habits && totalHabitsCount > 0 {
                     if habitsCompletedToday == totalHabitsCount {
                         HStack(spacing: 3) {

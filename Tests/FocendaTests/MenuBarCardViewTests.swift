@@ -12,6 +12,27 @@ final class MenuBarCardViewTests: XCTestCase {
         XCTAssertNotNil(cardView)
         XCTAssertEqual(cardView.timerVM.currentMode, .work)
         XCTAssertNotNil(cardView.appState)
+        XCTAssertEqual(cardView.selectedSection, .focus)
+    }
+
+    func testMenuBarCardViewFullInitialization() {
+        let timerVM = FocusTimerViewModel()
+        let taskVM = TaskListViewModel()
+        let scratchpadVM = ScratchpadViewModel()
+        let habitVM = HabitViewModel()
+        let appState = AppState()
+
+        let cardView = MenuBarCardView(
+            timerVM: timerVM,
+            taskVM: taskVM,
+            scratchpadVM: scratchpadVM,
+            habitVM: habitVM,
+            appState: appState
+        )
+
+        XCTAssertNotNil(cardView)
+        XCTAssertEqual(cardView.selectedSection, .focus)
+        XCTAssertEqual(cardView.taskVM.tasks.count, taskVM.tasks.count)
     }
 
     func testMenuBarCardViewDefaultInitialization() {
@@ -104,9 +125,58 @@ final class MenuBarCardViewTests: XCTestCase {
         XCTAssertEqual(cardView.statusText, "PAUSED")
     }
 
+    func testMenuBarSectionsAndIcons() {
+        let sections = MenuBarSection.allCases
+        XCTAssertEqual(sections.count, 4)
+        XCTAssertTrue(sections.contains(.focus))
+        XCTAssertTrue(sections.contains(.quickNote))
+        XCTAssertTrue(sections.contains(.quickTask))
+        XCTAssertTrue(sections.contains(.quickLinks))
+
+        for section in sections {
+            XCTAssertFalse(section.iconName.isEmpty)
+            XCTAssertFalse(section.rawValue.isEmpty)
+        }
+    }
+
+    func testQuickLinksModel() {
+        let defaultLinks = QuickLink.defaultLinks
+        XCTAssertFalse(defaultLinks.isEmpty)
+        XCTAssertTrue(defaultLinks.contains { $0.title == "GitHub" })
+
+        let customLink = QuickLink(title: "Linear", urlString: "https://linear.app", iconName: "target")
+        XCTAssertEqual(customLink.url?.absoluteString, "https://linear.app")
+    }
+
+    func testFloatingMiniTimerPanelAndWidget() {
+        let panel = FloatingMiniTimerPanel.shared
+        XCTAssertNotNil(panel)
+        XCTAssertEqual(panel.level, .floating)
+        XCTAssertTrue(panel.isMovableByWindowBackground)
+
+        let timerVM = FocusTimerViewModel()
+        var closed = false
+        let miniWidget = FloatingMiniTimerView(timerVM: timerVM) {
+            closed = true
+        }
+
+        XCTAssertNotNil(miniWidget)
+        miniWidget.onClose?()
+        XCTAssertTrue(closed)
+    }
+
     func testCardBodyRendering() {
         let timerVM = FocusTimerViewModel()
-        let cardView = MenuBarCardView(timerVM: timerVM)
+        let taskVM = TaskListViewModel()
+        let scratchpadVM = ScratchpadViewModel()
+        let habitVM = HabitViewModel()
+
+        let cardView = MenuBarCardView(
+            timerVM: timerVM,
+            taskVM: taskVM,
+            scratchpadVM: scratchpadVM,
+            habitVM: habitVM
+        )
 
         let body = cardView.body
         XCTAssertNotNil(body)
