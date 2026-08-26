@@ -243,4 +243,32 @@ final class KanbanBoardViewTests: XCTestCase {
         let listView = KanbanBoardView(taskVM: taskVM, showHeader: true, initialViewMode: .list)
         XCTAssertNotNil(listView.body)
     }
+
+    func testKanbanLayoutUsesCompactColumnsBeforeScrolling() {
+        let detailWidth: CGFloat = 760
+        let columnWidth = KanbanBoardLayout.columnWidth(for: detailWidth)
+
+        XCTAssertGreaterThanOrEqual(columnWidth, KanbanBoardLayout.minimumColumnWidth)
+        XCTAssertLessThan(columnWidth, KanbanBoardLayout.preferredColumnWidth)
+        XCTAssertEqual(
+            KanbanBoardLayout.contentWidth(for: detailWidth),
+            detailWidth,
+            accuracy: 0.001,
+            "A standard detail area should show all three compact columns without scrolling."
+        )
+    }
+
+    func testKanbanLayoutKeepsHorizontalScrollingAsNarrowWidthFallback() {
+        let narrowDetailWidth: CGFloat = 600
+
+        XCTAssertEqual(
+            KanbanBoardLayout.columnWidth(for: narrowDetailWidth),
+            KanbanBoardLayout.minimumColumnWidth
+        )
+        XCTAssertGreaterThan(
+            KanbanBoardLayout.contentWidth(for: narrowDetailWidth),
+            narrowDetailWidth,
+            "Columns should not become unusably narrow; the board scrolls horizontally instead."
+        )
+    }
 }

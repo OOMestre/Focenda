@@ -1,6 +1,59 @@
 import SwiftUI
 import AppKit
 
+/// Layout thresholds for the Focus Hub that keep every interactive control reachable in narrow detail panes.
+enum BookmarksResponsiveLayout {
+    static let compactControlsWidth: CGFloat = 580
+    static let regularHorizontalPadding: CGFloat = 20
+    static let compactHorizontalPadding: CGFloat = 12
+    static let bookmarkColumnMaximumWidth: CGFloat = 320
+
+    static func horizontalPadding(for availableWidth: CGFloat) -> CGFloat {
+        availableWidth < compactControlsWidth ? compactHorizontalPadding : regularHorizontalPadding
+    }
+
+    /// Flexible grid columns avoid giving the detail pane an artificial minimum
+    /// width. The split view can therefore shrink before each card switches to
+    /// its compact actions.
+    static func bookmarkGridColumns(for availableWidth: CGFloat, horizontalPadding: CGFloat) -> [GridItem] {
+        let contentWidth = max(0, availableWidth - (horizontalPadding * 2))
+        let columnCount: Int
+
+        switch contentWidth {
+        case 660...:
+            columnCount = 3
+        case 400...:
+            columnCount = 2
+        default:
+            columnCount = 1
+        }
+
+        return Array(
+            repeating: GridItem(.flexible(minimum: 0, maximum: bookmarkColumnMaximumWidth), spacing: 14),
+            count: columnCount
+        )
+    }
+
+    static func statisticsGridColumns(for availableWidth: CGFloat, horizontalPadding: CGFloat) -> [GridItem] {
+        let contentWidth = max(0, availableWidth - (horizontalPadding * 2))
+        let columnCount: Int
+
+        switch contentWidth {
+        case 480...:
+            columnCount = 3
+        case 280...:
+            columnCount = 2
+        default:
+            columnCount = 1
+        }
+
+        return Array(
+            repeating: GridItem(.flexible(minimum: 0, maximum: .infinity), spacing: 12),
+            count: columnCount
+        )
+    }
+}
+
 public struct BookmarksView: View {
     @Bindable var viewModel: BookmarkViewModel
     @State private var showingAddSheet = false
@@ -26,30 +79,38 @@ public struct BookmarksView: View {
     }
 
     public var body: some View {
-        VStack(spacing: 0) {
-            // Header Bar
-            headerBar
+        GeometryReader { proxy in
+            let availableWidth = proxy.size.width
+            let horizontalPadding = BookmarksResponsiveLayout.horizontalPadding(for: availableWidth)
 
-            Divider()
+            VStack(spacing: 0) {
+                headerBar(availableWidth: availableWidth)
 
-            // Main Content Area
-            ScrollView([.horizontal, .vertical], showsIndicators: true) {
-                VStack(alignment: .leading, spacing: 20) {
-                    // Category Filter Pills
-                    categoryFilterSection
+                Divider()
 
-                    // Quick Stats Cards
-                    statsBannerSection
+                // Keep the page vertically scrollable. Horizontal overflow is intentionally
+                // limited to controls that benefit from it, such as the category filter.
+                ScrollView(.vertical, showsIndicators: true) {
+                    VStack(alignment: .leading, spacing: 20) {
+                        categoryFilterSection
 
-                    // Bookmarks Grid or Empty State
-                    if viewModel.filteredBookmarks.isEmpty {
-                        emptyStateView
-                    } else {
-                        bookmarksGridSection
+                        statsBannerSection(
+                            availableWidth: availableWidth,
+                            horizontalPadding: horizontalPadding
+                        )
+
+                        if viewModel.filteredBookmarks.isEmpty {
+                            emptyStateView(availableWidth: availableWidth)
+                        } else {
+                            bookmarksGridSection(
+                                availableWidth: availableWidth,
+                                horizontalPadding: horizontalPadding
+                            )
+                        }
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(horizontalPadding)
                 }
-                .padding(20)
-                .frame(minWidth: 480, maxWidth: .infinity, alignment: .leading)
             }
         }
         .frame(minWidth: 0, maxWidth: .infinity, maxHeight: .infinity)
@@ -64,89 +125,121 @@ public struct BookmarksView: View {
     }
 
     // MARK: - Header Bar
-    private var headerBar: some View {
-        HStack(spacing: 14) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Focus Hub & Quick Links")
-                    .font(.system(size: 18, weight: .bold, design: .rounded))
-                    .foregroundStyle(AppTheme.textPrimary)
-                    .lineLimit(1)
+    private func headerBar(availableWidth: CGFloat) -> some View {
+        let usesCompactControls = availableWidth < BookmarksResponsiveLayout.compactControlsWidth
+        let horizontalPadding = BookmarksResponsiveLayout.horizontalPadding(for: availableWidth)
 
-                Text("One-click access to essential reference docs, tools, and flow resources.")
-                    .font(.caption)
-                    .foregroundStyle(AppTheme.textSecondary)
-                    .lineLimit(1)
+        return VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .top, spacing: 12) {
+                headerTitle
+
+                Spacer(minLength: 8)
+
+                moreActionsMenu
             }
 
-            Spacer(minLength: 8)
+            if usesCompactControls {
+                VStack(alignment: .leading, spacing: 8) {
+                    searchField
 
-            // Search Field
-            HStack(spacing: 6) {
-                Image(systemName: "magnifyingglass")
-                    .font(.system(size: 12))
-                    .foregroundStyle(AppTheme.textTertiary)
+                    addBookmarkButton
+                }
+            } else {
+                HStack(spacing: 10) {
+                    searchField
 
-                TextField("Search links or domains...", text: $viewModel.searchQuery)
-                    .textFieldStyle(.plain)
-                    .font(.system(size: 13))
-                    .foregroundStyle(AppTheme.textPrimary)
-
-                if !viewModel.searchQuery.isEmpty {
-                    Button {
-                        viewModel.searchQuery = ""
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 12))
-                            .foregroundStyle(AppTheme.textTertiary)
-                    }
-                    .buttonStyle(.plain)
+                    addBookmarkButton
                 }
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
-            .frame(minWidth: 140, idealWidth: 180, maxWidth: 240)
-            .background(AppTheme.cardBackground)
-            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .stroke(AppTheme.border, lineWidth: 1)
-            )
-
-            // + Add Link Button
-            Button {
-                resetForm()
-                showingAddSheet = true
-            } label: {
-                Label("Add Link", systemImage: "plus")
-                    .font(.system(size: 13, weight: .medium))
-                    .lineLimit(1)
-            }
-            .buttonStyle(.borderedProminent)
-            .tint(AppTheme.deepFocus)
-            .controlSize(.regular)
-            .help("Add a new focus link")
-
-            // More actions menu
-            Menu {
-                Button {
-                    viewModel.resetToDefaults()
-                } label: {
-                    Label("Reset Default Links", systemImage: "arrow.counterclockwise")
-                }
-            } label: {
-                Image(systemName: "ellipsis.circle")
-                    .font(.system(size: 14))
-                    .foregroundStyle(AppTheme.textSecondary)
-                    .padding(6)
-            }
-            .menuStyle(.borderlessButton)
-            .fixedSize()
-            .help("More options")
         }
-        .padding(.horizontal, 20)
+        .padding(.horizontal, horizontalPadding)
         .padding(.vertical, 12)
-        .frame(minWidth: 0, maxWidth: .infinity)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(AppTheme.background)
+    }
+
+    private var headerTitle: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text("Focus Hub & Quick Links")
+                .font(.system(size: 18, weight: .bold, design: .rounded))
+                .foregroundStyle(AppTheme.textPrimary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+
+            Text("One-click access to essential reference docs, tools, and flow resources.")
+                .font(.caption)
+                .foregroundStyle(AppTheme.textSecondary)
+                .lineLimit(1)
+        }
+        .layoutPriority(1)
+    }
+
+    private var searchField: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 12))
+                .foregroundStyle(AppTheme.textTertiary)
+
+            TextField("Search links or domains...", text: $viewModel.searchQuery)
+                .textFieldStyle(.plain)
+                .font(.system(size: 13))
+                .foregroundStyle(AppTheme.textPrimary)
+                .lineLimit(1)
+
+            if !viewModel.searchQuery.isEmpty {
+                Button {
+                    viewModel.searchQuery = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 12))
+                        .foregroundStyle(AppTheme.textTertiary)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .frame(minWidth: 0, maxWidth: .infinity)
+        .background(AppTheme.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .stroke(AppTheme.border, lineWidth: 1)
+        )
+    }
+
+    private var addBookmarkButton: some View {
+        Button {
+            resetForm()
+            showingAddSheet = true
+        } label: {
+            Label("Add Link", systemImage: "plus")
+                .font(.system(size: 13, weight: .medium))
+                .lineLimit(1)
+        }
+        .buttonStyle(.borderedProminent)
+        .tint(AppTheme.deepFocus)
+        .controlSize(.regular)
+        .fixedSize(horizontal: true, vertical: false)
+        .help("Add a new focus link")
+    }
+
+    private var moreActionsMenu: some View {
+        Menu {
+            Button {
+                viewModel.resetToDefaults()
+            } label: {
+                Label("Reset Default Links", systemImage: "arrow.counterclockwise")
+            }
+        } label: {
+            Image(systemName: "ellipsis.circle")
+                .font(.system(size: 14))
+                .foregroundStyle(AppTheme.textSecondary)
+                .padding(6)
+        }
+        .menuStyle(.borderlessButton)
+        .fixedSize()
+        .help("More options")
     }
 
     // MARK: - Category Filters
@@ -196,19 +289,21 @@ public struct BookmarksView: View {
             .padding(.horizontal, 2)
             .padding(.vertical, 2)
         }
-        .scrollClipDisabled()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .forceVisibleScrollers(horizontal: true, vertical: false)
     }
 
     // MARK: - Stats Banner
-    private var statsBannerSection: some View {
+    private func statsBannerSection(availableWidth: CGFloat, horizontalPadding: CGFloat) -> some View {
         let totalCount = viewModel.bookmarks.count
         let pinnedCount = viewModel.bookmarks.filter { $0.isPinned }.count
         let totalClicks = viewModel.bookmarks.reduce(0) { $0 + $1.clickCount }
 
         return LazyVGrid(
-            columns: [
-                GridItem(.adaptive(minimum: 140, maximum: .infinity), spacing: 12)
-            ],
+            columns: BookmarksResponsiveLayout.statisticsGridColumns(
+                for: availableWidth,
+                horizontalPadding: horizontalPadding
+            ),
             spacing: 12
         ) {
             statCard(
@@ -232,6 +327,7 @@ public struct BookmarksView: View {
                 color: AppTheme.success
             )
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func statCard(title: String, value: String, icon: String, color: Color) -> some View {
@@ -270,23 +366,26 @@ public struct BookmarksView: View {
     }
 
     // MARK: - Bookmarks Grid
-    private var bookmarksGridSection: some View {
+    private func bookmarksGridSection(availableWidth: CGFloat, horizontalPadding: CGFloat) -> some View {
         LazyVGrid(
-            columns: [
-                GridItem(.adaptive(minimum: 220, maximum: .infinity), spacing: 14)
-            ],
+            columns: BookmarksResponsiveLayout.bookmarkGridColumns(
+                for: availableWidth,
+                horizontalPadding: horizontalPadding
+            ),
             spacing: 14
         ) {
             ForEach(viewModel.filteredBookmarks) { bookmark in
                 bookmarkCard(bookmark)
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     // MARK: - Bookmark Card
     private func bookmarkCard(_ bookmark: BookmarkItem) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            // Top Row: Icon, Title, Pin indicator
+            // The category has its own row so a long title/category combination
+            // never squeezes the card wider than its grid column.
             HStack(alignment: .top, spacing: 10) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 8, style: .continuous)
@@ -299,118 +398,39 @@ public struct BookmarksView: View {
                 }
 
                 VStack(alignment: .leading, spacing: 2) {
-                    HStack(spacing: 4) {
-                        Text(bookmark.title)
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(AppTheme.textPrimary)
-                            .lineLimit(1)
-
-                        if bookmark.isPinned {
-                            Image(systemName: "pin.fill")
-                                .font(.system(size: 10))
-                                .foregroundStyle(AppTheme.sandstone)
-                        }
-                    }
+                    Text(bookmark.title)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(AppTheme.textPrimary)
+                        .lineLimit(1)
 
                     Text(bookmark.displayHost)
                         .font(.system(size: 11))
                         .foregroundStyle(AppTheme.textTertiary)
                         .lineLimit(1)
                 }
+                .layoutPriority(1)
 
                 Spacer(minLength: 4)
 
-                // Category pill
-                Text(bookmark.category)
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(AppTheme.textSecondary)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 3)
-                    .background(AppTheme.cardBackgroundSubtle)
-                    .clipShape(Capsule())
-                    .lineLimit(1)
+                if bookmark.isPinned {
+                    Image(systemName: "pin.fill")
+                        .font(.system(size: 10))
+                        .foregroundStyle(AppTheme.sandstone)
+                }
             }
+
+            Text(bookmark.category)
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(AppTheme.textSecondary)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 3)
+                .background(AppTheme.cardBackgroundSubtle)
+                .clipShape(Capsule())
+                .lineLimit(1)
 
             Divider()
 
-            // Bottom Row: Launch button & copy/pin actions
-            HStack(spacing: 8) {
-                // 1-Click Launch in browser button
-                Button {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                        viewModel.openBookmark(bookmark)
-                    }
-                } label: {
-                    HStack(spacing: 5) {
-                        Text("Open Link")
-                            .font(.system(size: 12, weight: .semibold))
-                            .lineLimit(1)
-
-                        Image(systemName: "arrow.up.right")
-                            .font(.system(size: 10, weight: .bold))
-                            .lineLimit(1)
-                    }
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(AppTheme.deepFocus)
-                    .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
-                }
-                .buttonStyle(.plain)
-                .help("Open in default browser")
-
-                if bookmark.clickCount > 0 {
-                    Text("\(bookmark.clickCount) \(bookmark.clickCount == 1 ? "launch" : "launches")")
-                        .font(.system(size: 10).monospacedDigit())
-                        .foregroundStyle(AppTheme.textTertiary)
-                        .lineLimit(1)
-                }
-
-                Spacer()
-
-                // Copy URL button
-                Button {
-                    let pasteboard = NSPasteboard.general
-                    pasteboard.clearContents()
-                    pasteboard.setString(bookmark.url, forType: .string)
-
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                        copiedBookmarkId = bookmark.id
-                    }
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) {
-                        withAnimation {
-                            if copiedBookmarkId == bookmark.id {
-                                copiedBookmarkId = nil
-                            }
-                        }
-                    }
-                } label: {
-                    Image(systemName: copiedBookmarkId == bookmark.id ? "checkmark" : "doc.on.doc")
-                        .font(.system(size: 12))
-                        .foregroundStyle(copiedBookmarkId == bookmark.id ? AppTheme.success : AppTheme.textSecondary)
-                        .padding(6)
-                        .background(AppTheme.cardBackgroundSubtle)
-                        .clipShape(RoundedRectangle(cornerRadius: 6))
-                }
-                .buttonStyle(.plain)
-                .help("Copy URL")
-
-                // Pin toggle button
-                Button {
-                    withAnimation(.spring(response: 0.25)) {
-                        viewModel.togglePin(for: bookmark)
-                    }
-                } label: {
-                    Image(systemName: bookmark.isPinned ? "pin.fill" : "pin")
-                        .font(.system(size: 12))
-                        .foregroundStyle(bookmark.isPinned ? AppTheme.sandstone : AppTheme.textSecondary)
-                        .padding(6)
-                        .background(bookmark.isPinned ? AppTheme.sandstone.opacity(0.15) : AppTheme.cardBackgroundSubtle)
-                        .clipShape(RoundedRectangle(cornerRadius: 6))
-                }
-                .buttonStyle(.plain)
-                .help(bookmark.isPinned ? "Unpin from favorites" : "Pin to favorites")
-            }
+            bookmarkActions(for: bookmark)
         }
         .padding(14)
         .background(AppTheme.cardBackground)
@@ -458,8 +478,141 @@ public struct BookmarksView: View {
         }
     }
 
+    private func bookmarkActions(for bookmark: BookmarkItem) -> some View {
+        ViewThatFits(in: .horizontal) {
+            regularBookmarkActions(for: bookmark)
+                .fixedSize(horizontal: true, vertical: false)
+
+            compactBookmarkActions(for: bookmark)
+                .fixedSize(horizontal: true, vertical: false)
+
+            iconOnlyBookmarkActions(for: bookmark)
+                .fixedSize(horizontal: true, vertical: false)
+        }
+    }
+
+    private func regularBookmarkActions(for bookmark: BookmarkItem) -> some View {
+            HStack(spacing: 8) {
+                openBookmarkButton(for: bookmark, title: "Open Link", usesIconOnlyLabel: false)
+
+                if bookmark.clickCount > 0 {
+                    Text("\(bookmark.clickCount) \(bookmark.clickCount == 1 ? "launch" : "launches")")
+                        .font(.system(size: 10).monospacedDigit())
+                        .foregroundStyle(AppTheme.textTertiary)
+                        .lineLimit(1)
+                }
+
+                Spacer()
+
+                copyURLButton(for: bookmark)
+                pinButton(for: bookmark)
+            }
+    }
+
+    private func compactBookmarkActions(for bookmark: BookmarkItem) -> some View {
+        HStack(spacing: 8) {
+            openBookmarkButton(for: bookmark, title: "Open", usesIconOnlyLabel: false)
+
+            if bookmark.clickCount > 0 {
+                Text("\(bookmark.clickCount)")
+                    .font(.system(size: 10, weight: .medium).monospacedDigit())
+                    .foregroundStyle(AppTheme.textTertiary)
+            }
+
+            Spacer(minLength: 2)
+
+            copyURLButton(for: bookmark)
+            pinButton(for: bookmark)
+        }
+    }
+
+    private func iconOnlyBookmarkActions(for bookmark: BookmarkItem) -> some View {
+        HStack(spacing: 8) {
+            openBookmarkButton(for: bookmark, title: "Open Link", usesIconOnlyLabel: true)
+            Spacer(minLength: 2)
+            copyURLButton(for: bookmark)
+            pinButton(for: bookmark)
+        }
+    }
+
+    private func openBookmarkButton(
+        for bookmark: BookmarkItem,
+        title: String,
+        usesIconOnlyLabel: Bool
+    ) -> some View {
+        Button {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                viewModel.openBookmark(bookmark)
+            }
+        } label: {
+            Group {
+                if usesIconOnlyLabel {
+                    Image(systemName: "arrow.up.right")
+                        .font(.system(size: 10, weight: .bold))
+                } else {
+                    Label(title, systemImage: "arrow.up.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .lineLimit(1)
+                }
+            }
+            .foregroundStyle(.white)
+            .padding(.horizontal, usesIconOnlyLabel ? 8 : 12)
+            .padding(.vertical, 6)
+            .background(AppTheme.deepFocus)
+            .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Open \(bookmark.title) in default browser")
+        .help("Open in default browser")
+    }
+
+    private func copyURLButton(for bookmark: BookmarkItem) -> some View {
+        Button {
+            let pasteboard = NSPasteboard.general
+            pasteboard.clearContents()
+            pasteboard.setString(bookmark.url, forType: .string)
+
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                copiedBookmarkId = bookmark.id
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) {
+                withAnimation {
+                    if copiedBookmarkId == bookmark.id {
+                        copiedBookmarkId = nil
+                    }
+                }
+            }
+        } label: {
+            Image(systemName: copiedBookmarkId == bookmark.id ? "checkmark" : "doc.on.doc")
+                .font(.system(size: 12))
+                .foregroundStyle(copiedBookmarkId == bookmark.id ? AppTheme.success : AppTheme.textSecondary)
+                .padding(6)
+                .background(AppTheme.cardBackgroundSubtle)
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+        }
+        .buttonStyle(.plain)
+        .help("Copy URL")
+    }
+
+    private func pinButton(for bookmark: BookmarkItem) -> some View {
+        Button {
+            withAnimation(.spring(response: 0.25)) {
+                viewModel.togglePin(for: bookmark)
+            }
+        } label: {
+            Image(systemName: bookmark.isPinned ? "pin.fill" : "pin")
+                .font(.system(size: 12))
+                .foregroundStyle(bookmark.isPinned ? AppTheme.sandstone : AppTheme.textSecondary)
+                .padding(6)
+                .background(bookmark.isPinned ? AppTheme.sandstone.opacity(0.15) : AppTheme.cardBackgroundSubtle)
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+        }
+        .buttonStyle(.plain)
+        .help(bookmark.isPinned ? "Unpin from favorites" : "Pin to favorites")
+    }
+
     // MARK: - Empty State View
-    private var emptyStateView: some View {
+    private func emptyStateView(availableWidth: CGFloat) -> some View {
         VStack(spacing: 16) {
             Spacer()
 
@@ -479,35 +632,57 @@ public struct BookmarksView: View {
                     .frame(maxWidth: 400)
             }
 
-            HStack(spacing: 12) {
-                if !viewModel.searchQuery.isEmpty {
-                    Button("Clear Search") {
-                        viewModel.searchQuery = ""
-                    }
-                    .buttonStyle(.bordered)
-                } else {
-                    Button {
-                        resetForm()
-                        showingAddSheet = true
-                    } label: {
-                        Label("Add Bookmark", systemImage: "plus")
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(AppTheme.deepFocus)
+            ViewThatFits(in: .horizontal) {
+                emptyStateActions(stacksButtons: false)
+                    .fixedSize(horizontal: true, vertical: false)
 
-                    Button("Reset Default Links") {
-                        viewModel.resetToDefaults()
-                    }
-                    .buttonStyle(.bordered)
-                }
+                emptyStateActions(stacksButtons: true)
             }
 
             Spacer()
         }
         .frame(maxWidth: .infinity, minHeight: 280)
-        .padding(32)
+        .padding(availableWidth < BookmarksResponsiveLayout.compactControlsWidth ? 20 : 32)
         .background(AppTheme.cardBackgroundSubtle)
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+
+    @ViewBuilder
+    private func emptyStateActions(stacksButtons: Bool) -> some View {
+        if !viewModel.searchQuery.isEmpty {
+            Button("Clear Search") {
+                viewModel.searchQuery = ""
+            }
+            .buttonStyle(.bordered)
+        } else if stacksButtons {
+            VStack(spacing: 8) {
+                addBookmarkEmptyStateButton
+                resetDefaultBookmarksButton
+            }
+        } else {
+            HStack(spacing: 12) {
+                addBookmarkEmptyStateButton
+                resetDefaultBookmarksButton
+            }
+        }
+    }
+
+    private var addBookmarkEmptyStateButton: some View {
+        Button {
+            resetForm()
+            showingAddSheet = true
+        } label: {
+            Label("Add Bookmark", systemImage: "plus")
+        }
+        .buttonStyle(.borderedProminent)
+        .tint(AppTheme.deepFocus)
+    }
+
+    private var resetDefaultBookmarksButton: some View {
+        Button("Reset Default Links") {
+            viewModel.resetToDefaults()
+        }
+        .buttonStyle(.bordered)
     }
 
     // MARK: - Bookmark Editor Sheet

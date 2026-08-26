@@ -1,5 +1,34 @@
 import SwiftUI
 
+/// Centralizes the Kanban width rules so that all three columns remain visible in
+/// the standard detail area, while retaining horizontal scrolling as a fallback.
+enum KanbanBoardLayout {
+    static let columnCount: CGFloat = 3
+    static let preferredColumnWidth: CGFloat = 320
+    static let minimumColumnWidth: CGFloat = 220
+    static let columnSpacing: CGFloat = 16
+    static let horizontalPadding: CGFloat = 40
+
+    static func columnWidth(for availableWidth: CGFloat) -> CGFloat {
+        let equalColumnWidth = (
+            availableWidth
+                - horizontalPadding
+                - (columnSpacing * (columnCount - 1))
+        ) / columnCount
+
+        return min(preferredColumnWidth, max(minimumColumnWidth, equalColumnWidth))
+    }
+
+    static func contentWidth(for availableWidth: CGFloat) -> CGFloat {
+        max(
+            availableWidth,
+            (columnWidth(for: availableWidth) * columnCount)
+                + (columnSpacing * (columnCount - 1))
+                + horizontalPadding
+        )
+    }
+}
+
 /// A unified visual task hub featuring an interactive 3-column Kanban board and linear List view in Focenda
 public struct KanbanBoardView: View {
     @Bindable var taskVM: TaskListViewModel
@@ -74,156 +103,184 @@ public struct KanbanBoardView: View {
 
     // MARK: - Header Bar & Controls
     private var headerView: some View {
-        VStack(spacing: 12) {
-            HStack(spacing: 14) {
-                // Search bar
-                HStack(spacing: 8) {
-                    Image(systemName: "magnifyingglass")
-                        .foregroundStyle(AppTheme.textTertiary)
-                    TextField(
-                        viewMode == .kanban
-                            ? "Search Kanban tasks by title, notes, or tags..."
-                            : "Search tasks by title, notes, or tags...",
-                        text: $taskVM.searchQuery
-                    )
-                    .textFieldStyle(.plain)
-                    .foregroundStyle(AppTheme.textPrimary)
-
-                    if !taskVM.searchQuery.isEmpty {
-                        Button {
-                            taskVM.searchQuery = ""
-                        } label: {
-                            Image(systemName: "xmark.circle.fill")
-                                .foregroundStyle(AppTheme.textTertiary)
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-                .padding(8)
-                .background(AppTheme.cardBackground)
-                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .stroke(AppTheme.border, lineWidth: 1)
-                )
-
-                // Compact Icon View Switcher [ Kanban Board | List View ]
-                HStack(spacing: 2) {
-                    Button {
-                        withAnimation(.spring(response: 0.25)) {
-                            viewMode = .kanban
-                        }
-                    } label: {
-                        Image(systemName: "rectangle.split.3x1")
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundStyle(viewMode == .kanban ? AppTheme.accent : AppTheme.textSecondary)
-                            .frame(width: 28, height: 26)
-                            .background(
-                                RoundedRectangle(cornerRadius: 6, style: .continuous)
-                                    .fill(viewMode == .kanban ? AppTheme.accent.opacity(0.15) : Color.clear)
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 6, style: .continuous)
-                                    .stroke(viewMode == .kanban ? AppTheme.accent.opacity(0.3) : Color.clear, lineWidth: 1)
-                            )
-                    }
-                    .buttonStyle(.plain)
-                    .help("Kanban Board")
-
-                    Button {
-                        withAnimation(.spring(response: 0.25)) {
-                            viewMode = .list
-                        }
-                    } label: {
-                        Image(systemName: "list.bullet")
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundStyle(viewMode == .list ? AppTheme.accent : AppTheme.textSecondary)
-                            .frame(width: 28, height: 26)
-                            .background(
-                                RoundedRectangle(cornerRadius: 6, style: .continuous)
-                                    .fill(viewMode == .list ? AppTheme.accent.opacity(0.15) : Color.clear)
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 6, style: .continuous)
-                                    .stroke(viewMode == .list ? AppTheme.accent.opacity(0.3) : Color.clear, lineWidth: 1)
-                            )
-                    }
-                    .buttonStyle(.plain)
-                    .help("List View")
-                }
-                .padding(2)
-                .background(AppTheme.cardBackgroundSubtle)
-                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .stroke(AppTheme.border, lineWidth: 1)
-                )
-                .fixedSize(horizontal: true, vertical: false)
-
-                // Dynamic Status Overview or Quick Filters
-                if viewMode == .kanban {
-                    // Top 3-Column Progress Overview Chips (Fixed non-wrapping)
-                    HStack(spacing: 8) {
-                        KanbanStatPill(
-                            title: "To Do",
-                            count: taskVM.todoTasksCount,
-                            color: AppTheme.riverSlate
-                        )
-                        KanbanStatPill(
-                            title: "In Progress",
-                            count: taskVM.inProgressTasksCount,
-                            color: AppTheme.sandstone
-                        )
-                        KanbanStatPill(
-                            title: "Done",
-                            count: taskVM.doneTasksCount,
-                            color: AppTheme.success
-                        )
-                    }
-                    .fixedSize(horizontal: true, vertical: false)
-                } else {
-                    // List Quick Filters (All, Active, Completed, High Priority)
-                    Picker("Filter", selection: $taskVM.currentFilter) {
-                        Text("All (\(taskVM.tasks.count))").tag(TaskFilter.all)
-                        Text("Active (\(taskVM.pendingTasksCount))").tag(TaskFilter.active)
-                        Text("Completed (\(taskVM.completedTasksCount))").tag(TaskFilter.completed)
-                        Text("High Priority (\(taskVM.highPriorityPendingCount))").tag(TaskFilter.highPriority)
-                    }
-                    .pickerStyle(.segmented)
-                    .fixedSize(horizontal: true, vertical: false)
-                }
-
-                // New Task Primary Button
-                Button {
-                    targetColumnStatus = .todo
-                    showingAddTaskSheet = true
-                } label: {
-                    Label("New Task", systemImage: "plus")
-                        .font(.headline)
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(AppTheme.deepFocus)
-                .controlSize(.regular)
-                .fixedSize(horizontal: true, vertical: false)
-            }
+        ViewThatFits(in: .horizontal) {
+            fullHeaderControls
+            compactHeaderControls
         }
         .padding(16)
         .background(AppTheme.background)
     }
 
+    private var fullHeaderControls: some View {
+        HStack(spacing: 14) {
+            searchField
+            viewModeSwitcher
+            headerOverview
+            newTaskButton
+        }
+    }
+
+    private var compactHeaderControls: some View {
+        VStack(spacing: 12) {
+            HStack(spacing: 12) {
+                searchField
+                newTaskButton
+            }
+
+            ScrollView(.horizontal, showsIndicators: true) {
+                HStack(spacing: 14) {
+                    viewModeSwitcher
+                    headerOverview
+                }
+                .padding(.vertical, 2)
+            }
+        }
+    }
+
+    private var searchField: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "magnifyingglass")
+                .foregroundStyle(AppTheme.textTertiary)
+            TextField(
+                viewMode == .kanban
+                    ? "Search Kanban tasks by title, notes, or tags..."
+                    : "Search tasks by title, notes, or tags...",
+                text: $taskVM.searchQuery
+            )
+            .textFieldStyle(.plain)
+            .foregroundStyle(AppTheme.textPrimary)
+
+            if !taskVM.searchQuery.isEmpty {
+                Button {
+                    taskVM.searchQuery = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(AppTheme.textTertiary)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(8)
+        .frame(minWidth: 180, idealWidth: 260, maxWidth: .infinity)
+        .background(AppTheme.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .stroke(AppTheme.border, lineWidth: 1)
+        )
+    }
+
+    private var viewModeSwitcher: some View {
+        HStack(spacing: 2) {
+            Button {
+                withAnimation(.spring(response: 0.25)) {
+                    viewMode = .kanban
+                }
+            } label: {
+                Image(systemName: "rectangle.split.3x1")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(viewMode == .kanban ? AppTheme.accent : AppTheme.textSecondary)
+                    .frame(width: 28, height: 26)
+                    .background(
+                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                            .fill(viewMode == .kanban ? AppTheme.accent.opacity(0.15) : Color.clear)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                            .stroke(viewMode == .kanban ? AppTheme.accent.opacity(0.3) : Color.clear, lineWidth: 1)
+                    )
+            }
+            .buttonStyle(.plain)
+            .help("Kanban Board")
+
+            Button {
+                withAnimation(.spring(response: 0.25)) {
+                    viewMode = .list
+                }
+            } label: {
+                Image(systemName: "list.bullet")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(viewMode == .list ? AppTheme.accent : AppTheme.textSecondary)
+                    .frame(width: 28, height: 26)
+                    .background(
+                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                            .fill(viewMode == .list ? AppTheme.accent.opacity(0.15) : Color.clear)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                            .stroke(viewMode == .list ? AppTheme.accent.opacity(0.3) : Color.clear, lineWidth: 1)
+                    )
+            }
+            .buttonStyle(.plain)
+            .help("List View")
+        }
+        .padding(2)
+        .background(AppTheme.cardBackgroundSubtle)
+        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .stroke(AppTheme.border, lineWidth: 1)
+        )
+        .fixedSize(horizontal: true, vertical: false)
+    }
+
+    @ViewBuilder
+    private var headerOverview: some View {
+        if viewMode == .kanban {
+            HStack(spacing: 8) {
+                KanbanStatPill(
+                    title: "To Do",
+                    count: taskVM.todoTasksCount,
+                    color: AppTheme.riverSlate
+                )
+                KanbanStatPill(
+                    title: "In Progress",
+                    count: taskVM.inProgressTasksCount,
+                    color: AppTheme.sandstone
+                )
+                KanbanStatPill(
+                    title: "Done",
+                    count: taskVM.doneTasksCount,
+                    color: AppTheme.success
+                )
+            }
+            .fixedSize(horizontal: true, vertical: false)
+        } else {
+            Picker("Filter", selection: $taskVM.currentFilter) {
+                Text("All (\(taskVM.tasks.count))").tag(TaskFilter.all)
+                Text("Active (\(taskVM.pendingTasksCount))").tag(TaskFilter.active)
+                Text("Completed (\(taskVM.completedTasksCount))").tag(TaskFilter.completed)
+                Text("High Priority (\(taskVM.highPriorityPendingCount))").tag(TaskFilter.highPriority)
+            }
+            .pickerStyle(.segmented)
+            .fixedSize(horizontal: true, vertical: false)
+        }
+    }
+
+    private var newTaskButton: some View {
+        Button {
+            targetColumnStatus = .todo
+            showingAddTaskSheet = true
+        } label: {
+            Label("New Task", systemImage: "plus")
+                .font(.headline)
+        }
+        .buttonStyle(.borderedProminent)
+        .tint(AppTheme.deepFocus)
+        .controlSize(.regular)
+        .fixedSize(horizontal: true, vertical: false)
+    }
+
     // MARK: - 3-Column Kanban Board Layout
     private var kanbanBoardContent: some View {
         GeometryReader { geometry in
-            let columnWidth: CGFloat = 320
-            let spacing: CGFloat = 16
-            let padding: CGFloat = 40
-            let minContentWidth: CGFloat = (columnWidth * 3) + (spacing * 2) + padding
-            let totalWidth = max(minContentWidth, geometry.size.width)
+            let columnWidth = KanbanBoardLayout.columnWidth(for: geometry.size.width)
+            let totalWidth = KanbanBoardLayout.contentWidth(for: geometry.size.width)
 
             ScrollViewReader { proxy in
                 VStack(spacing: 0) {
                     ScrollView(.horizontal, showsIndicators: true) {
-                        HStack(alignment: .top, spacing: spacing) {
+                        HStack(alignment: .top, spacing: KanbanBoardLayout.columnSpacing) {
                             ForEach(TaskStatus.allCases) { status in
                                 KanbanColumnView(
                                     status: status,
@@ -269,8 +326,14 @@ public struct KanbanBoardView: View {
                             }
                         }
                         .padding(20)
-                        .frame(minWidth: totalWidth, minHeight: max(0, geometry.size.height - 40), alignment: .topLeading)
+                        .frame(
+                            minWidth: totalWidth,
+                            maxWidth: totalWidth,
+                            minHeight: max(0, geometry.size.height - 40),
+                            alignment: .topLeading
+                        )
                     }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .forceVisibleScrollers(horizontal: true, vertical: false)
 
                     // Bottom Column Quick Navigation Bar (for 1-click jump for mouse users)
@@ -744,124 +807,9 @@ public struct KanbanCardView: View {
 
     public var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            // Card Top Row: Priority Badge + Direct Actions (+1 Pomodoro, Pencil, Trash, ...)
-            HStack(spacing: 6) {
-                // Priority Badge (Fixed Anti-Wrapping)
-                HStack(spacing: 4) {
-                    Image(systemName: task.priority.icon)
-                        .font(.system(size: 9, weight: .bold))
-                    Text(task.priority.rawValue)
-                        .font(.system(size: 10, weight: .bold))
-                        .lineLimit(1)
-                }
-                .padding(.horizontal, 8)
-                .padding(.vertical, 3)
-                .background(task.priority.color.opacity(0.12))
-                .foregroundStyle(task.priority.color)
-                .clipShape(Capsule())
-                .fixedSize(horizontal: true, vertical: false)
-
-                Spacer()
-
-                // Direct Action: +1 Pomodoro Button (Fixed Anti-Wrapping)
-                Button {
-                    onIncrementPomodoro()
-                } label: {
-                    HStack(spacing: 3) {
-                        Image(systemName: "timer")
-                            .font(.system(size: 9))
-                        Text("\(task.completedPomodoros)/\(task.estimatedPomodoros)")
-                            .font(.caption2.monospacedDigit().bold())
-                            .lineLimit(1)
-                        Text("+1")
-                            .font(.system(size: 8, weight: .bold))
-                            .foregroundStyle(AppTheme.accent)
-                            .padding(.horizontal, 3)
-                            .padding(.vertical, 1)
-                            .background(AppTheme.accent.opacity(0.12))
-                            .clipShape(Capsule())
-                            .lineLimit(1)
-                    }
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(AppTheme.cardBackgroundSubtle)
-                    .foregroundStyle(AppTheme.textSecondary)
-                    .clipShape(Capsule())
-                    .fixedSize(horizontal: true, vertical: false)
-                }
-                .buttonStyle(.plain)
-                .fixedSize(horizontal: true, vertical: false)
-                .help("Completed pomodoros (tap to +1)")
-
-                // Direct Action: Quick Edit Pencil
-                Button {
-                    onEdit()
-                } label: {
-                    Image(systemName: "pencil")
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(AppTheme.textSecondary)
-                        .frame(width: 20, height: 20)
-                        .background(AppTheme.cardBackgroundSubtle)
-                        .clipShape(Circle())
-                }
-                .buttonStyle(.plain)
-                .fixedSize(horizontal: true, vertical: false)
-                .help("Edit task")
-
-                // Direct Action: Delete Trash Button
-                Button {
-                    onDelete()
-                } label: {
-                    Image(systemName: "trash")
-                        .font(.system(size: 10))
-                        .foregroundStyle(AppTheme.terracotta.opacity(0.85))
-                        .frame(width: 20, height: 20)
-                        .background(AppTheme.terracotta.opacity(0.1))
-                        .clipShape(Circle())
-                }
-                .buttonStyle(.plain)
-                .fixedSize(horizontal: true, vertical: false)
-                .help("Delete task")
-
-                // Direct Action: Clean '...' Menu Button
-                Menu {
-                    Menu("Move to...") {
-                        Button("To Do") { onMove(.todo) }
-                        Button("In Progress") { onMove(.inProgress) }
-                        Button("Done") { onMove(.done) }
-                    }
-
-                    Button {
-                        onIncrementPomodoro()
-                    } label: {
-                        Label("Add Pomodoro (+1)", systemImage: "timer")
-                    }
-
-                    Button {
-                        onEdit()
-                    } label: {
-                        Label("Edit Task", systemImage: "pencil")
-                    }
-
-                    Divider()
-
-                    Button(role: .destructive) {
-                        onDelete()
-                    } label: {
-                        Label("Delete Task", systemImage: "trash")
-                    }
-                } label: {
-                    Image(systemName: "ellipsis")
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundStyle(AppTheme.textSecondary)
-                        .frame(width: 20, height: 20)
-                        .background(AppTheme.cardBackgroundSubtle)
-                        .clipShape(Circle())
-                }
-                .menuStyle(.borderlessButton)
-                .frame(width: 20, height: 20)
-                .fixedSize(horizontal: true, vertical: false)
-                .help("More actions")
+            ViewThatFits(in: .horizontal) {
+                expandedCardActions
+                compactCardActions
             }
 
             // Title & Notes
@@ -880,58 +828,17 @@ public struct KanbanCardView: View {
                 }
             }
 
-            // Tags (Anti-wrapping)
             if !task.tags.isEmpty {
-                HStack(spacing: 4) {
-                    ForEach(task.tags, id: \.self) { tag in
-                        Text("#\(tag)")
-                            .font(.system(size: 10, weight: .medium))
-                            .lineLimit(1)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(AppTheme.cardBackgroundSubtle)
-                            .foregroundStyle(AppTheme.textTertiary)
-                            .clipShape(Capsule())
-                            .fixedSize(horizontal: true, vertical: false)
-                    }
+                ViewThatFits(in: .horizontal) {
+                    tagPills
+                    compactTagPill
                 }
             }
 
-            // Reminders & Due Dates Indicators (Anti-wrapping)
             if task.reminderDate != nil || task.dueDate != nil {
-                HStack(spacing: 8) {
-                    if let reminder = task.reminderDate {
-                        HStack(spacing: 3) {
-                            Image(systemName: "bell.fill")
-                                .font(.system(size: 8))
-                            Text(formatReminderDate(reminder))
-                                .font(.system(size: 10, weight: .medium))
-                                .lineLimit(1)
-                        }
-                        .foregroundStyle(AppTheme.sandstone)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(AppTheme.sandstone.opacity(0.12))
-                        .clipShape(Capsule())
-                        .fixedSize(horizontal: true, vertical: false)
-                    }
-
-                    if let due = task.dueDate {
-                        let isOverdue = !task.isCompleted && due < Date()
-                        HStack(spacing: 3) {
-                            Image(systemName: "calendar")
-                                .font(.system(size: 8))
-                            Text(formatDueDate(due))
-                                .font(.system(size: 10, weight: .medium))
-                                .lineLimit(1)
-                        }
-                        .foregroundStyle(isOverdue ? AppTheme.terracotta : AppTheme.textSecondary)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(isOverdue ? AppTheme.terracotta.opacity(0.12) : AppTheme.cardBackgroundSubtle)
-                        .clipShape(Capsule())
-                        .fixedSize(horizontal: true, vertical: false)
-                    }
+                ViewThatFits(in: .horizontal) {
+                    datePills
+                    compactDatePills
                 }
             }
 
@@ -975,9 +882,253 @@ public struct KanbanCardView: View {
         }
     }
 
-    // MARK: - Direct Move Pill Selector Footer (Anti-wrapping)
+    private var expandedCardActions: some View {
+        HStack(spacing: 6) {
+            priorityBadge
+            Spacer(minLength: 0)
+            pomodoroButton
+            editButton
+            deleteButton
+            moreActionsMenu
+        }
+    }
+
+    private var compactCardActions: some View {
+        HStack(spacing: 6) {
+            priorityBadge
+            Spacer(minLength: 0)
+            moreActionsMenu
+        }
+    }
+
+    private var priorityBadge: some View {
+        HStack(spacing: 4) {
+            Image(systemName: task.priority.icon)
+                .font(.system(size: 9, weight: .bold))
+            Text(task.priority.rawValue)
+                .font(.system(size: 10, weight: .bold))
+                .lineLimit(1)
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 3)
+        .background(task.priority.color.opacity(0.12))
+        .foregroundStyle(task.priority.color)
+        .clipShape(Capsule())
+        .fixedSize(horizontal: true, vertical: false)
+    }
+
+    private var pomodoroButton: some View {
+        Button {
+            onIncrementPomodoro()
+        } label: {
+            HStack(spacing: 3) {
+                Image(systemName: "timer")
+                    .font(.system(size: 9))
+                Text("\(task.completedPomodoros)/\(task.estimatedPomodoros)")
+                    .font(.caption2.monospacedDigit().bold())
+                    .lineLimit(1)
+                Text("+1")
+                    .font(.system(size: 8, weight: .bold))
+                    .foregroundStyle(AppTheme.accent)
+                    .padding(.horizontal, 3)
+                    .padding(.vertical, 1)
+                    .background(AppTheme.accent.opacity(0.12))
+                    .clipShape(Capsule())
+                    .lineLimit(1)
+            }
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(AppTheme.cardBackgroundSubtle)
+            .foregroundStyle(AppTheme.textSecondary)
+            .clipShape(Capsule())
+            .fixedSize(horizontal: true, vertical: false)
+        }
+        .buttonStyle(.plain)
+        .fixedSize(horizontal: true, vertical: false)
+        .help("Completed pomodoros (tap to +1)")
+    }
+
+    private var editButton: some View {
+        Button {
+            onEdit()
+        } label: {
+            Image(systemName: "pencil")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(AppTheme.textSecondary)
+                .frame(width: 20, height: 20)
+                .background(AppTheme.cardBackgroundSubtle)
+                .clipShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .fixedSize(horizontal: true, vertical: false)
+        .help("Edit task")
+    }
+
+    private var deleteButton: some View {
+        Button {
+            onDelete()
+        } label: {
+            Image(systemName: "trash")
+                .font(.system(size: 10))
+                .foregroundStyle(AppTheme.terracotta.opacity(0.85))
+                .frame(width: 20, height: 20)
+                .background(AppTheme.terracotta.opacity(0.1))
+                .clipShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .fixedSize(horizontal: true, vertical: false)
+        .help("Delete task")
+    }
+
+    private var moreActionsMenu: some View {
+        Menu {
+            Menu("Move to...") {
+                Button("To Do") { onMove(.todo) }
+                Button("In Progress") { onMove(.inProgress) }
+                Button("Done") { onMove(.done) }
+            }
+
+            Button {
+                onIncrementPomodoro()
+            } label: {
+                Label("Add Pomodoro (+1)", systemImage: "timer")
+            }
+
+            Button {
+                onEdit()
+            } label: {
+                Label("Edit Task", systemImage: "pencil")
+            }
+
+            Divider()
+
+            Button(role: .destructive) {
+                onDelete()
+            } label: {
+                Label("Delete Task", systemImage: "trash")
+            }
+        } label: {
+            Image(systemName: "ellipsis")
+                .font(.system(size: 10, weight: .bold))
+                .foregroundStyle(AppTheme.textSecondary)
+                .frame(width: 20, height: 20)
+                .background(AppTheme.cardBackgroundSubtle)
+                .clipShape(Circle())
+        }
+        .menuStyle(.borderlessButton)
+        .frame(width: 20, height: 20)
+        .fixedSize(horizontal: true, vertical: false)
+        .help("More actions")
+    }
+
+    private var tagPills: some View {
+        HStack(spacing: 4) {
+            ForEach(task.tags, id: \.self) { tag in
+                Text("#\(tag)")
+                    .font(.system(size: 10, weight: .medium))
+                    .lineLimit(1)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(AppTheme.cardBackgroundSubtle)
+                    .foregroundStyle(AppTheme.textTertiary)
+                    .clipShape(Capsule())
+                    .fixedSize(horizontal: true, vertical: false)
+            }
+        }
+    }
+
+    private var compactTagPill: some View {
+        Text(compactTagsLabel)
+            .font(.system(size: 10, weight: .medium))
+            .lineLimit(1)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(AppTheme.cardBackgroundSubtle)
+            .foregroundStyle(AppTheme.textTertiary)
+            .clipShape(Capsule())
+            .accessibilityLabel("Tags: \(task.tags.joined(separator: ", "))")
+    }
+
+    private var compactTagsLabel: String {
+        guard let firstTag = task.tags.first else { return "" }
+        let remainingTagCount = task.tags.count - 1
+        return remainingTagCount == 0 ? "#\(firstTag)" : "#\(firstTag) +\(remainingTagCount)"
+    }
+
     @ViewBuilder
+    private var datePills: some View {
+        HStack(spacing: 8) {
+            if let reminder = task.reminderDate {
+                HStack(spacing: 3) {
+                    Image(systemName: "bell.fill")
+                        .font(.system(size: 8))
+                    Text(formatReminderDate(reminder))
+                        .font(.system(size: 10, weight: .medium))
+                        .lineLimit(1)
+                }
+                .foregroundStyle(AppTheme.sandstone)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2)
+                .background(AppTheme.sandstone.opacity(0.12))
+                .clipShape(Capsule())
+                .fixedSize(horizontal: true, vertical: false)
+            }
+
+            if let due = task.dueDate {
+                let isOverdue = !task.isCompleted && due < Date()
+                HStack(spacing: 3) {
+                    Image(systemName: "calendar")
+                        .font(.system(size: 8))
+                    Text(formatDueDate(due))
+                        .font(.system(size: 10, weight: .medium))
+                        .lineLimit(1)
+                }
+                .foregroundStyle(isOverdue ? AppTheme.terracotta : AppTheme.textSecondary)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2)
+                .background(isOverdue ? AppTheme.terracotta.opacity(0.12) : AppTheme.cardBackgroundSubtle)
+                .clipShape(Capsule())
+                .fixedSize(horizontal: true, vertical: false)
+            }
+        }
+    }
+
+    private var compactDatePills: some View {
+        HStack(spacing: 8) {
+            if task.reminderDate != nil {
+                Image(systemName: "bell.fill")
+                    .font(.system(size: 10))
+                    .foregroundStyle(AppTheme.sandstone)
+                    .accessibilityLabel("Task has a reminder")
+            }
+
+            if task.dueDate != nil {
+                Image(systemName: "calendar")
+                    .font(.system(size: 10))
+                    .foregroundStyle(taskIsOverdue ? AppTheme.terracotta : AppTheme.textSecondary)
+                    .accessibilityLabel("Task has a due date")
+            }
+        }
+        .padding(.horizontal, 6)
+        .padding(.vertical, 4)
+        .background(AppTheme.cardBackgroundSubtle)
+        .clipShape(Capsule())
+    }
+
+    private var taskIsOverdue: Bool {
+        guard let dueDate = task.dueDate else { return false }
+        return !task.isCompleted && dueDate < Date()
+    }
+
+    // MARK: - Direct Move Pill Selector Footer
     private var cardDirectMoveFooter: some View {
+        ViewThatFits(in: .horizontal) {
+            expandedMoveControls
+            compactMoveMenu
+        }
+    }
+
+    private var expandedMoveControls: some View {
         HStack(spacing: 5) {
             Text("Move:")
                 .font(.system(size: 10, weight: .semibold))
@@ -1023,6 +1174,29 @@ public struct KanbanCardView: View {
                 .help(isCurrent ? "Current column: \(targetStatus.rawValue)" : "Move to \(targetStatus.rawValue)")
             }
         }
+    }
+
+    private var compactMoveMenu: some View {
+        Menu {
+            ForEach(TaskStatus.allCases) { targetStatus in
+                Button(targetStatus.rawValue) {
+                    if task.status != targetStatus {
+                        onMove(targetStatus)
+                    }
+                }
+                .disabled(task.status == targetStatus)
+            }
+        } label: {
+            Label("Move", systemImage: "arrow.right.circle")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(AppTheme.textSecondary)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 4)
+                .background(AppTheme.cardBackgroundSubtle)
+                .clipShape(Capsule())
+        }
+        .menuStyle(.borderlessButton)
+        .help("Move task to another column")
     }
 
     private func formatReminderDate(_ date: Date) -> String {

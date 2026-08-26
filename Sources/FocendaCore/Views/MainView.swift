@@ -1,6 +1,11 @@
 import SwiftUI
 
 public struct MainView: View {
+    /// The app remains usable on compact Mac displays. Detail views are responsible for
+    /// adapting their controls and exposing overflow only when it is genuinely needed.
+    public static let minimumWindowWidth: CGFloat = 720
+    public static let minimumWindowHeight: CGFloat = 540
+
     @State private var appState: AppState
     @State private var timerVM: FocusTimerViewModel
     @State private var taskVM: TaskListViewModel
@@ -79,7 +84,10 @@ public struct MainView: View {
             .background(AppTheme.background)
         }
         .navigationSplitViewStyle(.balanced)
-        .frame(minWidth: 980, minHeight: 640)
+        .frame(
+            minWidth: Self.minimumWindowWidth,
+            minHeight: Self.minimumWindowHeight
+        )
         .background(AppTheme.background)
         .preferredColorScheme(appState.selectedTheme.colorScheme)
         .id(appState.selectedTheme)

@@ -97,4 +97,9 @@ final class SidebarViewTests: XCTestCase {
         XCTAssertNotNil(mainView)
         XCTAssertNotNil(mainView.body)
     }
+
+    func testMainViewSupportsCompactMacWindows() {
+        XCTAssertEqual(MainView.minimumWindowWidth, 720)
+        XCTAssertEqual(MainView.minimumWindowHeight, 540)
+    }
 }
