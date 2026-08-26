@@ -7,6 +7,7 @@ public struct MainView: View {
     @State private var scratchpadVM: ScratchpadViewModel
     @State private var bookmarkVM: BookmarkViewModel
     @State private var recurringReminderVM: RecurringReminderViewModel
+    @State private var columnVisibility: NavigationSplitViewVisibility = .all
 
     public init(
         appState: AppState = AppState(),
@@ -25,14 +26,14 @@ public struct MainView: View {
     }
 
     public var body: some View {
-        NavigationSplitView {
+        NavigationSplitView(columnVisibility: $columnVisibility) {
             SidebarView(
                 appState: appState,
                 timerVM: timerVM,
                 taskVM: taskVM,
                 bookmarkVM: bookmarkVM
             )
-            .navigationSplitViewColumnWidth(min: 220, ideal: 240, max: 280)
+            .navigationSplitViewColumnWidth(min: 220, ideal: 240, max: 300)
             .background(AppTheme.sidebarBackground)
         } detail: {
             Group {

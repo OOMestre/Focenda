@@ -26,7 +26,7 @@ public struct ScratchpadView: View {
                 let minPaneWidth: CGFloat = (viewModel.showFoldersSidebar ? 141 : 0) + 191 + 320
                 let totalPaneWidth = max(minPaneWidth, geometry.size.width)
 
-                ScrollView(.horizontal, showsIndicators: true) {
+                ScrollView([.horizontal, .vertical], showsIndicators: true) {
                     HStack(spacing: 0) {
                         // Folder / Notebook Sidebar (Leftmost Column)
                         if viewModel.showFoldersSidebar {

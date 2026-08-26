@@ -33,7 +33,7 @@ public struct BookmarksView: View {
             Divider()
 
             // Main Content Area
-            ScrollView {
+            ScrollView([.horizontal, .vertical], showsIndicators: true) {
                 VStack(alignment: .leading, spacing: 20) {
                     // Category Filter Pills
                     categoryFilterSection
@@ -49,7 +49,7 @@ public struct BookmarksView: View {
                     }
                 }
                 .padding(20)
-                .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
+                .frame(minWidth: 480, maxWidth: .infinity, alignment: .leading)
             }
         }
         .frame(minWidth: 0, maxWidth: .infinity, maxHeight: .infinity)

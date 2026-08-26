@@ -33,6 +33,7 @@ public struct SidebarView: View {
                     isPulsingDot: isPulsingDot
                 )
             }
+            .listRowInsets(EdgeInsets(top: 4, leading: 14, bottom: 4, trailing: 12))
         }
         .listStyle(.sidebar)
         .safeAreaInset(edge: .bottom) {
@@ -115,16 +116,34 @@ public struct SidebarView: View {
 
 // MARK: - Sidebar Row Item
 
-private struct SidebarRowItem: View {
-    let tab: AppTab
-    let isSelected: Bool
-    let timerIsRunning: Bool
-    let pendingTasksCount: Int
-    let inProgressTasksCount: Int
-    let totalBookmarksCount: Int
-    let isPulsingDot: Bool
+public struct SidebarRowItem: View {
+    public let tab: AppTab
+    public let isSelected: Bool
+    public let timerIsRunning: Bool
+    public let pendingTasksCount: Int
+    public let inProgressTasksCount: Int
+    public let totalBookmarksCount: Int
+    public let isPulsingDot: Bool
 
-    var body: some View {
+    public init(
+        tab: AppTab,
+        isSelected: Bool,
+        timerIsRunning: Bool = false,
+        pendingTasksCount: Int = 0,
+        inProgressTasksCount: Int = 0,
+        totalBookmarksCount: Int = 0,
+        isPulsingDot: Bool = false
+    ) {
+        self.tab = tab
+        self.isSelected = isSelected
+        self.timerIsRunning = timerIsRunning
+        self.pendingTasksCount = pendingTasksCount
+        self.inProgressTasksCount = inProgressTasksCount
+        self.totalBookmarksCount = totalBookmarksCount
+        self.isPulsingDot = isPulsingDot
+    }
+
+    public var body: some View {
         HStack(spacing: 9) {
             Image(systemName: tab.iconName)
                 .font(.system(size: 14))
@@ -185,5 +204,7 @@ private struct SidebarRowItem: View {
                     .fixedSize(horizontal: true, vertical: false)
             }
         }
+        .padding(.leading, 2)
+        .frame(minHeight: 28, alignment: .leading)
     }
 }

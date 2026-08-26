@@ -47,66 +47,73 @@ public struct TaskListView: View {
         VStack(spacing: 0) {
             // Search, View Switcher and Filter Bar
             VStack(spacing: 12) {
-                HStack(spacing: 12) {
-                    HStack {
-                        Image(systemName: "magnifyingglass")
-                            .foregroundStyle(AppTheme.textTertiary)
-                        TextField("Search tasks by title, notes, or tags...", text: $taskVM.searchQuery)
-                            .textFieldStyle(.plain)
-                            .foregroundStyle(AppTheme.textPrimary)
-                        if !taskVM.searchQuery.isEmpty {
-                            Button {
-                                taskVM.searchQuery = ""
-                            } label: {
-                                Image(systemName: "xmark.circle.fill")
-                                    .foregroundStyle(AppTheme.textTertiary)
+                ScrollView(.horizontal, showsIndicators: true) {
+                    HStack(spacing: 12) {
+                        HStack {
+                            Image(systemName: "magnifyingglass")
+                                .foregroundStyle(AppTheme.textTertiary)
+                            TextField("Search tasks by title, notes, or tags...", text: $taskVM.searchQuery)
+                                .textFieldStyle(.plain)
+                                .foregroundStyle(AppTheme.textPrimary)
+                            if !taskVM.searchQuery.isEmpty {
+                                Button {
+                                    taskVM.searchQuery = ""
+                                } label: {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .foregroundStyle(AppTheme.textTertiary)
+                                }
+                                .buttonStyle(.plain)
                             }
-                            .buttonStyle(.plain)
                         }
-                    }
-                    .padding(8)
-                    .background(AppTheme.cardBackground)
-                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .stroke(AppTheme.border, lineWidth: 1)
-                    )
+                        .padding(8)
+                        .frame(minWidth: 200, idealWidth: 280)
+                        .background(AppTheme.cardBackground)
+                        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                .stroke(AppTheme.border, lineWidth: 1)
+                        )
 
-                    // View Mode Switcher (Kanban Board vs List View)
-                    Picker("View", selection: $viewMode) {
-                        ForEach(TaskViewMode.allCases) { mode in
-                            Label(mode.title, systemImage: mode.iconName).tag(mode)
+                        // View Mode Switcher (Kanban Board vs List View)
+                        Picker("View", selection: $viewMode) {
+                            ForEach(TaskViewMode.allCases) { mode in
+                                Label(mode.title, systemImage: mode.iconName).tag(mode)
+                            }
                         }
-                    }
-                    .pickerStyle(.segmented)
-                    .frame(width: 240)
-                    .fixedSize(horizontal: true, vertical: false)
+                        .pickerStyle(.segmented)
+                        .frame(width: 240)
+                        .fixedSize(horizontal: true, vertical: false)
 
-                    Button {
-                        showingAddTaskSheet = true
-                    } label: {
-                        Label("New Task", systemImage: "plus")
-                            .font(.headline)
+                        Button {
+                            showingAddTaskSheet = true
+                        } label: {
+                            Label("New Task", systemImage: "plus")
+                                .font(.headline)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(AppTheme.deepFocus)
+                        .controlSize(.regular)
+                        .fixedSize(horizontal: true, vertical: false)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(AppTheme.deepFocus)
-                    .controlSize(.regular)
-                    .fixedSize(horizontal: true, vertical: false)
+                    .padding(.vertical, 2)
                 }
 
                 // Quick Filters (only displayed in List view mode)
                 if viewMode == .list {
-                    HStack {
-                        Picker("Filter", selection: $taskVM.currentFilter) {
-                            Text("All (\(taskVM.tasks.count))").tag(TaskFilter.all)
-                            Text("Active (\(taskVM.pendingTasksCount))").tag(TaskFilter.active)
-                            Text("Completed (\(taskVM.completedTasksCount))").tag(TaskFilter.completed)
-                            Text("High Priority (\(taskVM.highPriorityPendingCount))").tag(TaskFilter.highPriority)
-                        }
-                        .pickerStyle(.segmented)
-                        .fixedSize(horizontal: true, vertical: false)
+                    ScrollView(.horizontal, showsIndicators: true) {
+                        HStack {
+                            Picker("Filter", selection: $taskVM.currentFilter) {
+                                Text("All (\(taskVM.tasks.count))").tag(TaskFilter.all)
+                                Text("Active (\(taskVM.pendingTasksCount))").tag(TaskFilter.active)
+                                Text("Completed (\(taskVM.completedTasksCount))").tag(TaskFilter.completed)
+                                Text("High Priority (\(taskVM.highPriorityPendingCount))").tag(TaskFilter.highPriority)
+                            }
+                            .pickerStyle(.segmented)
+                            .fixedSize(horizontal: true, vertical: false)
 
-                        Spacer()
+                            Spacer()
+                        }
+                        .padding(.vertical, 2)
                     }
                 }
             }
@@ -166,40 +173,45 @@ public struct TaskListView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(AppTheme.background)
         } else {
-            List {
-                ForEach(taskVM.filteredTasks) { task in
-                    TaskRowView(
-                        task: task,
-                        onToggle: {
-                            withAnimation(.spring(response: 0.35, dampingFraction: 0.6)) {
-                                taskVM.toggleTaskCompletion(task)
-                            }
-                        },
-                        onDelete: {
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                taskVM.deleteTask(withId: task.id)
-                            }
-                        },
-                        onMove: { newStatus in
-                            withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
-                                taskVM.moveTask(id: task.id, to: newStatus)
-                            }
-                        },
-                        onEdit: {
-                            editingTask = task
-                        },
-                        onIncrementPomodoro: {
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
-                                taskVM.incrementTaskPomodoro(taskId: task.id)
-                            }
+            GeometryReader { geometry in
+                let minTableWidth: CGFloat = 580
+                let totalWidth = max(minTableWidth, geometry.size.width)
+
+                ScrollView([.horizontal, .vertical], showsIndicators: true) {
+                    LazyVStack(spacing: 8) {
+                        ForEach(taskVM.filteredTasks) { task in
+                            TaskRowView(
+                                task: task,
+                                onToggle: {
+                                    withAnimation(.spring(response: 0.35, dampingFraction: 0.6)) {
+                                        taskVM.toggleTaskCompletion(task)
+                                    }
+                                },
+                                onDelete: {
+                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                        taskVM.deleteTask(withId: task.id)
+                                    }
+                                },
+                                onMove: { newStatus in
+                                    withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
+                                        taskVM.moveTask(id: task.id, to: newStatus)
+                                    }
+                                },
+                                onEdit: {
+                                    editingTask = task
+                                },
+                                onIncrementPomodoro: {
+                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                                        taskVM.incrementTaskPomodoro(taskId: task.id)
+                                    }
+                                }
+                            )
                         }
-                    )
-                    .listRowSeparator(.hidden)
-                    .listRowInsets(EdgeInsets(top: 4, leading: 12, bottom: 4, trailing: 12))
-                    .listRowBackground(Color.clear)
+                    }
+                    .padding(16)
+                    .frame(minWidth: totalWidth, alignment: .topLeading)
                 }
             }
-            .listStyle(.plain)
             .background(AppTheme.background)
             .animation(.default, value: taskVM.filteredTasks)
         }

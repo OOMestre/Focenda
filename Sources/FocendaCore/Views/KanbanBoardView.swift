@@ -217,7 +217,7 @@ public struct KanbanBoardView: View {
             let minContentWidth: CGFloat = (280 * 3) + (16 * 2) + 40 // 912 minimum width for 3 columns
             let totalWidth = max(minContentWidth, geometry.size.width)
 
-            ScrollView(.horizontal, showsIndicators: true) {
+            ScrollView([.horizontal, .vertical], showsIndicators: true) {
                 HStack(alignment: .top, spacing: 16) {
                     ForEach(TaskStatus.allCases) { status in
                         KanbanColumnView(

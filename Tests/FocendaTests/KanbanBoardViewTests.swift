@@ -230,4 +230,17 @@ final class KanbanBoardViewTests: XCTestCase {
         XCTAssertEqual(listView.viewMode, .list)
         XCTAssertNotNil(listView.body)
     }
+
+    func testKanbanBoardHorizontalScrollContainer() {
+        // Populate tasks across statuses
+        taskVM.addTask(title: "To Do Task", priority: .high, status: .todo)
+        taskVM.addTask(title: "In Progress Task", priority: .medium, status: .inProgress)
+        taskVM.addTask(title: "Done Task", priority: .low, status: .done)
+
+        let kanbanView = KanbanBoardView(taskVM: taskVM, showHeader: true, initialViewMode: .kanban)
+        XCTAssertNotNil(kanbanView.body)
+
+        let listView = KanbanBoardView(taskVM: taskVM, showHeader: true, initialViewMode: .list)
+        XCTAssertNotNil(listView.body)
+    }
 }

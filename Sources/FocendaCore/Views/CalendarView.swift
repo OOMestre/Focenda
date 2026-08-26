@@ -119,7 +119,7 @@ public struct CalendarView: View {
                 }
 
                 if isCompact {
-                    ScrollView {
+                    ScrollView([.horizontal, .vertical], showsIndicators: true) {
                         VStack(spacing: 20) {
                             calendarMonthSection
                                 .padding(.horizontal, 16)
@@ -133,11 +133,12 @@ public struct CalendarView: View {
                                 .padding(.horizontal, 16)
                                 .padding(.bottom, 24)
                         }
+                        .frame(minWidth: 440, alignment: .topLeading)
                     }
                 } else {
                     HStack(spacing: 0) {
                         // Left Column: Monthly Calendar & Navigation
-                        ScrollView {
+                        ScrollView([.horizontal, .vertical], showsIndicators: true) {
                             calendarMonthSection
                                 .padding(20)
                         }
@@ -147,7 +148,7 @@ public struct CalendarView: View {
                             .background(AppTheme.border)
 
                         // Right Column: Selected Day Agenda & Timebox Pane
-                        ScrollView {
+                        ScrollView([.horizontal, .vertical], showsIndicators: true) {
                             selectedDayAgendaSection
                                 .padding(20)
                         }
