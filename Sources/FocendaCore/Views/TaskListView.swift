@@ -176,74 +176,151 @@ public struct TaskListView: View {
                 .font(.title2.bold())
                 .foregroundStyle(AppTheme.textPrimary)
 
-            TextField("Task title (e.g. Finish quarterly report)", text: $newTaskTitle)
-                .textFieldStyle(.roundedBorder)
-
-            TextField("Notes or extra details (optional)", text: $newTaskNotes)
-                .textFieldStyle(.roundedBorder)
-
-            HStack(spacing: 20) {
-                Picker("Status:", selection: $newTaskStatus) {
-                    ForEach(TaskStatus.allCases) { status in
-                        Text(status.rawValue).tag(status)
-                    }
-                }
-                .pickerStyle(.segmented)
-
-                Picker("Priority:", selection: $newTaskPriority) {
-                    ForEach(TaskPriority.allCases) { priority in
-                        Text(priority.rawValue).tag(priority)
-                    }
-                }
-                .pickerStyle(.segmented)
-            }
-
-            HStack {
-                TextField("Tag (e.g. Work, Study)", text: $newTaskTag)
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Title")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(AppTheme.textSecondary)
+                TextField("Task title (e.g. Finish quarterly report)", text: $newTaskTitle)
                     .textFieldStyle(.roundedBorder)
-
-                Stepper("Estimated Pomodoros: \(newTaskEstimatedPomodoros)", value: $newTaskEstimatedPomodoros, in: 1...10)
-                    .foregroundStyle(AppTheme.textPrimary)
             }
 
-            // Timed Reminder
-            VStack(alignment: .leading, spacing: 8) {
-                Toggle("Enable Timed Reminder", isOn: $newTaskHasReminder)
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(AppTheme.textPrimary)
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Notes (optional)")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(AppTheme.textSecondary)
+                TextField("Notes or extra details...", text: $newTaskNotes)
+                    .textFieldStyle(.roundedBorder)
+            }
+
+            // Status and Priority segmented pickers with clear top labels to avoid wrapping
+            HStack(alignment: .top, spacing: 16) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Status")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(AppTheme.textSecondary)
+                    Picker("Status", selection: $newTaskStatus) {
+                        ForEach(TaskStatus.allCases) { status in
+                            Text(status.rawValue).tag(status)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                }
+                .frame(maxWidth: .infinity)
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Priority")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(AppTheme.textSecondary)
+                    Picker("Priority", selection: $newTaskPriority) {
+                        ForEach(TaskPriority.allCases) { priority in
+                            Text(priority.rawValue).tag(priority)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                }
+                .frame(maxWidth: .infinity)
+            }
+
+            // Tags & Pomodoros row
+            HStack(alignment: .top, spacing: 16) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Tags")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(AppTheme.textSecondary)
+                    TextField("e.g. Work, Study", text: $newTaskTag)
+                        .textFieldStyle(.roundedBorder)
+                }
+                .frame(maxWidth: .infinity)
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Estimated Pomodoros: \(newTaskEstimatedPomodoros)")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(AppTheme.textSecondary)
+                    HStack {
+                        Stepper("", value: $newTaskEstimatedPomodoros, in: 1...10)
+                            .labelsHidden()
+                        Spacer()
+                    }
+                }
+                .frame(maxWidth: .infinity)
+            }
+
+            // Timed Reminder Section
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    Label("Enable Timed Reminder", systemImage: "bell.fill")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(AppTheme.textPrimary)
+                    Spacer()
+                    Toggle("", isOn: $newTaskHasReminder)
+                        .labelsHidden()
+                        .toggleStyle(.switch)
+                }
 
                 if newTaskHasReminder {
-                    DatePicker(
-                        "Reminder Date & Time:",
-                        selection: $newTaskReminderDate,
-                        in: Date()...,
-                        displayedComponents: [.date, .hourAndMinute]
-                    )
-                    .datePickerStyle(.compact)
+                    HStack {
+                        Text("Reminder Date & Time:")
+                            .font(.subheadline)
+                            .foregroundStyle(AppTheme.textSecondary)
+                        Spacer()
+                        DatePicker(
+                            "",
+                            selection: $newTaskReminderDate,
+                            in: Date()...,
+                            displayedComponents: [.date, .hourAndMinute]
+                        )
+                        .labelsHidden()
+                        .datePickerStyle(.compact)
+                    }
+                    .padding(.top, 2)
                 }
             }
-            .padding(10)
+            .padding(12)
             .background(AppTheme.cardBackgroundSubtle)
-            .clipShape(RoundedRectangle(cornerRadius: 8))
+            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .stroke(AppTheme.border, lineWidth: 1)
+            )
 
-            // Due Date
-            VStack(alignment: .leading, spacing: 8) {
-                Toggle("Set Due Date", isOn: $newTaskHasDueDate)
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(AppTheme.textPrimary)
+            // Due Date Section
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    Label("Set Due Date", systemImage: "calendar")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(AppTheme.textPrimary)
+                    Spacer()
+                    Toggle("", isOn: $newTaskHasDueDate)
+                        .labelsHidden()
+                        .toggleStyle(.switch)
+                }
 
                 if newTaskHasDueDate {
-                    DatePicker(
-                        "Due Date:",
-                        selection: $newTaskDueDate,
-                        displayedComponents: [.date]
-                    )
-                    .datePickerStyle(.compact)
+                    HStack {
+                        Text("Due Date:")
+                            .font(.subheadline)
+                            .foregroundStyle(AppTheme.textSecondary)
+                        Spacer()
+                        DatePicker(
+                            "",
+                            selection: $newTaskDueDate,
+                            displayedComponents: [.date]
+                        )
+                        .labelsHidden()
+                        .datePickerStyle(.compact)
+                    }
+                    .padding(.top, 2)
                 }
             }
-            .padding(10)
+            .padding(12)
             .background(AppTheme.cardBackgroundSubtle)
-            .clipShape(RoundedRectangle(cornerRadius: 8))
+            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .stroke(AppTheme.border, lineWidth: 1)
+            )
 
             HStack {
                 Button("Cancel") {

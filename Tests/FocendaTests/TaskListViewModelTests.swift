@@ -68,6 +68,31 @@ final class TaskListViewModelTests: XCTestCase {
         XCTAssertNil(viewModel.tasks.first { $0.id == task.id }?.completedAt)
     }
 
+    func testMoveTaskAllStatusPermutations() {
+        let task = TaskItem(title: "Permutation Task", status: .todo)
+        viewModel.tasks = [task]
+
+        // todo -> done
+        viewModel.moveTask(id: task.id, to: .done)
+        XCTAssertEqual(viewModel.tasks.first?.status, .done)
+        XCTAssertTrue(viewModel.tasks.first?.isCompleted ?? false)
+        XCTAssertNotNil(viewModel.tasks.first?.completedAt)
+
+        // done -> todo
+        viewModel.moveTask(id: task.id, to: .todo)
+        XCTAssertEqual(viewModel.tasks.first?.status, .todo)
+        XCTAssertFalse(viewModel.tasks.first?.isCompleted ?? true)
+        XCTAssertNil(viewModel.tasks.first?.completedAt)
+
+        // todo -> inProgress
+        viewModel.moveTask(id: task.id, to: .inProgress)
+        XCTAssertEqual(viewModel.tasks.first?.status, .inProgress)
+
+        // inProgress -> todo
+        viewModel.moveTask(id: task.id, to: .todo)
+        XCTAssertEqual(viewModel.tasks.first?.status, .todo)
+    }
+
     func testTasksForStatusColumn() {
         viewModel.tasks = [
             TaskItem(title: "Task 1", priority: .low, status: .todo),
@@ -113,6 +138,26 @@ final class TaskListViewModelTests: XCTestCase {
 
         XCTAssertEqual(viewModel.tasks.count, countBefore - 1)
         XCTAssertFalse(viewModel.tasks.contains { $0.id == task.id })
+    }
+
+    func testUpdateTask() {
+        guard var task = viewModel.tasks.first else {
+            XCTFail("Should contain initial sample task")
+            return
+        }
+
+        task.title = "Updated Task Title"
+        task.notes = "Updated Task Notes"
+        task.priority = .high
+        task.status = .inProgress
+
+        viewModel.updateTask(task)
+
+        let retrieved = viewModel.tasks.first { $0.id == task.id }
+        XCTAssertEqual(retrieved?.title, "Updated Task Title")
+        XCTAssertEqual(retrieved?.notes, "Updated Task Notes")
+        XCTAssertEqual(retrieved?.priority, .high)
+        XCTAssertEqual(retrieved?.status, .inProgress)
     }
 
     func testFilterTasks() {

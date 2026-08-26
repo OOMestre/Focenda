@@ -81,6 +81,30 @@ final class KanbanBoardViewTests: XCTestCase {
         XCTAssertEqual(taskVM.tasks(for: .inProgress).count, 0)
     }
 
+    func testKanbanDragAndDropUUIDExtractionAndMove() {
+        let task = TaskItem(title: "Draggable Task", priority: .high, status: .todo)
+        taskVM.tasks = [task]
+
+        // Simulate dragged string item containing UUID string
+        let draggedString = task.id.uuidString
+        guard let extractedUUID = UUID(uuidString: draggedString) else {
+            XCTFail("Should successfully decode UUID from dragged string")
+            return
+        }
+
+        XCTAssertEqual(extractedUUID, task.id)
+
+        // Move to inProgress
+        taskVM.moveTask(id: extractedUUID, to: .inProgress)
+        XCTAssertEqual(taskVM.tasks(for: .inProgress).count, 1)
+        XCTAssertEqual(taskVM.tasks(for: .todo).count, 0)
+
+        // Move to done
+        taskVM.moveTask(id: extractedUUID, to: .done)
+        XCTAssertEqual(taskVM.tasks(for: .done).count, 1)
+        XCTAssertTrue(taskVM.tasks.first?.isCompleted ?? false)
+    }
+
     func testKanbanTaskQuickAdd() {
         let initialTodoCount = taskVM.todoTasksCount
         let initialInProgressCount = taskVM.inProgressTasksCount
@@ -145,6 +169,36 @@ final class KanbanBoardViewTests: XCTestCase {
 
         taskVM.incrementTaskPomodoro(taskId: task.id)
         XCTAssertEqual(taskVM.tasks.first?.completedPomodoros, 3)
+    }
+
+    func testKanbanStatPill() {
+        let pill = KanbanStatPill(title: "In Progress", count: 5, color: AppTheme.sandstone)
+        XCTAssertEqual(pill.title, "In Progress")
+        XCTAssertEqual(pill.count, 5)
+        XCTAssertNotNil(pill.body)
+    }
+
+    func testKanbanTaskFormSheet() {
+        var savedTitle: String? = nil
+        var savedPriority: TaskPriority? = nil
+        var savedStatus: TaskStatus? = nil
+
+        let sheet = KanbanTaskFormSheet(
+            initialStatus: .inProgress,
+            onSave: { title, notes, priority, status, reminder, due, tags, pomodoros in
+                savedTitle = title
+                savedPriority = priority
+                savedStatus = status
+            }
+        )
+        XCTAssertEqual(sheet.initialStatus, .inProgress)
+        XCTAssertNil(sheet.editingTask)
+        XCTAssertNotNil(sheet.body)
+
+        sheet.onSave("Form Task", "Notes", .high, .done, nil, nil, ["Tag"], 2)
+        XCTAssertEqual(savedTitle, "Form Task")
+        XCTAssertEqual(savedPriority, .high)
+        XCTAssertEqual(savedStatus, .done)
     }
 
     func testTaskViewModeEnum() {
