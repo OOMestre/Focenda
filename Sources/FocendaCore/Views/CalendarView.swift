@@ -18,6 +18,9 @@ public struct CalendarDay: Identifiable, Equatable {
     public let focusSessionsCount: Int
     public let habitsCompletedCount: Int
     public let tasksCount: Int
+    public let dueTasksCount: Int
+    public let hasDueTasks: Bool
+    public let hasReminders: Bool
     public let hasHabitStreak: Bool
 
     public var focusHeatmapLevel: Int {
@@ -25,6 +28,36 @@ public struct CalendarDay: Identifiable, Equatable {
         if focusMinutes <= 25 { return 1 }
         if focusMinutes <= 60 { return 2 }
         return 3
+    }
+
+    public init(
+        date: Date,
+        dayNumber: Int,
+        isCurrentMonth: Bool,
+        isToday: Bool,
+        isSelected: Bool,
+        focusMinutes: Int,
+        focusSessionsCount: Int,
+        habitsCompletedCount: Int,
+        tasksCount: Int,
+        dueTasksCount: Int = 0,
+        hasDueTasks: Bool = false,
+        hasReminders: Bool = false,
+        hasHabitStreak: Bool = false
+    ) {
+        self.date = date
+        self.dayNumber = dayNumber
+        self.isCurrentMonth = isCurrentMonth
+        self.isToday = isToday
+        self.isSelected = isSelected
+        self.focusMinutes = focusMinutes
+        self.focusSessionsCount = focusSessionsCount
+        self.habitsCompletedCount = habitsCompletedCount
+        self.tasksCount = tasksCount
+        self.dueTasksCount = dueTasksCount
+        self.hasDueTasks = hasDueTasks
+        self.hasReminders = hasReminders
+        self.hasHabitStreak = hasHabitStreak
     }
 }
 
@@ -220,7 +253,7 @@ public struct CalendarView: View {
             }
         } label: {
             VStack(spacing: 3) {
-                // Day Number + Today / Streak Indicator
+                // Day Number + Today / Streak / Reminder Indicator
                 HStack(spacing: 2) {
                     Text("\(day.dayNumber)")
                         .font(.system(size: 12, weight: day.isToday ? .heavy : (day.isSelected ? .bold : .medium), design: .rounded))
@@ -238,6 +271,12 @@ public struct CalendarView: View {
 
                     Spacer(minLength: 0)
 
+                    if day.hasReminders {
+                        Image(systemName: "bell.fill")
+                            .font(.system(size: 7))
+                            .foregroundStyle(day.isSelected ? .white.opacity(0.9) : AppTheme.sandstone)
+                    }
+
                     if day.hasHabitStreak {
                         Image(systemName: "flame.fill")
                             .font(.system(size: 8))
@@ -247,7 +286,7 @@ public struct CalendarView: View {
 
                 Spacer(minLength: 1)
 
-                // Heatmap dots & task indicators
+                // Heatmap dots & task indicators (Focus + Due Tasks + Tasks)
                 HStack(spacing: 3) {
                     // Focus Heatmap indicator
                     if day.focusHeatmapLevel > 0 {
@@ -256,8 +295,15 @@ public struct CalendarView: View {
                             .frame(width: 5, height: 5)
                     }
 
+                    // Due Tasks indicator (amber / sandstone dot)
+                    if day.hasDueTasks {
+                        Circle()
+                            .fill(day.isSelected ? Color.white : AppTheme.sandstone)
+                            .frame(width: 4, height: 4)
+                    }
+
                     // Tasks indicator
-                    if day.tasksCount > 0 {
+                    if day.tasksCount > day.dueTasksCount || (!day.hasDueTasks && day.tasksCount > 0) {
                         Circle()
                             .fill(day.isSelected ? Color.white.opacity(0.85) : AppTheme.riverSlate)
                             .frame(width: 4, height: 4)
@@ -297,7 +343,7 @@ public struct CalendarView: View {
         .onHover { hovering in
             hoveredDate = hovering ? day.date : nil
         }
-        .help("\(formattedFullDate(day.date)): \(day.focusMinutes)m focus, \(day.habitsCompletedCount) habits, \(day.tasksCount) tasks")
+        .help("\(formattedFullDate(day.date)): \(day.focusMinutes)m focus, \(day.habitsCompletedCount) habits, \(day.tasksCount) tasks\(day.dueTasksCount > 0 ? ", \(day.dueTasksCount) due" : "")\(day.hasReminders ? ", has reminders" : "")")
     }
 
     private func heatmapDotColor(level: Int, isSelected: Bool) -> Color {
@@ -352,6 +398,13 @@ public struct CalendarView: View {
             }
 
             Spacer(minLength: 4)
+
+            HStack(spacing: 3) {
+                Circle().fill(AppTheme.sandstone).frame(width: 5, height: 5)
+                Text("Due Task")
+                    .font(.system(size: 9))
+                    .foregroundStyle(AppTheme.textTertiary)
+            }
 
             HStack(spacing: 3) {
                 Image(systemName: "flame.fill")
@@ -777,7 +830,7 @@ public struct CalendarView: View {
                             }
                             .buttonStyle(.plain)
 
-                            VStack(alignment: .leading, spacing: 1) {
+                            VStack(alignment: .leading, spacing: 3) {
                                 Text(task.title)
                                     .font(.caption.weight(.medium))
                                     .strikethrough(task.isCompleted, color: AppTheme.textSecondary)
@@ -789,6 +842,33 @@ public struct CalendarView: View {
                                         .font(.system(size: 9))
                                         .foregroundStyle(AppTheme.textTertiary)
                                         .lineLimit(1)
+                                }
+
+                                // Badges: Due Date Badge and Reminder Badge
+                                HStack(spacing: 4) {
+                                    if let dueBadge = dueDateBadge(for: task, on: selectedDate) {
+                                        HStack(spacing: 2) {
+                                            Image(systemName: "calendar")
+                                                .font(.system(size: 7, weight: .semibold))
+                                            Text(dueBadge.text)
+                                                .font(.system(size: 8, weight: .semibold))
+                                        }
+                                        .padding(.horizontal, 5)
+                                        .padding(.vertical, 1.5)
+                                        .background(dueBadge.color.opacity(0.12))
+                                        .foregroundStyle(dueBadge.color)
+                                        .clipShape(Capsule())
+                                    }
+
+                                    if let reminderText = reminderBadge(for: task) {
+                                        Text(reminderText)
+                                            .font(.system(size: 8, weight: .semibold))
+                                            .padding(.horizontal, 5)
+                                            .padding(.vertical, 1.5)
+                                            .background(AppTheme.sandstone.opacity(0.12))
+                                            .foregroundStyle(AppTheme.sandstone)
+                                            .clipShape(Capsule())
+                                    }
                                 }
                             }
 
@@ -823,7 +903,8 @@ public struct CalendarView: View {
 
         taskVM.addTask(
             title: trimmed,
-            priority: quickTaskPriority
+            priority: quickTaskPriority,
+            dueDate: selectedDate
         )
         quickTaskTitle = ""
     }
@@ -877,6 +958,19 @@ public struct CalendarView: View {
             let habits = habitsCompleted(for: currentDate)
             let tasksList = tasks(for: currentDate)
 
+            let dueTasks = tasksList.filter { task in
+                if let due = task.dueDate {
+                    return calendar.isDate(due, inSameDayAs: currentDate)
+                }
+                return false
+            }
+            let hasReminders = tasksList.contains { task in
+                if let rem = task.reminderDate {
+                    return calendar.isDate(rem, inSameDayAs: currentDate)
+                }
+                return false
+            }
+
             let day = CalendarDay(
                 date: currentDate,
                 dayNumber: dayNumber,
@@ -887,6 +981,9 @@ public struct CalendarView: View {
                 focusSessionsCount: sessions.count,
                 habitsCompletedCount: habits.count,
                 tasksCount: tasksList.count,
+                dueTasksCount: dueTasks.count,
+                hasDueTasks: !dueTasks.isEmpty,
+                hasReminders: hasReminders,
                 hasHabitStreak: !habits.isEmpty
             )
             days.append(day)
@@ -920,6 +1017,12 @@ public struct CalendarView: View {
 
     public func tasks(for date: Date) -> [TaskItem] {
         taskVM.tasks.filter { task in
+            if let dueDate = task.dueDate, calendar.isDate(dueDate, inSameDayAs: date) {
+                return true
+            }
+            if let reminderDate = task.reminderDate, calendar.isDate(reminderDate, inSameDayAs: date) {
+                return true
+            }
             if let completedAt = task.completedAt, calendar.isDate(completedAt, inSameDayAs: date) {
                 return true
             }
@@ -931,6 +1034,42 @@ public struct CalendarView: View {
             }
             return false
         }
+    }
+
+    public func dueDateBadge(for task: TaskItem, on referenceDate: Date = Date()) -> (text: String, color: Color)? {
+        guard let dueDate = task.dueDate else { return nil }
+
+        let startOfDue = calendar.startOfDay(for: dueDate)
+        let startOfToday = calendar.startOfDay(for: Date())
+
+        if !task.isCompleted && startOfDue < startOfToday {
+            return ("Overdue", AppTheme.terracotta)
+        }
+
+        if calendar.isDate(dueDate, inSameDayAs: referenceDate) {
+            if calendar.isDateInToday(dueDate) {
+                return ("Due Today", AppTheme.sandstone)
+            } else if calendar.isDateInTomorrow(dueDate) {
+                return ("Due Tomorrow", AppTheme.sandstone)
+            } else {
+                return ("Due on this day", AppTheme.sandstone)
+            }
+        } else if calendar.isDateInTomorrow(dueDate) {
+            return ("Due Tomorrow", AppTheme.sandstone)
+        } else if calendar.isDateInToday(dueDate) {
+            return ("Due Today", AppTheme.sandstone)
+        } else {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "MMM d"
+            return ("Due \(formatter.string(from: dueDate))", AppTheme.sandstone)
+        }
+    }
+
+    public func reminderBadge(for task: TaskItem) -> String? {
+        guard let reminderDate = task.reminderDate else { return nil }
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm"
+        return "🔔 \(formatter.string(from: reminderDate))"
     }
 
     public func calculateMonthlyStats(for month: Date) -> (totalFocusMinutes: Int, sessionsCount: Int, habitsCompleted: Int, tasksCompleted: Int, activeDays: Int) {

@@ -238,6 +238,229 @@ final class CalendarViewTests: XCTestCase {
         XCTAssertEqual(tasks.first?.title, "Ship Calendar Feature")
     }
 
+    func testTasksForDateWithDueDate() {
+        let timerVM = FocusTimerViewModel()
+        let taskVM = TaskListViewModel()
+        taskVM.tasks = []
+        let habitVM = HabitViewModel()
+
+        let createdDate = Calendar.current.date(byAdding: .day, value: -5, to: Date())!
+        let futureDueDate = Calendar.current.date(byAdding: .day, value: 3, to: Date())!
+
+        let taskWithDue = TaskItem(
+            title: "Prepare Release Notes",
+            createdAt: createdDate,
+            dueDate: futureDueDate
+        )
+        taskVM.tasks = [taskWithDue]
+
+        let calendarView = CalendarView(
+            timerVM: timerVM,
+            taskVM: taskVM,
+            habitVM: habitVM,
+            initialDate: futureDueDate
+        )
+
+        // Matching dueDate on future date
+        let matchingTasks = calendarView.tasks(for: futureDueDate)
+        XCTAssertEqual(matchingTasks.count, 1)
+        XCTAssertEqual(matchingTasks.first?.title, "Prepare Release Notes")
+
+        // Non-matching other date (e.g. 4 days from now)
+        let otherDate = Calendar.current.date(byAdding: .day, value: 4, to: Date())!
+        let nonMatching = calendarView.tasks(for: otherDate)
+        XCTAssertEqual(nonMatching.count, 0)
+    }
+
+    func testTasksForDateWithReminderDate() {
+        let timerVM = FocusTimerViewModel()
+        let taskVM = TaskListViewModel()
+        taskVM.tasks = []
+        let habitVM = HabitViewModel()
+
+        let createdDate = Calendar.current.date(byAdding: .day, value: -10, to: Date())!
+        let reminderDate = Calendar.current.date(byAdding: .day, value: 5, to: Date())!
+
+        let taskWithReminder = TaskItem(
+            title: "Follow up on feedback",
+            createdAt: createdDate,
+            reminderDate: reminderDate
+        )
+        taskVM.tasks = [taskWithReminder]
+
+        let calendarView = CalendarView(
+            timerVM: timerVM,
+            taskVM: taskVM,
+            habitVM: habitVM,
+            initialDate: reminderDate
+        )
+
+        let tasksOnReminderDay = calendarView.tasks(for: reminderDate)
+        XCTAssertEqual(tasksOnReminderDay.count, 1)
+        XCTAssertEqual(tasksOnReminderDay.first?.title, "Follow up on feedback")
+    }
+
+    func testTasksForDateAllMatchingConditions() {
+        let timerVM = FocusTimerViewModel()
+        let taskVM = TaskListViewModel()
+        taskVM.tasks = []
+        let habitVM = HabitViewModel()
+
+        let today = Date()
+        let pastDate = Calendar.current.date(byAdding: .day, value: -3, to: today)!
+
+        let task1 = TaskItem(title: "Active Today Task", createdAt: pastDate)
+        let task2 = TaskItem(title: "Completed Past Task", isCompleted: true, createdAt: pastDate, completedAt: pastDate)
+        let task3 = TaskItem(title: "Created Past Incomplete", status: .inProgress, createdAt: pastDate)
+
+        taskVM.tasks = [task1, task2, task3]
+
+        let calendarView = CalendarView(
+            timerVM: timerVM,
+            taskVM: taskVM,
+            habitVM: habitVM,
+            initialDate: today
+        )
+
+        // Today should include active pending tasks
+        let todayTasks = calendarView.tasks(for: today)
+        XCTAssertTrue(todayTasks.contains(where: { $0.title == "Active Today Task" }))
+        XCTAssertTrue(todayTasks.contains(where: { $0.title == "Created Past Incomplete" }))
+        XCTAssertFalse(todayTasks.contains(where: { $0.title == "Completed Past Task" }))
+
+        // Past date should include tasks completed on that date or created on that date
+        let pastTasks = calendarView.tasks(for: pastDate)
+        XCTAssertTrue(pastTasks.contains(where: { $0.title == "Completed Past Task" }))
+        XCTAssertTrue(pastTasks.contains(where: { $0.title == "Active Today Task" }))
+    }
+
+    func testDueDateBadgeLabels() {
+        let timerVM = FocusTimerViewModel()
+        let taskVM = TaskListViewModel()
+        let habitVM = HabitViewModel()
+        let calendarView = CalendarView(timerVM: timerVM, taskVM: taskVM, habitVM: habitVM)
+
+        let today = Date()
+        let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: today)!
+        let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: today)!
+        let nextWeek = Calendar.current.date(byAdding: .day, value: 7, to: today)!
+
+        // 1. Overdue task
+        let overdueTask = TaskItem(title: "Overdue", dueDate: yesterday)
+        let overdueBadge = calendarView.dueDateBadge(for: overdueTask, on: today)
+        XCTAssertNotNil(overdueBadge)
+        XCTAssertEqual(overdueBadge?.text, "Overdue")
+
+        // Completed task in the past is NOT overdue
+        let completedPastTask = TaskItem(title: "Done", isCompleted: true, dueDate: yesterday)
+        let completedBadge = calendarView.dueDateBadge(for: completedPastTask, on: today)
+        XCTAssertNotNil(completedBadge)
+        XCTAssertNotEqual(completedBadge?.text, "Overdue")
+
+        // 2. Due Today
+        let dueTodayTask = TaskItem(title: "Due Today", dueDate: today)
+        let todayBadge = calendarView.dueDateBadge(for: dueTodayTask, on: today)
+        XCTAssertNotNil(todayBadge)
+        XCTAssertEqual(todayBadge?.text, "Due Today")
+
+        // 3. Due Tomorrow
+        let dueTomorrowTask = TaskItem(title: "Due Tomorrow", dueDate: tomorrow)
+        let tomorrowBadge = calendarView.dueDateBadge(for: dueTomorrowTask, on: today)
+        XCTAssertNotNil(tomorrowBadge)
+        XCTAssertEqual(tomorrowBadge?.text, "Due Tomorrow")
+
+        // 4. Due on selected day
+        let dueNextWeekTask = TaskItem(title: "Due Next Week", dueDate: nextWeek)
+        let onDayBadge = calendarView.dueDateBadge(for: dueNextWeekTask, on: nextWeek)
+        XCTAssertNotNil(onDayBadge)
+        XCTAssertEqual(onDayBadge?.text, "Due on this day")
+
+        // 5. No due date
+        let noDueTask = TaskItem(title: "No Due Date")
+        XCTAssertNil(calendarView.dueDateBadge(for: noDueTask, on: today))
+    }
+
+    func testReminderBadgeFormat() {
+        let timerVM = FocusTimerViewModel()
+        let taskVM = TaskListViewModel()
+        let habitVM = HabitViewModel()
+        let calendarView = CalendarView(timerVM: timerVM, taskVM: taskVM, habitVM: habitVM)
+
+        var components = DateComponents()
+        components.year = 2026
+        components.month = 8
+        components.day = 26
+        components.hour = 15
+        components.minute = 30
+        let reminderTime = Calendar.current.date(from: components)!
+
+        let taskWithReminder = TaskItem(title: "Reminder Task", reminderDate: reminderTime)
+        let badge = calendarView.reminderBadge(for: taskWithReminder)
+        XCTAssertEqual(badge, "🔔 15:30")
+
+        let taskNoReminder = TaskItem(title: "Regular Task")
+        XCTAssertNil(calendarView.reminderBadge(for: taskNoReminder))
+    }
+
+    func testCalendarDayIndicatorsAndCounters() {
+        let date = Date()
+        let day = CalendarDay(
+            date: date,
+            dayNumber: 26,
+            isCurrentMonth: true,
+            isToday: true,
+            isSelected: false,
+            focusMinutes: 45,
+            focusSessionsCount: 2,
+            habitsCompletedCount: 1,
+            tasksCount: 4,
+            dueTasksCount: 2,
+            hasDueTasks: true,
+            hasReminders: true,
+            hasHabitStreak: true
+        )
+
+        XCTAssertEqual(day.dueTasksCount, 2)
+        XCTAssertTrue(day.hasDueTasks)
+        XCTAssertTrue(day.hasReminders)
+        XCTAssertEqual(day.tasksCount, 4)
+        XCTAssertEqual(day.focusHeatmapLevel, 2)
+    }
+
+    func testCalculateDaysInMonthIncludesDueAndReminders() {
+        let timerVM = FocusTimerViewModel()
+        let taskVM = TaskListViewModel()
+        taskVM.tasks = []
+        let habitVM = HabitViewModel()
+
+        var components = DateComponents()
+        components.year = 2026
+        components.month = 8
+        components.day = 18
+        components.hour = 14
+        let aug18 = Calendar.current.date(from: components)!
+
+        let task1 = TaskItem(title: "August 18 Due Task", dueDate: aug18)
+        let task2 = TaskItem(title: "August 18 Reminder Task", reminderDate: aug18)
+        taskVM.tasks = [task1, task2]
+
+        let calendarView = CalendarView(
+            timerVM: timerVM,
+            taskVM: taskVM,
+            habitVM: habitVM,
+            initialDate: aug18
+        )
+
+        let days = calendarView.calculateDaysInMonth(for: aug18)
+        let targetDay = days.first(where: { $0.isCurrentMonth && $0.dayNumber == 18 })
+
+        XCTAssertNotNil(targetDay)
+        XCTAssertEqual(targetDay?.dueTasksCount, 1)
+        XCTAssertEqual(targetDay?.hasDueTasks, true)
+        XCTAssertEqual(targetDay?.hasReminders, true)
+        XCTAssertEqual(targetDay?.tasksCount, 2)
+    }
+
     func testMonthlyStatsCalculation() {
         let timerVM = FocusTimerViewModel()
         let taskVM = TaskListViewModel()
@@ -373,6 +596,9 @@ final class CalendarViewTests: XCTestCase {
             focusSessionsCount: 1,
             habitsCompletedCount: 2,
             tasksCount: 3,
+            dueTasksCount: 1,
+            hasDueTasks: true,
+            hasReminders: false,
             hasHabitStreak: true
         )
 
@@ -381,6 +607,9 @@ final class CalendarViewTests: XCTestCase {
         XCTAssertTrue(day.isCurrentMonth)
         XCTAssertTrue(day.isToday)
         XCTAssertFalse(day.isSelected)
+        XCTAssertEqual(day.dueTasksCount, 1)
+        XCTAssertTrue(day.hasDueTasks)
+        XCTAssertFalse(day.hasReminders)
         XCTAssertTrue(day.hasHabitStreak)
     }
 }
