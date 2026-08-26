@@ -1,12 +1,14 @@
 import SwiftUI
 
-/// Elegant statistics card component for macOS
+/// Elegant statistics card component with hover elevation and subtle gradient border for macOS
 public struct StatCard: View {
     public let title: String
     public let value: String
     public let subtitle: String?
     public let icon: String
     public let color: Color
+
+    @State private var isHovered: Bool = false
 
     public init(
         title: String,
@@ -23,19 +25,20 @@ public struct StatCard: View {
     }
 
     public var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Image(systemName: icon)
-                    .font(.title2)
+                    .font(.title3)
                     .foregroundStyle(color)
-                    .frame(width: 36, height: 36)
-                    .background(color.opacity(0.12))
-                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    .frame(width: 38, height: 38)
+                    .background(color.opacity(isHovered ? 0.18 : 0.12))
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .scaleEffect(isHovered ? 1.06 : 1.0)
 
                 Spacer()
             }
 
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 3) {
                 Text(value)
                     .font(.system(size: 26, weight: .bold, design: .rounded))
                     .foregroundStyle(.primary)
@@ -52,16 +55,36 @@ public struct StatCard: View {
                 }
             }
         }
-        .padding(16)
+        .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .fill(Color(nsColor: .controlBackgroundColor))
-                .shadow(color: Color.black.opacity(0.04), radius: 6, x: 0, y: 2)
+                .shadow(
+                    color: isHovered ? color.opacity(0.12) : Color.black.opacity(0.04),
+                    radius: isHovered ? 10 : 6,
+                    x: 0,
+                    y: isHovered ? 4 : 2
+                )
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(Color.primary.opacity(0.06), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(
+                    LinearGradient(
+                        colors: [
+                            color.opacity(isHovered ? 0.45 : 0.1),
+                            color.opacity(isHovered ? 0.2 : 0.03)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: isHovered ? 1.5 : 1
+                )
         )
+        .scaleEffect(isHovered ? 1.02 : 1.0)
+        .animation(.spring(response: 0.3, dampingFraction: 0.75), value: isHovered)
+        .onHover { hovering in
+            isHovered = hovering
+        }
     }
 }

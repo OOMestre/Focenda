@@ -5,6 +5,16 @@ public struct DashboardView: View {
     var timerVM: FocusTimerViewModel
     var taskVM: TaskListViewModel
 
+    public init(
+        appState: AppState,
+        timerVM: FocusTimerViewModel,
+        taskVM: TaskListViewModel
+    ) {
+        self.appState = appState
+        self.timerVM = timerVM
+        self.taskVM = taskVM
+    }
+
     public var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
@@ -20,14 +30,35 @@ public struct DashboardView: View {
 
     // MARK: - Header
     private var headerSection: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Ready to focus?")
-                    .font(.system(size: 28, weight: .bold, design: .rounded))
+        HStack(alignment: .center) {
+            HStack(spacing: 16) {
+                // Subtle icon flair
+                ZStack {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [Color.indigo, Color.purple],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 48, height: 48)
+                        .shadow(color: Color.indigo.opacity(0.3), radius: 8, x: 0, y: 3)
 
-                Text("Track your daily progress and reach your goals effortlessly.")
-                    .font(.body)
-                    .foregroundStyle(.secondary)
+                    Image(systemName: greetingIcon)
+                        .font(.title2)
+                        .foregroundStyle(.white)
+                }
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(greetingTitle)
+                        .font(.system(size: 26, weight: .bold, design: .rounded))
+                        .foregroundStyle(.primary)
+
+                    Text("Track your daily focus flow and accomplish your high-impact goals.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
             }
 
             Spacer()
@@ -35,7 +66,9 @@ public struct DashboardView: View {
             Button {
                 appState.selectedTab = .timer
                 if timerVM.status != .running {
-                    timerVM.start()
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
+                        timerVM.start()
+                    }
                 }
             } label: {
                 Label("Start Focus", systemImage: "play.circle.fill")
@@ -43,6 +76,35 @@ public struct DashboardView: View {
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.large)
+            .shadow(color: Color.accentColor.opacity(0.25), radius: 6, x: 0, y: 2)
+        }
+    }
+
+    private var greetingIcon: String {
+        let hour = Calendar.current.component(.hour, from: Date())
+        switch hour {
+        case 5..<12:
+            return "sun.max.fill"
+        case 12..<17:
+            return "sun.horizon.fill"
+        case 17..<22:
+            return "moon.stars.fill"
+        default:
+            return "sparkles"
+        }
+    }
+
+    private var greetingTitle: String {
+        let hour = Calendar.current.component(.hour, from: Date())
+        switch hour {
+        case 5..<12:
+            return "Good Morning"
+        case 12..<17:
+            return "Good Afternoon"
+        case 17..<22:
+            return "Good Evening"
+        default:
+            return "Ready to Focus"
         }
     }
 
@@ -85,10 +147,18 @@ public struct DashboardView: View {
 
     // MARK: - Timer Banner
     private var timerBannerSection: some View {
-        HStack(spacing: 16) {
+        HStack(spacing: 18) {
             VStack(alignment: .leading, spacing: 6) {
-                Text("Current Focus Session")
-                    .font(.headline)
+                HStack(spacing: 8) {
+                    Circle()
+                        .fill(timerVM.status == .running ? Color.green : timerVM.currentMode.themeColor)
+                        .frame(width: 9, height: 9)
+                        .shadow(color: (timerVM.status == .running ? Color.green : timerVM.currentMode.themeColor).opacity(0.6), radius: 4, x: 0, y: 0)
+
+                    Text(timerVM.status == .running ? "Active Session" : "Current Focus Session")
+                        .font(.headline)
+                }
+
                 Text(timerVM.currentMode.motivationalMessage)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
@@ -96,36 +166,56 @@ public struct DashboardView: View {
 
             Spacer()
 
-            HStack(spacing: 12) {
+            HStack(spacing: 14) {
                 Text(timerVM.formattedTimeRemaining)
                     .font(.system(size: 32, weight: .bold, design: .rounded))
                     .monospacedDigit()
                     .foregroundStyle(timerVM.currentMode.themeColor)
+                    .contentTransition(.numericText())
 
                 Button {
-                    if timerVM.status == .running {
-                        timerVM.pause()
-                    } else {
-                        timerVM.start()
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
+                        if timerVM.status == .running {
+                            timerVM.pause()
+                        } else {
+                            timerVM.start()
+                        }
                     }
                 } label: {
                     Image(systemName: timerVM.status == .running ? "pause.fill" : "play.fill")
-                        .font(.title3)
+                        .font(.title3.bold())
+                        .foregroundStyle(.white)
                         .frame(width: 44, height: 44)
+                        .background(
+                            Circle()
+                                .fill(timerVM.currentMode.themeColor)
+                                .shadow(color: timerVM.currentMode.themeColor.opacity(0.35), radius: 6, x: 0, y: 2)
+                        )
                 }
-                .buttonStyle(.borderedProminent)
-                .clipShape(Circle())
+                .buttonStyle(.plain)
+                .help(timerVM.status == .running ? "Pause" : "Start")
             }
         }
         .padding(20)
         .background(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(timerVM.currentMode.themeColor.opacity(0.08))
+                .fill(timerVM.currentMode.themeColor.opacity(0.07))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(timerVM.currentMode.themeColor.opacity(0.2), lineWidth: 1)
+                .stroke(
+                    LinearGradient(
+                        colors: [
+                            timerVM.currentMode.themeColor.opacity(0.35),
+                            timerVM.currentMode.themeColor.opacity(0.1)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1
+                )
         )
+        .animation(.spring(response: 0.35, dampingFraction: 0.75), value: timerVM.currentMode)
     }
 
     // MARK: - Featured Tasks
@@ -143,10 +233,13 @@ public struct DashboardView: View {
                 Spacer()
 
                 Button("View all") {
-                    appState.selectedTab = .tasks
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+                        appState.selectedTab = .tasks
+                    }
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(Color.accentColor)
+                .font(.subheadline.weight(.medium))
             }
 
             if featuredTasks.isEmpty {
@@ -154,9 +247,14 @@ public struct DashboardView: View {
             } else {
                 VStack(spacing: 8) {
                     ForEach(featuredTasks) { task in
-                        taskRow(task)
+                        FeaturedTaskRowView(task: task) {
+                            withAnimation(.spring(response: 0.35, dampingFraction: 0.6)) {
+                                taskVM.toggleTaskCompletion(task)
+                            }
+                        }
                     }
                 }
+                .animation(.default, value: featuredTasks)
             }
         }
     }
@@ -177,22 +275,41 @@ public struct DashboardView: View {
         .background(Color.primary.opacity(0.02))
         .clipShape(RoundedRectangle(cornerRadius: 12))
     }
+}
 
-    private func taskRow(_ task: TaskItem) -> some View {
+// MARK: - Featured Task Row View
+
+private struct FeaturedTaskRowView: View {
+    let task: TaskItem
+    let onToggle: () -> Void
+
+    @State private var isHovered: Bool = false
+    @State private var isChecking: Bool = false
+
+    var body: some View {
         HStack(spacing: 12) {
             Button {
-                taskVM.toggleTaskCompletion(task)
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.5)) {
+                    isChecking = true
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                    isChecking = false
+                }
+                onToggle()
             } label: {
                 Image(systemName: task.isCompleted ? "checkmark.circle.fill" : "circle")
                     .font(.title3)
-                    .foregroundStyle(task.isCompleted ? .green : .secondary)
+                    .foregroundStyle(task.isCompleted ? Color.green : Color.secondary)
+                    .scaleEffect(isChecking ? 1.3 : 1.0)
             }
             .buttonStyle(.plain)
+            .help(task.isCompleted ? "Mark as active" : "Mark as completed")
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(task.title)
-                    .font(.body)
-                    .strikethrough(task.isCompleted)
+                    .font(.body.weight(task.isCompleted ? .regular : .medium))
+                    .strikethrough(task.isCompleted, color: .secondary)
+                    .foregroundStyle(task.isCompleted ? .secondary : .primary)
 
                 if !task.notes.isEmpty {
                     Text(task.notes)
@@ -210,16 +327,39 @@ public struct DashboardView: View {
             .font(.caption2.bold())
             .padding(.horizontal, 8)
             .padding(.vertical, 3)
-            .background(task.priority.color.opacity(0.15))
+            .background(task.priority.color.opacity(0.14))
             .foregroundStyle(task.priority.color)
             .clipShape(Capsule())
         }
-        .padding(12)
-        .background(Color(nsColor: .controlBackgroundColor))
-        .clipShape(RoundedRectangle(cornerRadius: 8))
-        .overlay(
-            RoundedRectangle(cornerRadius: 8)
-                .stroke(Color.primary.opacity(0.05), lineWidth: 1)
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(isHovered ? Color(nsColor: .controlBackgroundColor) : Color.primary.opacity(0.02))
+                .shadow(
+                    color: isHovered ? Color.black.opacity(0.06) : Color.clear,
+                    radius: 6,
+                    x: 0,
+                    y: 2
+                )
         )
+        .overlay(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .stroke(
+                    LinearGradient(
+                        colors: [
+                            Color.primary.opacity(isHovered ? 0.14 : 0.04),
+                            Color.primary.opacity(isHovered ? 0.06 : 0.01)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1
+                )
+        )
+        .scaleEffect(isHovered ? 1.008 : 1.0)
+        .animation(.spring(response: 0.25, dampingFraction: 0.75), value: isHovered)
+        .onHover { hovering in
+            isHovered = hovering
+        }
     }
 }
