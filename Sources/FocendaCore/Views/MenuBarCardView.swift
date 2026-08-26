@@ -105,19 +105,10 @@ public struct MenuBarCardView: View {
             }
     }
 
-    private func detachToFloatingWindow() {
-        FloatingMiniTimerPanel.shared.show(
-            timerVM: timerVM,
-            taskVM: taskVM,
-            scratchpadVM: scratchpadVM,
-            at: NSEvent.mouseLocation
-        )
-    }
-
     private var cardBody: some View {
-        VStack(spacing: 14) {
-            // Drag handle pill at the top of the card
-            dragHandleSection
+        VStack(spacing: 12) {
+            // Header: App Title & Active Mode Tag
+            headerSection
 
             // Top Multi-Action Segmented Bar
             segmentedControlSection
@@ -138,44 +129,38 @@ public struct MenuBarCardView: View {
             .transition(.opacity.combined(with: .scale(scale: 0.98)))
             .animation(.spring(response: 0.28, dampingFraction: 0.75), value: selectedSection)
 
-            // Footer actions (Floating Widget, Open Main App, Quit)
+            // Footer actions (Open Main App, Quit)
             footerSection
         }
     }
 
-    // MARK: - Drag / Detach Handle
-    private var dragHandleSection: some View {
-        HStack {
-            Spacer()
-            Button {
-                detachToFloatingWindow()
-            } label: {
-                HStack(spacing: 5) {
-                    Capsule()
-                        .fill(Color.secondary.opacity(0.4))
-                        .frame(width: 36, height: 4)
-                    Image(systemName: "arrow.up.left.and.down.right.and.arrow.up.right.and.down.left")
-                        .font(.system(size: 9, weight: .bold))
-                        .foregroundStyle(AppTheme.textTertiary)
-                }
-                .padding(.vertical, 4)
-                .padding(.horizontal, 10)
-                .background(AppTheme.cardBackgroundSubtle.opacity(0.6))
-                .clipShape(Capsule())
+    // MARK: - Header
+    private var headerSection: some View {
+        HStack(alignment: .center) {
+            HStack(spacing: 6) {
+                Image(systemName: "timer")
+                    .foregroundStyle(timerVM.currentMode.themeColor)
+                    .font(.headline)
+                Text("Focenda")
+                    .font(.headline.bold())
+                    .foregroundStyle(AppTheme.textPrimary)
             }
-            .buttonStyle(.plain)
-            .help("Drag or click to detach floating window across screen")
+
             Spacer()
+
+            // Active Mode Tag
+            HStack(spacing: 4) {
+                Image(systemName: timerVM.currentMode.iconName)
+                    .font(.caption2)
+                Text(timerVM.currentMode.rawValue)
+                    .font(.caption.weight(.semibold))
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
+            .background(timerVM.currentMode.themeColor.opacity(0.12))
+            .foregroundStyle(timerVM.currentMode.themeColor)
+            .clipShape(Capsule())
         }
-        .padding(.top, -4)
-        .padding(.bottom, 2)
-        .contentShape(Rectangle())
-        .gesture(
-            DragGesture(minimumDistance: 2)
-                .onChanged { _ in
-                    detachToFloatingWindow()
-                }
-        )
     }
 
     // MARK: - Segmented Control Bar
@@ -844,28 +829,6 @@ public struct MenuBarCardView: View {
     private var footerSection: some View {
         VStack(spacing: 8) {
             Divider()
-
-            // Detach Floating Widget Action Button
-            Button {
-                FloatingMiniTimerPanel.shared.toggle(timerVM: timerVM)
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "macwindow.on.rectangle")
-                        .font(.caption.weight(.semibold))
-                    Text("Detach Floating Widget")
-                        .font(.caption.weight(.medium))
-                    Spacer()
-                    Image(systemName: "pip.enter")
-                        .font(.caption2)
-                }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-                .background(AppTheme.accent.opacity(0.12))
-                .foregroundStyle(AppTheme.accent)
-                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-            }
-            .buttonStyle(.plain)
-            .help("Open native floating mini timer window on top of all apps")
 
             HStack {
                 // Open Main App Button
