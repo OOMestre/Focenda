@@ -7,13 +7,15 @@ struct FocendaApp: App {
     @State private var appState = AppState()
     @State private var timerVM = FocusTimerViewModel()
     @State private var taskVM = TaskListViewModel()
+    @State private var habitVM = HabitViewModel()
 
     var body: some Scene {
         WindowGroup {
             MainView(
                 appState: appState,
                 timerVM: timerVM,
-                taskVM: taskVM
+                taskVM: taskVM,
+                habitVM: habitVM
             )
         }
         .windowStyle(.titleBar)

@@ -4,15 +4,18 @@ public struct MainView: View {
     @State private var appState: AppState
     @State private var timerVM: FocusTimerViewModel
     @State private var taskVM: TaskListViewModel
+    @State private var habitVM: HabitViewModel
 
     public init(
         appState: AppState = AppState(),
         timerVM: FocusTimerViewModel = FocusTimerViewModel(),
-        taskVM: TaskListViewModel = TaskListViewModel()
+        taskVM: TaskListViewModel = TaskListViewModel(),
+        habitVM: HabitViewModel = HabitViewModel()
     ) {
         _appState = State(initialValue: appState)
         _timerVM = State(initialValue: timerVM)
         _taskVM = State(initialValue: taskVM)
+        _habitVM = State(initialValue: habitVM)
     }
 
     public var body: some View {
@@ -20,7 +23,8 @@ public struct MainView: View {
             SidebarView(
                 appState: appState,
                 timerVM: timerVM,
-                taskVM: taskVM
+                taskVM: taskVM,
+                habitVM: habitVM
             )
             .navigationSplitViewColumnWidth(min: 210, ideal: 230, max: 280)
         } detail: {
@@ -29,12 +33,15 @@ public struct MainView: View {
                 DashboardView(
                     appState: appState,
                     timerVM: timerVM,
-                    taskVM: taskVM
+                    taskVM: taskVM,
+                    habitVM: habitVM
                 )
             case .timer:
                 FocusTimerView(timerVM: timerVM)
             case .tasks:
                 TaskListView(taskVM: taskVM)
+            case .habits:
+                HabitTrackerView(habitVM: habitVM)
             case .stats:
                 StatsView(
                     timerVM: timerVM,

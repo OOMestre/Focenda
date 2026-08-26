@@ -4,17 +4,20 @@ public struct SidebarView: View {
     @Bindable var appState: AppState
     var timerVM: FocusTimerViewModel
     var taskVM: TaskListViewModel
+    var habitVM: HabitViewModel
 
     @State private var isPulsingDot = false
 
     public init(
         appState: AppState,
         timerVM: FocusTimerViewModel,
-        taskVM: TaskListViewModel
+        taskVM: TaskListViewModel,
+        habitVM: HabitViewModel = HabitViewModel()
     ) {
         self.appState = appState
         self.timerVM = timerVM
         self.taskVM = taskVM
+        self.habitVM = habitVM
     }
 
     public var body: some View {
@@ -25,6 +28,9 @@ public struct SidebarView: View {
                     isSelected: appState.selectedTab == tab,
                     timerIsRunning: timerVM.status == .running,
                     pendingTasksCount: taskVM.pendingTasksCount,
+                    habitsCompletedToday: habitVM.totalCompletionsToday,
+                    totalHabitsCount: habitVM.habits.count,
+                    longestHabitStreak: habitVM.longestStreak,
                     isPulsingDot: isPulsingDot
                 )
             }
@@ -113,6 +119,9 @@ private struct SidebarRowItem: View {
     let isSelected: Bool
     let timerIsRunning: Bool
     let pendingTasksCount: Int
+    let habitsCompletedToday: Int
+    let totalHabitsCount: Int
+    let longestHabitStreak: Int
     let isPulsingDot: Bool
 
     var body: some View {
@@ -152,6 +161,33 @@ private struct SidebarRowItem: View {
                                 .fill(isSelected ? Color.primary.opacity(0.12) : Color.secondary.opacity(0.15))
                         )
                         .contentTransition(.numericText())
+                } else if tab == .habits && totalHabitsCount > 0 {
+                    if habitsCompletedToday == totalHabitsCount {
+                        HStack(spacing: 3) {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 8, weight: .bold))
+                            Text("DONE")
+                                .font(.system(size: 9, weight: .bold))
+                        }
+                        .foregroundStyle(Color.green)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color.green.opacity(0.12))
+                        .clipShape(Capsule())
+                    } else if longestHabitStreak > 0 {
+                        HStack(spacing: 3) {
+                            Image(systemName: "flame.fill")
+                                .font(.system(size: 8))
+                                .foregroundStyle(Color.orange)
+                            Text("\(longestHabitStreak)d")
+                                .font(.caption2.bold())
+                                .foregroundStyle(isSelected ? Color.primary : Color.secondary)
+                        }
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color.orange.opacity(0.12))
+                        .clipShape(Capsule())
+                    }
                 }
             }
         } icon: {

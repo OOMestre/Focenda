@@ -4,15 +4,18 @@ public struct DashboardView: View {
     @Bindable var appState: AppState
     var timerVM: FocusTimerViewModel
     var taskVM: TaskListViewModel
+    var habitVM: HabitViewModel
 
     public init(
         appState: AppState,
         timerVM: FocusTimerViewModel,
-        taskVM: TaskListViewModel
+        taskVM: TaskListViewModel,
+        habitVM: HabitViewModel = HabitViewModel()
     ) {
         self.appState = appState
         self.timerVM = timerVM
         self.taskVM = taskVM
+        self.habitVM = habitVM
     }
 
     public var body: some View {
@@ -21,6 +24,7 @@ public struct DashboardView: View {
                 headerSection
                 statsGridSection
                 timerBannerSection
+                habitsSummarySection
                 featuredTasksSection
             }
             .padding(28)
@@ -218,6 +222,78 @@ public struct DashboardView: View {
         .animation(.spring(response: 0.35, dampingFraction: 0.75), value: timerVM.currentMode)
     }
 
+    // MARK: - Habits Summary Section
+    private var habitsSummarySection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                HStack(spacing: 8) {
+                    Text("Daily Habit Streaks")
+                        .font(.title2.bold())
+
+                    if !habitVM.habits.isEmpty {
+                        Text("\(habitVM.totalCompletionsToday)/\(habitVM.habits.count) done today")
+                            .font(.caption.bold())
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
+                            .background(
+                                Capsule()
+                                    .fill(habitVM.totalCompletionsToday == habitVM.habits.count ? Color.green.opacity(0.15) : Color.accentColor.opacity(0.12))
+                            )
+                            .foregroundStyle(habitVM.totalCompletionsToday == habitVM.habits.count ? Color.green : Color.accentColor)
+                    }
+                }
+
+                Spacer()
+
+                Button("View all") {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+                        appState.selectedTab = .habits
+                    }
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(Color.accentColor)
+                .font(.subheadline.weight(.medium))
+            }
+
+            if habitVM.habits.isEmpty {
+                emptyHabitsSummaryView
+            } else {
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+                    ForEach(habitVM.habits.prefix(3)) { habit in
+                        DashboardHabitCard(habit: habit) {
+                            withAnimation(.spring(response: 0.35, dampingFraction: 0.6)) {
+                                habitVM.toggleHabitCompletion(id: habit.id)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private var emptyHabitsSummaryView: some View {
+        HStack(spacing: 14) {
+            Image(systemName: "flame")
+                .font(.title)
+                .foregroundStyle(.orange)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("No active habits")
+                    .font(.headline)
+                Text("Start tracking daily routines to unlock consistency streaks.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+            Button("Explore Habits") {
+                appState.selectedTab = .habits
+            }
+            .buttonStyle(.bordered)
+        }
+        .padding(16)
+        .background(Color.primary.opacity(0.02))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+
     // MARK: - Featured Tasks
     private var featuredTasks: [TaskItem] {
         let pending = taskVM.tasks.filter { !$0.isCompleted }
@@ -274,6 +350,83 @@ public struct DashboardView: View {
         .padding(32)
         .background(Color.primary.opacity(0.02))
         .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+}
+
+// MARK: - Dashboard Habit Mini Card
+
+private struct DashboardHabitCard: View {
+    let habit: HabitItem
+    let onToggle: () -> Void
+
+    @State private var isHovered = false
+    @State private var isBouncing = false
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: habit.iconName)
+                .font(.headline)
+                .foregroundStyle(habit.color)
+                .frame(width: 34, height: 34)
+                .background(habit.color.opacity(0.15))
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(habit.title)
+                    .font(.subheadline.bold())
+                    .lineLimit(1)
+                    .foregroundStyle(.primary)
+
+                HStack(spacing: 3) {
+                    Image(systemName: "flame.fill")
+                        .font(.system(size: 9))
+                        .foregroundStyle(habit.streakCount > 0 ? Color.orange : Color.secondary.opacity(0.6))
+                    Text("\(habit.streakCount)d streak")
+                        .font(.caption2)
+                        .foregroundStyle(habit.streakCount > 0 ? Color.orange : Color.secondary)
+                }
+            }
+
+            Spacer()
+
+            Button {
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.5)) {
+                    isBouncing = true
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                    isBouncing = false
+                }
+                onToggle()
+            } label: {
+                Image(systemName: habit.isCompletedToday ? "checkmark.circle.fill" : "circle")
+                    .font(.title3)
+                    .foregroundStyle(habit.isCompletedToday ? Color.green : Color.secondary.opacity(0.7))
+                    .scaleEffect(isBouncing ? 1.3 : 1.0)
+            }
+            .buttonStyle(.plain)
+            .help(habit.isCompletedToday ? "Completed today" : "Mark as completed today")
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(isHovered ? Color(nsColor: .controlBackgroundColor) : Color.primary.opacity(0.02))
+                .shadow(
+                    color: isHovered ? Color.black.opacity(0.05) : Color.clear,
+                    radius: 5,
+                    x: 0,
+                    y: 2
+                )
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .stroke(
+                    habit.isCompletedToday ? Color.green.opacity(0.25) : Color.primary.opacity(0.04),
+                    lineWidth: 1
+                )
+        )
+        .onHover { hovering in
+            isHovered = hovering
+        }
     }
 }
 
