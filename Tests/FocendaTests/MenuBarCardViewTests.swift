@@ -181,4 +181,56 @@ final class MenuBarCardViewTests: XCTestCase {
         let body = cardView.body
         XCTAssertNotNil(body)
     }
+
+    func testMenuBarCardViewAllSectionsRendering() {
+        let timerVM = FocusTimerViewModel()
+        let taskVM = TaskListViewModel()
+        let scratchpadVM = ScratchpadViewModel()
+        let habitVM = HabitViewModel()
+        let appState = AppState()
+
+        for section in MenuBarSection.allCases {
+            let cardView = MenuBarCardView(
+                timerVM: timerVM,
+                taskVM: taskVM,
+                scratchpadVM: scratchpadVM,
+                habitVM: habitVM,
+                appState: appState,
+                initialSection: section
+            )
+            XCTAssertNotNil(cardView.body)
+            XCTAssertEqual(cardView.selectedSection, section)
+        }
+    }
+
+    func testMenuBarCardViewNoteTabAndColorSelection() {
+        let scratchpadVM = ScratchpadViewModel()
+        scratchpadVM.selectColor(.lavender)
+        XCTAssertEqual(scratchpadVM.selectedColor, .lavender)
+
+        scratchpadVM.selectColor(.emerald)
+        XCTAssertEqual(scratchpadVM.selectedColor, .emerald)
+
+        scratchpadVM.selectColor(.amber)
+        XCTAssertEqual(scratchpadVM.selectedColor, .amber)
+
+        scratchpadVM.selectColor(.sky)
+        XCTAssertEqual(scratchpadVM.selectedColor, .sky)
+
+        scratchpadVM.selectColor(.rose)
+        XCTAssertEqual(scratchpadVM.selectedColor, .rose)
+    }
+
+    func testFocusSessionCompletedNotificationTriggersInMenuBarView() {
+        let timerVM = FocusTimerViewModel()
+        let cardView = MenuBarCardView(timerVM: timerVM)
+        XCTAssertNotNil(cardView.body)
+
+        // Post notification and ensure no crash or state inconsistency
+        NotificationCenter.default.post(
+            name: .focusSessionCompleted,
+            object: nil,
+            userInfo: ["mode": FocusMode.work]
+        )
+    }
 }

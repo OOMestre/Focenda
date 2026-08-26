@@ -28,6 +28,18 @@ struct FocendaApp: App {
             .task {
                 _ = try? await NotificationManager.shared.requestAuthorization()
             }
+            .onReceive(NotificationCenter.default.publisher(for: .focusSessionCompleted)) { _ in
+                NSApp.activate(ignoringOtherApps: true)
+                if let window = NSApp.windows.first(where: { $0.canBecomeKey && $0.isVisible }) ?? NSApp.windows.first {
+                    window.makeKeyAndOrderFront(nil)
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: Notification.Name("FocendaTaskReminderFired"))) { _ in
+                NSApp.activate(ignoringOtherApps: true)
+                if let window = NSApp.windows.first(where: { $0.canBecomeKey && $0.isVisible }) ?? NSApp.windows.first {
+                    window.makeKeyAndOrderFront(nil)
+                }
+            }
         }
         .windowStyle(.titleBar)
         .windowToolbarStyle(.unified)
