@@ -4,18 +4,15 @@ public struct DashboardView: View {
     @Bindable var appState: AppState
     var timerVM: FocusTimerViewModel
     var taskVM: TaskListViewModel
-    var habitVM: HabitViewModel
 
     public init(
         appState: AppState,
         timerVM: FocusTimerViewModel,
-        taskVM: TaskListViewModel,
-        habitVM: HabitViewModel = HabitViewModel()
+        taskVM: TaskListViewModel
     ) {
         self.appState = appState
         self.timerVM = timerVM
         self.taskVM = taskVM
-        self.habitVM = habitVM
     }
 
     public var body: some View {
@@ -24,7 +21,7 @@ public struct DashboardView: View {
                 headerSection
                 statsGridSection
                 timerBannerSection
-                habitsSummarySection
+                focusSummaryAndDueTasksSection
                 featuredTasksSection
             }
             .padding(28)
@@ -77,7 +74,7 @@ public struct DashboardView: View {
                     .font(.headline)
             }
             .buttonStyle(.borderedProminent)
-            .tint(AppTheme.deepFocus)
+            .tint(AppTheme.accent)
             .controlSize(.large)
             .shadow(color: Color.black.opacity(0.08), radius: 4, x: 0, y: 2)
         }
@@ -154,7 +151,7 @@ public struct DashboardView: View {
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 8) {
                     Circle()
-                        .fill(timerVM.status == .running ? AppTheme.success : timerVM.currentMode.themeColor)
+                        .fill(timerVM.status == .running ? AppTheme.success : AppTheme.accent)
                         .frame(width: 8, height: 8)
 
                     Text(timerVM.status == .running ? "Active Session" : "Current Focus Session")
@@ -173,7 +170,7 @@ public struct DashboardView: View {
                 Text(timerVM.formattedTimeRemaining)
                     .font(.system(size: 32, weight: .bold, design: .rounded))
                     .monospacedDigit()
-                    .foregroundStyle(timerVM.currentMode.themeColor)
+                    .foregroundStyle(AppTheme.accent)
                     .contentTransition(.numericText())
 
                 Button {
@@ -191,7 +188,7 @@ public struct DashboardView: View {
                         .frame(width: 44, height: 44)
                         .background(
                             Circle()
-                                .fill(timerVM.currentMode.themeColor)
+                                .fill(AppTheme.accent)
                                 .shadow(color: Color.black.opacity(0.12), radius: 4, x: 0, y: 2)
                         )
                 }
@@ -207,38 +204,60 @@ public struct DashboardView: View {
         )
         .overlay(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(timerVM.currentMode.themeColor.opacity(0.22), lineWidth: 1)
+                .stroke(AppTheme.accent.opacity(0.22), lineWidth: 1)
         )
-        .animation(.spring(response: 0.35, dampingFraction: 0.75), value: timerVM.currentMode)
     }
 
-    // MARK: - Habits Summary Section
-    private var habitsSummarySection: some View {
+    // MARK: - Focus Summary / Upcoming Due Tasks Widget
+    private var upcomingDueTasks: [TaskItem] {
+        let calendar = Calendar.current
+                let pending = taskVM.tasks.filter { !$0.isCompleted }
+
+        // Filter tasks that have a dueDate or are high priority
+        let withDue = pending.filter { task in
+            if task.dueDate != nil {
+                return true
+            }
+            return task.priority == .high
+        }
+
+        // Sort by dueDate ascending then high priority
+        return withDue.sorted { t1, t2 in
+            if let d1 = t1.dueDate, let d2 = t2.dueDate {
+                return d1 < d2
+            }
+            if t1.dueDate != nil { return true }
+            if t2.dueDate != nil { return false }
+            return t1.priority > t2.priority
+        }
+    }
+
+    private var focusSummaryAndDueTasksSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 HStack(spacing: 8) {
-                    Text("Daily Habit Streaks")
+                    Text(upcomingDueTasks.isEmpty ? "Daily Focus Summary" : "Upcoming Due & Priority Tasks")
                         .font(.title2.bold())
                         .foregroundStyle(AppTheme.textPrimary)
 
-                    if !habitVM.habits.isEmpty {
-                        Text("\(habitVM.totalCompletionsToday)/\(habitVM.habits.count) done today")
+                    if !upcomingDueTasks.isEmpty {
+                        Text("\(upcomingDueTasks.count) due soon")
                             .font(.caption.bold())
                             .padding(.horizontal, 8)
                             .padding(.vertical, 3)
                             .background(
                                 Capsule()
-                                    .fill(habitVM.totalCompletionsToday == habitVM.habits.count ? AppTheme.success.opacity(0.15) : AppTheme.accent.opacity(0.12))
+                                    .fill(AppTheme.sandstone.opacity(0.15))
                             )
-                            .foregroundStyle(habitVM.totalCompletionsToday == habitVM.habits.count ? AppTheme.success : AppTheme.accent)
+                            .foregroundStyle(AppTheme.sandstone)
                     }
                 }
 
                 Spacer()
 
-                Button("View all") {
+                Button("View all tasks") {
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
-                        appState.selectedTab = .habits
+                        appState.selectedTab = .tasks
                     }
                 }
                 .buttonStyle(.plain)
@@ -246,14 +265,14 @@ public struct DashboardView: View {
                 .font(.subheadline.weight(.medium))
             }
 
-            if habitVM.habits.isEmpty {
-                emptyHabitsSummaryView
+            if upcomingDueTasks.isEmpty {
+                focusSummaryBannerView
             } else {
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                    ForEach(habitVM.habits.prefix(3)) { habit in
-                        DashboardHabitCard(habit: habit) {
+                    ForEach(upcomingDueTasks.prefix(3)) { task in
+                        DashboardUpcomingTaskCard(task: task) {
                             withAnimation(.spring(response: 0.35, dampingFraction: 0.6)) {
-                                habitVM.toggleHabitCompletion(id: habit.id)
+                                taskVM.toggleTaskCompletion(task)
                             }
                         }
                     }
@@ -262,22 +281,47 @@ public struct DashboardView: View {
         }
     }
 
-    private var emptyHabitsSummaryView: some View {
-        HStack(spacing: 14) {
-            Image(systemName: "flame")
-                .font(.title)
-                .foregroundStyle(AppTheme.sandstone)
-            VStack(alignment: .leading, spacing: 2) {
-                Text("No active habits")
+    private var focusSummaryBannerView: some View {
+        let goal = max(appState.dailyFocusGoalMinutes, 1)
+        let progress = min(Double(timerVM.todayFocusMinutes) / Double(goal), 1.0)
+        let percent = Int(progress * 100)
+
+        return HStack(spacing: 20) {
+            // Circular progress indicator
+            ZStack {
+                Circle()
+                    .stroke(AppTheme.accent.opacity(0.12), lineWidth: 6)
+                    .frame(width: 52, height: 52)
+
+                Circle()
+                    .trim(from: 0.0, to: CGFloat(progress))
+                    .stroke(AppTheme.accent, style: StrokeStyle(lineWidth: 6, lineCap: .round))
+                    .rotationEffect(.degrees(-90))
+                    .frame(width: 52, height: 52)
+
+                Text("\(percent)%")
+                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                    .foregroundStyle(AppTheme.textPrimary)
+            }
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(percent >= 100 ? "Daily Focus Goal Achieved!" : "Daily Focus Progress")
                     .font(.headline)
                     .foregroundStyle(AppTheme.textPrimary)
-                Text("Start tracking daily routines to unlock consistency streaks.")
+
+                Text(percent >= 100
+                     ? "You completed \(timerVM.todayFocusMinutes) min of deep work today. Exceptional consistency!"
+                     : "\(timerVM.todayFocusMinutes) of \(goal) minutes completed. Keep your momentum going.")
                     .font(.caption)
                     .foregroundStyle(AppTheme.textSecondary)
             }
+
             Spacer()
-            Button("Explore Habits") {
-                appState.selectedTab = .habits
+
+            Button("Focus Timer") {
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+                    appState.selectedTab = .timer
+                }
             }
             .buttonStyle(.bordered)
         }
@@ -345,10 +389,10 @@ public struct DashboardView: View {
     }
 }
 
-// MARK: - Dashboard Habit Mini Card
+// MARK: - Dashboard Upcoming Task Mini Card
 
-private struct DashboardHabitCard: View {
-    let habit: HabitItem
+private struct DashboardUpcomingTaskCard: View {
+    let task: TaskItem
     let onToggle: () -> Void
 
     @State private var isHovered = false
@@ -356,26 +400,32 @@ private struct DashboardHabitCard: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            Image(systemName: habit.iconName)
+            Image(systemName: task.priority.icon)
                 .font(.headline)
-                .foregroundStyle(habit.color)
+                .foregroundStyle(task.priority.color)
                 .frame(width: 34, height: 34)
-                .background(habit.color.opacity(0.12))
+                .background(task.priority.color.opacity(0.12))
                 .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(habit.title)
+                Text(task.title)
                     .font(.subheadline.bold())
                     .lineLimit(1)
                     .foregroundStyle(AppTheme.textPrimary)
 
-                HStack(spacing: 3) {
-                    Image(systemName: "flame.fill")
-                        .font(.system(size: 9))
-                        .foregroundStyle(habit.streakCount > 0 ? AppTheme.sandstone : AppTheme.textTertiary)
-                    Text("\(habit.streakCount)d streak")
+                if let dueDate = task.dueDate {
+                    HStack(spacing: 3) {
+                        Image(systemName: "calendar")
+                            .font(.system(size: 9))
+                            .foregroundStyle(AppTheme.sandstone)
+                        Text(formattedDue(dueDate))
+                            .font(.caption2)
+                            .foregroundStyle(AppTheme.sandstone)
+                    }
+                } else {
+                    Text(task.priority.rawValue)
                         .font(.caption2)
-                        .foregroundStyle(habit.streakCount > 0 ? AppTheme.sandstone : AppTheme.textSecondary)
+                        .foregroundStyle(task.priority.color)
                 }
             }
 
@@ -390,25 +440,38 @@ private struct DashboardHabitCard: View {
                 }
                 onToggle()
             } label: {
-                Image(systemName: habit.isCompletedToday ? "checkmark.circle.fill" : "circle")
+                Image(systemName: task.isCompleted ? "checkmark.circle.fill" : "circle")
                     .font(.title3)
-                    .foregroundStyle(habit.isCompletedToday ? AppTheme.success : AppTheme.textTertiary)
+                    .foregroundStyle(task.isCompleted ? AppTheme.success : AppTheme.textTertiary)
                     .scaleEffect(isBouncing ? 1.25 : 1.0)
             }
             .buttonStyle(.plain)
-            .help(habit.isCompletedToday ? "Completed today" : "Mark as completed today")
+            .help(task.isCompleted ? "Completed" : "Mark as completed")
         }
         .padding(12)
         .calmCard(isHovered: isHovered, cornerRadius: 10)
         .overlay(
             RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .stroke(
-                    habit.isCompletedToday ? AppTheme.success.opacity(0.3) : AppTheme.subtleBorder,
+                    task.isCompleted ? AppTheme.success.opacity(0.3) : AppTheme.subtleBorder,
                     lineWidth: 1
                 )
         )
         .onHover { hovering in
             isHovered = hovering
+        }
+    }
+
+    private func formattedDue(_ date: Date) -> String {
+        let calendar = Calendar.current
+        if calendar.isDateInToday(date) {
+            return "Due Today"
+        } else if calendar.isDateInTomorrow(date) {
+            return "Due Tomorrow"
+        } else {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "MMM d"
+            return "Due \(formatter.string(from: date))"
         }
     }
 }

@@ -232,7 +232,7 @@ public final class TaskListViewModel {
             ),
             TaskItem(
                 title: "Explore Focenda features",
-                notes: "Try out the focus timer, kanban board, and habit tracker",
+                notes: "Try out the focus timer, kanban board, and scratchpad",
                 priority: .medium,
                 status: .todo,
                 reminderDate: Calendar.current.date(byAdding: .day, value: 1, to: Date()),

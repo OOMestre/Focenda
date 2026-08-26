@@ -328,7 +328,7 @@ final class ScratchpadViewModelTests: XCTestCase {
     func testFilterNotesByActiveFolder() {
         let viewModel = ScratchpadViewModel(userDefaults: testDefaults)
         viewModel.createNote(title: "Work Doc", content: "Meeting", folder: "Work")
-        viewModel.createNote(title: "Personal Habit", content: "Gym", folder: "Personal")
+        viewModel.createNote(title: "Personal Routine", content: "Gym", folder: "Personal")
 
         // In All Notes, both are visible
         viewModel.selectFolder(ScratchpadViewModel.allNotesFolder)
@@ -342,7 +342,7 @@ final class ScratchpadViewModelTests: XCTestCase {
         // In Personal, only Personal notes are visible
         viewModel.selectFolder("Personal")
         XCTAssertEqual(viewModel.filteredNotes.count, 1)
-        XCTAssertEqual(viewModel.filteredNotes.first?.title, "Personal Habit")
+        XCTAssertEqual(viewModel.filteredNotes.first?.title, "Personal Routine")
     }
 
     func testFolderIcons() {

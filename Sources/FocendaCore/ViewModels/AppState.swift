@@ -8,7 +8,6 @@ public enum AppTab: String, CaseIterable, Identifiable {
     case timer = "Focus Timer"
     case kanban = "Tasks & Kanban"
     case calendar = "Calendar"
-    case habits = "Habits"
     case scratchpad = "Scratchpad"
     case bookmarks = "Bookmarks"
     case stats = "Statistics"
@@ -22,7 +21,6 @@ public enum AppTab: String, CaseIterable, Identifiable {
         case .timer: return "timer"
         case .kanban: return "rectangle.split.3x1"
         case .calendar: return "calendar"
-        case .habits: return "flame.fill"
         case .scratchpad: return "square.and.pencil"
         case .bookmarks: return "bookmark.fill"
         case .stats: return "chart.bar.xaxis"
@@ -39,15 +37,28 @@ public final class AppState {
     public var soundEnabled: Bool = true
     public var autoStartBreaks: Bool = false
     public var autoStartFocus: Bool = false
+    public var selectedTheme: AppThemeOption {
+        didSet {
+            UserDefaults.standard.set(selectedTheme.rawValue, forKey: AppTheme.storageKey)
+            AppTheme.current = selectedTheme
+        }
+    }
 
     public init() {
         let savedGoal = UserDefaults.standard.integer(forKey: "dailyFocusGoalMinutes")
         self.dailyFocusGoalMinutes = savedGoal == 0 ? 120 : savedGoal
         self.soundEnabled = UserDefaults.standard.object(forKey: "soundEnabled") == nil ? true : UserDefaults.standard.bool(forKey: "soundEnabled")
+        
+        let storedTheme = UserDefaults.standard.string(forKey: AppTheme.storageKey)
+        let resolvedTheme = AppThemeOption.from(storedValue: storedTheme)
+        self.selectedTheme = resolvedTheme
+        AppTheme.current = resolvedTheme
     }
 
     public func savePreferences() {
         UserDefaults.standard.set(dailyFocusGoalMinutes, forKey: "dailyFocusGoalMinutes")
         UserDefaults.standard.set(soundEnabled, forKey: "soundEnabled")
+        UserDefaults.standard.set(selectedTheme.rawValue, forKey: AppTheme.storageKey)
+        AppTheme.current = selectedTheme
     }
 }
