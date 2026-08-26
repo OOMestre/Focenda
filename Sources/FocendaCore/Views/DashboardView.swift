@@ -302,7 +302,7 @@ public struct DashboardView: View {
 
                 Button("View all") {
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
-                        appState.selectedTab = .tasks
+                        appState.selectedTab = .kanban
                     }
                 }
                 .buttonStyle(.plain)

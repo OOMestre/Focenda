@@ -6,8 +6,7 @@ import Observation
 public enum AppTab: String, CaseIterable, Identifiable {
     case dashboard = "Dashboard"
     case timer = "Focus Timer"
-    case tasks = "Tasks"
-    case kanban = "Kanban"
+    case kanban = "Tasks & Kanban"
     case calendar = "Calendar"
     case habits = "Habits"
     case scratchpad = "Scratchpad"
@@ -21,7 +20,6 @@ public enum AppTab: String, CaseIterable, Identifiable {
         switch self {
         case .dashboard: return "square.grid.2x2"
         case .timer: return "timer"
-        case .tasks: return "checklist"
         case .kanban: return "rectangle.split.3x1"
         case .calendar: return "calendar"
         case .habits: return "flame.fill"

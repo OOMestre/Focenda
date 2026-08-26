@@ -21,10 +21,12 @@ final class KanbanBoardViewTests: XCTestCase {
     func testKanbanBoardViewInitialization() {
         let kanbanView = KanbanBoardView(taskVM: taskVM, showHeader: true)
         XCTAssertTrue(kanbanView.showHeader)
+        XCTAssertEqual(kanbanView.viewMode, .kanban)
         XCTAssertNotNil(kanbanView.body)
 
-        let embeddedView = KanbanBoardView(taskVM: taskVM, showHeader: false)
+        let embeddedView = KanbanBoardView(taskVM: taskVM, showHeader: false, initialViewMode: .list)
         XCTAssertFalse(embeddedView.showHeader)
+        XCTAssertEqual(embeddedView.viewMode, .list)
         XCTAssertNotNil(embeddedView.body)
     }
 
@@ -206,7 +208,17 @@ final class KanbanBoardViewTests: XCTestCase {
         XCTAssertEqual(TaskViewMode.kanban.rawValue, "Kanban")
         XCTAssertEqual(TaskViewMode.list.id, "List")
         XCTAssertEqual(TaskViewMode.kanban.id, "Kanban")
+        XCTAssertEqual(TaskViewMode.list.title, "List View")
+        XCTAssertEqual(TaskViewMode.kanban.title, "Kanban Board")
         XCTAssertEqual(TaskViewMode.list.iconName, "list.bullet")
         XCTAssertEqual(TaskViewMode.kanban.iconName, "rectangle.split.3x1")
+    }
+
+    func testAppTabEnumUnified() {
+        let allTabs = AppTab.allCases
+        XCTAssertFalse(allTabs.map(\.rawValue).contains("Tasks"), "Standalone 'Tasks' tab must be removed")
+        XCTAssertTrue(allTabs.contains(.kanban))
+        XCTAssertEqual(AppTab.kanban.rawValue, "Tasks & Kanban")
+        XCTAssertEqual(AppTab.kanban.iconName, "rectangle.split.3x1")
     }
 }

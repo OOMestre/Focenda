@@ -1,15 +1,22 @@
 import SwiftUI
 
 public enum TaskViewMode: String, CaseIterable, Identifiable {
-    case list = "List"
     case kanban = "Kanban"
+    case list = "List"
 
     public var id: String { rawValue }
 
+    public var title: String {
+        switch self {
+        case .kanban: return "Kanban Board"
+        case .list: return "List View"
+        }
+    }
+
     public var iconName: String {
         switch self {
-        case .list: return "list.bullet"
         case .kanban: return "rectangle.split.3x1"
+        case .list: return "list.bullet"
         }
     }
 }
@@ -18,6 +25,7 @@ public struct TaskListView: View {
     @Bindable var taskVM: TaskListViewModel
     @State private var viewMode: TaskViewMode = .list
     @State private var showingAddTaskSheet: Bool = false
+    @State private var editingTask: TaskItem? = nil
 
     // New task form state
     @State private var newTaskTitle: String = ""
@@ -58,20 +66,21 @@ public struct TaskListView: View {
                     }
                     .padding(8)
                     .background(AppTheme.cardBackground)
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 8)
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
                             .stroke(AppTheme.border, lineWidth: 1)
                     )
 
-                    // View Mode Switcher (List vs Kanban)
+                    // View Mode Switcher (Kanban Board vs List View)
                     Picker("View", selection: $viewMode) {
                         ForEach(TaskViewMode.allCases) { mode in
-                            Label(mode.rawValue, systemImage: mode.iconName).tag(mode)
+                            Label(mode.title, systemImage: mode.iconName).tag(mode)
                         }
                     }
                     .pickerStyle(.segmented)
-                    .frame(width: 170)
+                    .frame(width: 240)
+                    .fixedSize(horizontal: true, vertical: false)
 
                     Button {
                         showingAddTaskSheet = true
@@ -82,6 +91,7 @@ public struct TaskListView: View {
                     .buttonStyle(.borderedProminent)
                     .tint(AppTheme.deepFocus)
                     .controlSize(.regular)
+                    .fixedSize(horizontal: true, vertical: false)
                 }
 
                 // Quick Filters (only displayed in List view mode)
@@ -94,6 +104,7 @@ public struct TaskListView: View {
                             Text("High Priority (\(taskVM.highPriorityPendingCount))").tag(TaskFilter.highPriority)
                         }
                         .pickerStyle(.segmented)
+                        .fixedSize(horizontal: true, vertical: false)
 
                         Spacer()
                     }
@@ -106,15 +117,32 @@ public struct TaskListView: View {
 
             // View Content: List vs Kanban Board
             if viewMode == .kanban {
-                KanbanBoardView(taskVM: taskVM, showHeader: false)
+                KanbanBoardView(taskVM: taskVM, showHeader: false, initialViewMode: .kanban)
             } else {
                 taskListViewContent
             }
         }
         .background(AppTheme.background)
-        .navigationTitle("Tasks")
+        .navigationTitle(viewMode == .kanban ? "Kanban Board" : "Tasks")
         .sheet(isPresented: $showingAddTaskSheet) {
             addTaskSheetView
+        }
+        .sheet(item: $editingTask) { task in
+            KanbanTaskFormSheet(
+                editingTask: task,
+                onSave: { title, notes, priority, status, reminderDate, dueDate, tags, pomodoros in
+                    var updated = task
+                    updated.title = title
+                    updated.notes = notes
+                    updated.priority = priority
+                    updated.status = status
+                    updated.reminderDate = reminderDate
+                    updated.dueDate = dueDate
+                    updated.tags = tags
+                    updated.estimatedPomodoros = pomodoros
+                    taskVM.updateTask(updated)
+                }
+            )
         }
     }
 
@@ -155,6 +183,14 @@ public struct TaskListView: View {
                         onMove: { newStatus in
                             withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
                                 taskVM.moveTask(id: task.id, to: newStatus)
+                            }
+                        },
+                        onEdit: {
+                            editingTask = task
+                        },
+                        onIncrementPomodoro: {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                                taskVM.incrementTaskPomodoro(taskId: task.id)
                             }
                         }
                     )
@@ -364,16 +400,34 @@ public struct TaskListView: View {
 
 // MARK: - Task Row View
 
-private struct TaskRowView: View {
-    let task: TaskItem
-    let onToggle: () -> Void
-    let onDelete: () -> Void
-    var onMove: ((TaskStatus) -> Void)? = nil
+public struct TaskRowView: View {
+    public let task: TaskItem
+    public let onToggle: () -> Void
+    public let onDelete: () -> Void
+    public var onMove: ((TaskStatus) -> Void)? = nil
+    public var onEdit: (() -> Void)? = nil
+    public var onIncrementPomodoro: (() -> Void)? = nil
 
     @State private var isHovered: Bool = false
     @State private var isChecking: Bool = false
 
-    var body: some View {
+    public init(
+        task: TaskItem,
+        onToggle: @escaping () -> Void,
+        onDelete: @escaping () -> Void,
+        onMove: ((TaskStatus) -> Void)? = nil,
+        onEdit: (() -> Void)? = nil,
+        onIncrementPomodoro: (() -> Void)? = nil
+    ) {
+        self.task = task
+        self.onToggle = onToggle
+        self.onDelete = onDelete
+        self.onMove = onMove
+        self.onEdit = onEdit
+        self.onIncrementPomodoro = onIncrementPomodoro
+    }
+
+    public var body: some View {
         HStack(spacing: 14) {
             // Bouncy checkmark toggle button
             Button {
@@ -399,26 +453,30 @@ private struct TaskRowView: View {
                         .font(.body.weight(task.isCompleted ? .regular : .medium))
                         .strikethrough(task.isCompleted, color: AppTheme.textSecondary)
                         .foregroundStyle(task.isCompleted ? AppTheme.textSecondary : AppTheme.textPrimary)
+                        .lineLimit(2)
 
-                    // Status Pill
+                    // Status Pill (Anti-wrapping)
                     HStack(spacing: 3) {
                         Circle()
                             .fill(task.status.color)
                             .frame(width: 5, height: 5)
                         Text(task.status.rawValue)
+                            .font(.system(size: 10, weight: .medium))
+                            .lineLimit(1)
                     }
-                    .font(.system(size: 10, weight: .medium))
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
                     .background(task.status.color.opacity(0.12))
                     .foregroundStyle(task.status.color)
                     .clipShape(Capsule())
+                    .fixedSize(horizontal: true, vertical: false)
                 }
 
                 if !task.notes.isEmpty {
                     Text(task.notes)
                         .font(.caption)
                         .foregroundStyle(AppTheme.textSecondary)
+                        .lineLimit(2)
                 }
 
                 HStack(spacing: 6) {
@@ -426,11 +484,13 @@ private struct TaskRowView: View {
                         ForEach(task.tags, id: \.self) { tag in
                             Text("#\(tag)")
                                 .font(.caption2.bold())
+                                .lineLimit(1)
                                 .padding(.horizontal, 7)
                                 .padding(.vertical, 2)
                                 .background(AppTheme.cardBackgroundSubtle)
                                 .foregroundStyle(AppTheme.textSecondary)
                                 .clipShape(Capsule())
+                                .fixedSize(horizontal: true, vertical: false)
                         }
                     }
 
@@ -440,12 +500,14 @@ private struct TaskRowView: View {
                                 .font(.system(size: 8))
                             Text(formatReminderDate(reminder))
                                 .font(.caption2.bold())
+                                .lineLimit(1)
                         }
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
                         .background(AppTheme.sandstone.opacity(0.12))
                         .foregroundStyle(AppTheme.sandstone)
                         .clipShape(Capsule())
+                        .fixedSize(horizontal: true, vertical: false)
                     }
 
                     if let due = task.dueDate {
@@ -455,12 +517,14 @@ private struct TaskRowView: View {
                                 .font(.system(size: 8))
                             Text(formatDueDate(due))
                                 .font(.caption2.bold())
+                                .lineLimit(1)
                         }
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
                         .background(isOverdue ? AppTheme.terracotta.opacity(0.12) : AppTheme.cardBackgroundSubtle)
                         .foregroundStyle(isOverdue ? AppTheme.terracotta : AppTheme.textSecondary)
                         .clipShape(Capsule())
+                        .fixedSize(horizontal: true, vertical: false)
                     }
                 }
                 .padding(.top, 2)
@@ -468,29 +532,70 @@ private struct TaskRowView: View {
 
             Spacer()
 
-            // Pomodoro badge
-            HStack(spacing: 4) {
-                Image(systemName: "timer")
-                Text("\(task.completedPomodoros)/\(task.estimatedPomodoros)")
+            // Pomodoro badge (Anti-wrapping)
+            Button {
+                onIncrementPomodoro?()
+            } label: {
+                HStack(spacing: 3) {
+                    Image(systemName: "timer")
+                        .font(.system(size: 9))
+                    Text("\(task.completedPomodoros)/\(task.estimatedPomodoros)")
+                        .font(.caption.bold().monospacedDigit())
+                        .lineLimit(1)
+                    if onIncrementPomodoro != nil {
+                        Text("+1")
+                            .font(.system(size: 8, weight: .bold))
+                            .foregroundStyle(AppTheme.accent)
+                            .padding(.horizontal, 3)
+                            .padding(.vertical, 1)
+                            .background(AppTheme.accent.opacity(0.12))
+                            .clipShape(Capsule())
+                            .lineLimit(1)
+                    }
+                }
+                .foregroundStyle(AppTheme.textSecondary)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(AppTheme.cardBackgroundSubtle)
+                .clipShape(Capsule())
+                .fixedSize(horizontal: true, vertical: false)
             }
-            .font(.caption.bold())
-            .foregroundStyle(AppTheme.textSecondary)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(AppTheme.cardBackgroundSubtle)
-            .clipShape(Capsule())
+            .buttonStyle(.plain)
+            .disabled(onIncrementPomodoro == nil)
+            .fixedSize(horizontal: true, vertical: false)
+            .help("Completed pomodoros (tap to +1)")
 
-            // Priority badge
+            // Priority badge (Anti-wrapping)
             HStack(spacing: 4) {
                 Image(systemName: task.priority.icon)
+                    .font(.system(size: 10, weight: .bold))
                 Text(task.priority.rawValue)
+                    .font(.caption2.bold())
+                    .lineLimit(1)
             }
-            .font(.caption2.bold())
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
             .background(task.priority.color.opacity(0.12))
             .foregroundStyle(task.priority.color)
             .clipShape(Capsule())
+            .fixedSize(horizontal: true, vertical: false)
+
+            // Edit button (if onEdit != nil)
+            if let onEdit = onEdit {
+                Button {
+                    onEdit()
+                } label: {
+                    Image(systemName: "pencil")
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.textSecondary)
+                        .frame(width: 24, height: 24)
+                        .background(AppTheme.cardBackgroundSubtle)
+                        .clipShape(Circle())
+                }
+                .buttonStyle(.plain)
+                .fixedSize(horizontal: true, vertical: false)
+                .help("Edit task")
+            }
 
             // Move Status Menu
             if let onMove = onMove {
@@ -505,6 +610,7 @@ private struct TaskRowView: View {
                 }
                 .menuStyle(.borderlessButton)
                 .frame(width: 20)
+                .fixedSize(horizontal: true, vertical: false)
             }
 
             // Delete button
@@ -517,6 +623,7 @@ private struct TaskRowView: View {
                     .clipShape(Circle())
             }
             .buttonStyle(.plain)
+            .fixedSize(horizontal: true, vertical: false)
             .help("Delete task")
         }
         .padding(.horizontal, 14)

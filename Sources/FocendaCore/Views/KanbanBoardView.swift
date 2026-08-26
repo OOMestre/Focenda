@@ -1,17 +1,23 @@
 import SwiftUI
 
-/// A visual, interactive 3-column Kanban board for managing task workflows in Focenda
+/// A unified visual task hub featuring an interactive 3-column Kanban board and linear List view in Focenda
 public struct KanbanBoardView: View {
     @Bindable var taskVM: TaskListViewModel
     public var showHeader: Bool
+    @State public var viewMode: TaskViewMode = .kanban
 
     @State private var showingAddTaskSheet: Bool = false
     @State private var targetColumnStatus: TaskStatus = .todo
     @State private var editingTask: TaskItem? = nil
 
-    public init(taskVM: TaskListViewModel, showHeader: Bool = true) {
+    public init(
+        taskVM: TaskListViewModel,
+        showHeader: Bool = true,
+        initialViewMode: TaskViewMode = .kanban
+    ) {
         self.taskVM = taskVM
         self.showHeader = showHeader
+        self._viewMode = State(initialValue: initialViewMode)
     }
 
     public var body: some View {
@@ -21,62 +27,15 @@ public struct KanbanBoardView: View {
                 Divider()
             }
 
-            // 3-Column Kanban Board Layout
-            GeometryReader { geometry in
-                let minContentWidth: CGFloat = (240 * 3) + (16 * 2) + 40 // 792 minimum width for 3 columns
-                let totalWidth = max(minContentWidth, geometry.size.width)
-
-                ScrollView(.horizontal, showsIndicators: true) {
-                    HStack(alignment: .top, spacing: 16) {
-                        ForEach(TaskStatus.allCases) { status in
-                            KanbanColumnView(
-                                status: status,
-                                tasks: taskVM.tasks(for: status),
-                                onAddTask: {
-                                    targetColumnStatus = status
-                                    showingAddTaskSheet = true
-                                },
-                                onQuickAdd: { title, priority in
-                                    taskVM.addTask(
-                                        title: title,
-                                        priority: priority,
-                                        status: status
-                                    )
-                                },
-                                onMoveTask: { taskId, newStatus in
-                                    withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
-                                        taskVM.moveTask(id: taskId, to: newStatus)
-                                    }
-                                },
-                                onToggleTask: { task in
-                                    withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
-                                        taskVM.toggleTaskCompletion(task)
-                                    }
-                                },
-                                onDeleteTask: { taskId in
-                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                        taskVM.deleteTask(withId: taskId)
-                                    }
-                                },
-                                onEditTask: { task in
-                                    editingTask = task
-                                },
-                                onIncrementPomodoro: { taskId in
-                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
-                                        taskVM.incrementTaskPomodoro(taskId: taskId)
-                                    }
-                                }
-                            )
-                            .frame(minWidth: 240, maxWidth: .infinity, maxHeight: .infinity)
-                        }
-                    }
-                    .padding(20)
-                    .frame(minWidth: totalWidth, minHeight: geometry.size.height, alignment: .topLeading)
-                }
+            // View Content Switcher: Kanban Board (Default) vs Linear List View
+            if viewMode == .kanban {
+                kanbanBoardContent
+            } else {
+                listViewContent
             }
         }
         .background(AppTheme.background)
-        .navigationTitle("Kanban Board")
+        .navigationTitle(viewMode == .kanban ? "Kanban Board" : "Tasks")
         .sheet(isPresented: $showingAddTaskSheet) {
             KanbanTaskFormSheet(
                 initialStatus: targetColumnStatus,
@@ -113,17 +72,23 @@ public struct KanbanBoardView: View {
         }
     }
 
-    // MARK: - Header Bar & 3-Column Progress Overview Banner
+    // MARK: - Header Bar & Controls
     private var headerView: some View {
         VStack(spacing: 12) {
-            HStack(spacing: 16) {
+            HStack(spacing: 14) {
                 // Search bar
                 HStack(spacing: 8) {
                     Image(systemName: "magnifyingglass")
                         .foregroundStyle(AppTheme.textTertiary)
-                    TextField("Search Kanban tasks by title, notes, or tags...", text: $taskVM.searchQuery)
-                        .textFieldStyle(.plain)
-                        .foregroundStyle(AppTheme.textPrimary)
+                    TextField(
+                        viewMode == .kanban
+                            ? "Search Kanban tasks by title, notes, or tags..."
+                            : "Search tasks by title, notes, or tags...",
+                        text: $taskVM.searchQuery
+                    )
+                    .textFieldStyle(.plain)
+                    .foregroundStyle(AppTheme.textPrimary)
+
                     if !taskVM.searchQuery.isEmpty {
                         Button {
                             taskVM.searchQuery = ""
@@ -142,23 +107,47 @@ public struct KanbanBoardView: View {
                         .stroke(AppTheme.border, lineWidth: 1)
                 )
 
-                // Top 3-Column Progress Overview Chips (Fixed non-wrapping)
-                HStack(spacing: 8) {
-                    KanbanStatPill(
-                        title: "To Do",
-                        count: taskVM.todoTasksCount,
-                        color: AppTheme.riverSlate
-                    )
-                    KanbanStatPill(
-                        title: "In Progress",
-                        count: taskVM.inProgressTasksCount,
-                        color: AppTheme.sandstone
-                    )
-                    KanbanStatPill(
-                        title: "Done",
-                        count: taskVM.doneTasksCount,
-                        color: AppTheme.success
-                    )
+                // Top View Switcher Segmented Picker [ Kanban Board (Default) | List View ]
+                Picker("View Mode", selection: $viewMode) {
+                    ForEach(TaskViewMode.allCases) { mode in
+                        Label(mode.title, systemImage: mode.iconName).tag(mode)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .frame(width: 240)
+                .fixedSize(horizontal: true, vertical: false)
+
+                // Dynamic Status Overview or Quick Filters
+                if viewMode == .kanban {
+                    // Top 3-Column Progress Overview Chips (Fixed non-wrapping)
+                    HStack(spacing: 8) {
+                        KanbanStatPill(
+                            title: "To Do",
+                            count: taskVM.todoTasksCount,
+                            color: AppTheme.riverSlate
+                        )
+                        KanbanStatPill(
+                            title: "In Progress",
+                            count: taskVM.inProgressTasksCount,
+                            color: AppTheme.sandstone
+                        )
+                        KanbanStatPill(
+                            title: "Done",
+                            count: taskVM.doneTasksCount,
+                            color: AppTheme.success
+                        )
+                    }
+                    .fixedSize(horizontal: true, vertical: false)
+                } else {
+                    // List Quick Filters (All, Active, Completed, High Priority)
+                    Picker("Filter", selection: $taskVM.currentFilter) {
+                        Text("All (\(taskVM.tasks.count))").tag(TaskFilter.all)
+                        Text("Active (\(taskVM.pendingTasksCount))").tag(TaskFilter.active)
+                        Text("Completed (\(taskVM.completedTasksCount))").tag(TaskFilter.completed)
+                        Text("High Priority (\(taskVM.highPriorityPendingCount))").tag(TaskFilter.highPriority)
+                    }
+                    .pickerStyle(.segmented)
+                    .fixedSize(horizontal: true, vertical: false)
                 }
 
                 // New Task Primary Button
@@ -172,11 +161,126 @@ public struct KanbanBoardView: View {
                 .buttonStyle(.borderedProminent)
                 .tint(AppTheme.deepFocus)
                 .controlSize(.regular)
-                .fixedSize()
+                .fixedSize(horizontal: true, vertical: false)
             }
         }
         .padding(16)
         .background(AppTheme.background)
+    }
+
+    // MARK: - 3-Column Kanban Board Layout
+    private var kanbanBoardContent: some View {
+        GeometryReader { geometry in
+            let minContentWidth: CGFloat = (240 * 3) + (16 * 2) + 40 // 792 minimum width for 3 columns
+            let totalWidth = max(minContentWidth, geometry.size.width)
+
+            ScrollView(.horizontal, showsIndicators: true) {
+                HStack(alignment: .top, spacing: 16) {
+                    ForEach(TaskStatus.allCases) { status in
+                        KanbanColumnView(
+                            status: status,
+                            tasks: taskVM.tasks(for: status),
+                            onAddTask: {
+                                targetColumnStatus = status
+                                showingAddTaskSheet = true
+                            },
+                            onQuickAdd: { title, priority in
+                                taskVM.addTask(
+                                    title: title,
+                                    priority: priority,
+                                    status: status
+                                )
+                            },
+                            onMoveTask: { taskId, newStatus in
+                                withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
+                                    taskVM.moveTask(id: taskId, to: newStatus)
+                                }
+                            },
+                            onToggleTask: { task in
+                                withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
+                                    taskVM.toggleTaskCompletion(task)
+                                }
+                            },
+                            onDeleteTask: { taskId in
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                    taskVM.deleteTask(withId: taskId)
+                                }
+                            },
+                            onEditTask: { task in
+                                editingTask = task
+                            },
+                            onIncrementPomodoro: { taskId in
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                                    taskVM.incrementTaskPomodoro(taskId: taskId)
+                                }
+                            }
+                        )
+                        .frame(minWidth: 240, maxWidth: .infinity, maxHeight: .infinity)
+                    }
+                }
+                .padding(20)
+                .frame(minWidth: totalWidth, minHeight: geometry.size.height, alignment: .topLeading)
+            }
+        }
+    }
+
+    // MARK: - Linear List View Layout
+    @ViewBuilder
+    private var listViewContent: some View {
+        if taskVM.filteredTasks.isEmpty {
+            VStack(spacing: 14) {
+                Spacer()
+                Image(systemName: "tray.fill")
+                    .font(.system(size: 40))
+                    .foregroundStyle(AppTheme.textTertiary.opacity(0.6))
+                Text("No tasks found")
+                    .font(.title3.bold())
+                    .foregroundStyle(AppTheme.textPrimary)
+                Text("Adjust your filter or create a new task to get things done.")
+                    .font(.subheadline)
+                    .foregroundStyle(AppTheme.textSecondary)
+                Spacer()
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(AppTheme.background)
+        } else {
+            List {
+                ForEach(taskVM.filteredTasks) { task in
+                    TaskRowView(
+                        task: task,
+                        onToggle: {
+                            withAnimation(.spring(response: 0.35, dampingFraction: 0.6)) {
+                                taskVM.toggleTaskCompletion(task)
+                            }
+                        },
+                        onDelete: {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                taskVM.deleteTask(withId: task.id)
+                            }
+                        },
+                        onMove: { newStatus in
+                            withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
+                                taskVM.moveTask(id: task.id, to: newStatus)
+                            }
+                        },
+                        onEdit: {
+                            editingTask = task
+                        },
+                        onIncrementPomodoro: {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                                taskVM.incrementTaskPomodoro(taskId: task.id)
+                            }
+                        }
+                    )
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
+                    .listRowBackground(Color.clear)
+                }
+            }
+            .listStyle(.plain)
+            .background(AppTheme.background)
+            .animation(.default, value: taskVM.filteredTasks)
+        }
     }
 }
 
@@ -202,6 +306,7 @@ public struct KanbanStatPill: View {
                 .font(.caption.bold())
                 .monospacedDigit()
                 .foregroundStyle(AppTheme.textPrimary)
+                .lineLimit(1)
             Text(title)
                 .font(.caption.weight(.medium))
                 .foregroundStyle(AppTheme.textSecondary)
@@ -310,6 +415,7 @@ public struct KanbanColumnView: View {
                             .font(.subheadline)
                         Text("Add Task")
                             .font(.subheadline.weight(.medium))
+                            .lineLimit(1)
                     }
                     .foregroundStyle(AppTheme.textSecondary)
                     .frame(maxWidth: .infinity)
@@ -364,6 +470,8 @@ public struct KanbanColumnView: View {
                 .padding(.vertical, 2)
                 .background(AppTheme.cardBackgroundSubtle)
                 .clipShape(Capsule())
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
 
             Spacer()
 
@@ -447,6 +555,7 @@ public struct KanbanColumnView: View {
             Text(emptyMessage)
                 .font(.caption.bold())
                 .foregroundStyle(AppTheme.textTertiary)
+                .lineLimit(1)
             Spacer().frame(height: 24)
         }
         .frame(maxWidth: .infinity)
@@ -502,21 +611,24 @@ public struct KanbanCardView: View {
         VStack(alignment: .leading, spacing: 10) {
             // Card Top Row: Priority Badge + Direct Actions (+1 Pomodoro, Pencil, Trash, ...)
             HStack(spacing: 6) {
-                // Priority Badge
-                HStack(spacing: 3) {
+                // Priority Badge (Fixed Anti-Wrapping)
+                HStack(spacing: 4) {
                     Image(systemName: task.priority.icon)
+                        .font(.system(size: 9, weight: .bold))
                     Text(task.priority.rawValue)
+                        .font(.system(size: 10, weight: .bold))
+                        .lineLimit(1)
                 }
-                .font(.caption2.bold())
-                .padding(.horizontal, 6)
-                .padding(.vertical, 2)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
                 .background(task.priority.color.opacity(0.12))
                 .foregroundStyle(task.priority.color)
                 .clipShape(Capsule())
+                .fixedSize(horizontal: true, vertical: false)
 
                 Spacer()
 
-                // Direct Action: +1 Pomodoro Button
+                // Direct Action: +1 Pomodoro Button (Fixed Anti-Wrapping)
                 Button {
                     onIncrementPomodoro()
                 } label: {
@@ -525,6 +637,7 @@ public struct KanbanCardView: View {
                             .font(.system(size: 9))
                         Text("\(task.completedPomodoros)/\(task.estimatedPomodoros)")
                             .font(.caption2.monospacedDigit().bold())
+                            .lineLimit(1)
                         Text("+1")
                             .font(.system(size: 8, weight: .bold))
                             .foregroundStyle(AppTheme.accent)
@@ -532,14 +645,17 @@ public struct KanbanCardView: View {
                             .padding(.vertical, 1)
                             .background(AppTheme.accent.opacity(0.12))
                             .clipShape(Capsule())
+                            .lineLimit(1)
                     }
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
                     .background(AppTheme.cardBackgroundSubtle)
                     .foregroundStyle(AppTheme.textSecondary)
                     .clipShape(Capsule())
+                    .fixedSize(horizontal: true, vertical: false)
                 }
                 .buttonStyle(.plain)
+                .fixedSize(horizontal: true, vertical: false)
                 .help("Completed pomodoros (tap to +1)")
 
                 // Direct Action: Quick Edit Pencil
@@ -554,6 +670,7 @@ public struct KanbanCardView: View {
                         .clipShape(Circle())
                 }
                 .buttonStyle(.plain)
+                .fixedSize(horizontal: true, vertical: false)
                 .help("Edit task")
 
                 // Direct Action: Delete Trash Button
@@ -568,6 +685,7 @@ public struct KanbanCardView: View {
                         .clipShape(Circle())
                 }
                 .buttonStyle(.plain)
+                .fixedSize(horizontal: true, vertical: false)
                 .help("Delete task")
 
                 // Direct Action: Clean '...' Menu Button
@@ -607,6 +725,7 @@ public struct KanbanCardView: View {
                 }
                 .menuStyle(.borderlessButton)
                 .frame(width: 20, height: 20)
+                .fixedSize(horizontal: true, vertical: false)
                 .help("More actions")
             }
 
@@ -626,22 +745,24 @@ public struct KanbanCardView: View {
                 }
             }
 
-            // Tags
+            // Tags (Anti-wrapping)
             if !task.tags.isEmpty {
                 HStack(spacing: 4) {
                     ForEach(task.tags, id: \.self) { tag in
                         Text("#\(tag)")
                             .font(.system(size: 10, weight: .medium))
+                            .lineLimit(1)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
                             .background(AppTheme.cardBackgroundSubtle)
                             .foregroundStyle(AppTheme.textTertiary)
                             .clipShape(Capsule())
+                            .fixedSize(horizontal: true, vertical: false)
                     }
                 }
             }
 
-            // Reminders & Due Dates Indicators
+            // Reminders & Due Dates Indicators (Anti-wrapping)
             if task.reminderDate != nil || task.dueDate != nil {
                 HStack(spacing: 8) {
                     if let reminder = task.reminderDate {
@@ -650,12 +771,14 @@ public struct KanbanCardView: View {
                                 .font(.system(size: 8))
                             Text(formatReminderDate(reminder))
                                 .font(.system(size: 10, weight: .medium))
+                                .lineLimit(1)
                         }
                         .foregroundStyle(AppTheme.sandstone)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
                         .background(AppTheme.sandstone.opacity(0.12))
                         .clipShape(Capsule())
+                        .fixedSize(horizontal: true, vertical: false)
                     }
 
                     if let due = task.dueDate {
@@ -665,19 +788,21 @@ public struct KanbanCardView: View {
                                 .font(.system(size: 8))
                             Text(formatDueDate(due))
                                 .font(.system(size: 10, weight: .medium))
+                                .lineLimit(1)
                         }
                         .foregroundStyle(isOverdue ? AppTheme.terracotta : AppTheme.textSecondary)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
                         .background(isOverdue ? AppTheme.terracotta.opacity(0.12) : AppTheme.cardBackgroundSubtle)
                         .clipShape(Capsule())
+                        .fixedSize(horizontal: true, vertical: false)
                     }
                 }
             }
 
             Divider()
 
-            // Card Direct Move Pill Selector Footer
+            // Card Direct Move Pill Selector Footer (Anti-wrapping)
             cardDirectMoveFooter
         }
         .padding(12)
@@ -715,13 +840,15 @@ public struct KanbanCardView: View {
         }
     }
 
-    // MARK: - Direct Move Pill Selector Footer
+    // MARK: - Direct Move Pill Selector Footer (Anti-wrapping)
     @ViewBuilder
     private var cardDirectMoveFooter: some View {
         HStack(spacing: 5) {
             Text("Move:")
                 .font(.system(size: 10, weight: .semibold))
                 .foregroundStyle(AppTheme.textTertiary)
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
 
             ForEach(TaskStatus.allCases) { targetStatus in
                 let isCurrent = (task.status == targetStatus)
@@ -742,6 +869,7 @@ public struct KanbanCardView: View {
                         Text(targetStatus.rawValue)
                             .font(.system(size: 9, weight: isCurrent ? .bold : .medium))
                             .lineLimit(1)
+                            .fixedSize(horizontal: true, vertical: false)
                     }
                     .padding(.horizontal, 6)
                     .padding(.vertical, 3)
@@ -752,9 +880,11 @@ public struct KanbanCardView: View {
                         Capsule()
                             .stroke(isCurrent ? targetStatus.color.opacity(0.4) : Color.clear, lineWidth: 1)
                     )
+                    .fixedSize(horizontal: true, vertical: false)
                 }
                 .buttonStyle(.plain)
                 .disabled(isCurrent)
+                .fixedSize(horizontal: true, vertical: false)
                 .help(isCurrent ? "Current column: \(targetStatus.rawValue)" : "Move to \(targetStatus.rawValue)")
             }
         }

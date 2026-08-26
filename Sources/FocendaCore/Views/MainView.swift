@@ -47,8 +47,6 @@ public struct MainView: View {
                     )
                 case .timer:
                     FocusTimerView(timerVM: timerVM)
-                case .tasks:
-                    TaskListView(taskVM: taskVM)
                 case .kanban:
                     KanbanBoardView(taskVM: taskVM)
                 case .habits:

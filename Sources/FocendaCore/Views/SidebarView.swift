@@ -169,7 +169,7 @@ private struct SidebarRowItem: View {
                 .background(AppTheme.success.opacity(0.12))
                 .clipShape(Capsule())
                 .fixedSize(horizontal: true, vertical: false)
-            } else if tab == .tasks && pendingTasksCount > 0 {
+            } else if tab == .kanban && pendingTasksCount > 0 {
                 Text("\(pendingTasksCount)")
                     .font(.caption2.bold())
                     .foregroundStyle(isSelected ? AppTheme.textPrimary : AppTheme.textSecondary)
@@ -182,22 +182,6 @@ private struct SidebarRowItem: View {
                     .contentTransition(.numericText())
                     .lineLimit(1)
                     .fixedSize(horizontal: true, vertical: false)
-            } else if tab == .kanban && inProgressTasksCount > 0 {
-                HStack(spacing: 3) {
-                    Circle()
-                        .fill(AppTheme.sandstone)
-                        .frame(width: 5, height: 5)
-                    Text("\(inProgressTasksCount)")
-                        .font(.caption2.bold())
-                        .foregroundStyle(isSelected ? AppTheme.textPrimary : AppTheme.textSecondary)
-                }
-                .padding(.horizontal, 6)
-                .padding(.vertical, 2)
-                .background(AppTheme.sandstone.opacity(0.12))
-                .clipShape(Capsule())
-                .contentTransition(.numericText())
-                .lineLimit(1)
-                .fixedSize(horizontal: true, vertical: false)
             } else if tab == .habits && totalHabitsCount > 0 {
                 if habitsCompletedToday == totalHabitsCount {
                     HStack(spacing: 3) {
