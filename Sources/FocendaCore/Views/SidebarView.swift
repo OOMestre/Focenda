@@ -31,6 +31,7 @@ public struct SidebarView: View {
                     isSelected: appState.selectedTab == tab,
                     timerIsRunning: timerVM.status == .running,
                     pendingTasksCount: taskVM.pendingTasksCount,
+                    inProgressTasksCount: taskVM.inProgressTasksCount,
                     habitsCompletedToday: habitVM.totalCompletionsToday,
                     totalHabitsCount: habitVM.habits.count,
                     longestHabitStreak: habitVM.longestStreak,
@@ -125,6 +126,7 @@ private struct SidebarRowItem: View {
     let isSelected: Bool
     let timerIsRunning: Bool
     let pendingTasksCount: Int
+    let inProgressTasksCount: Int
     let habitsCompletedToday: Int
     let totalHabitsCount: Int
     let longestHabitStreak: Int
@@ -176,6 +178,22 @@ private struct SidebarRowItem: View {
                         .contentTransition(.numericText())
                         .lineLimit(1)
                         .fixedSize(horizontal: true, vertical: false)
+                } else if tab == .kanban && inProgressTasksCount > 0 {
+                    HStack(spacing: 3) {
+                        Circle()
+                            .fill(AppTheme.sandstone)
+                            .frame(width: 5, height: 5)
+                        Text("\(inProgressTasksCount)")
+                            .font(.caption2.bold())
+                            .foregroundStyle(isSelected ? AppTheme.textPrimary : AppTheme.textSecondary)
+                    }
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(AppTheme.sandstone.opacity(0.12))
+                    .clipShape(Capsule())
+                    .contentTransition(.numericText())
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
                 } else if tab == .habits && totalHabitsCount > 0 {
                     if habitsCompletedToday == totalHabitsCount {
                         HStack(spacing: 3) {
@@ -209,6 +227,16 @@ private struct SidebarRowItem: View {
                         .clipShape(Capsule())
                         .fixedSize(horizontal: true, vertical: false)
                     }
+                } else if tab == .bookmarks && totalBookmarksCount > 0 {
+                    Text("\(totalBookmarksCount)")
+                        .font(.caption2.bold())
+                        .foregroundStyle(isSelected ? AppTheme.textPrimary : AppTheme.textSecondary)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(AppTheme.cardBackgroundSubtle)
+                        .clipShape(Capsule())
+                        .lineLimit(1)
+                        .fixedSize(horizontal: true, vertical: false)
                 }
             }
         } icon: {

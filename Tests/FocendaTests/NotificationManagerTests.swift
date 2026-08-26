@@ -41,6 +41,19 @@ final class NotificationManagerTests: XCTestCase {
         }
     }
 
+    func testScheduleTaskReminderDoesNotCrash() {
+        let manager = NotificationManager()
+        let futureTask = TaskItem(
+            title: "Future Task Reminder",
+            notes: "Don't forget this task",
+            reminderDate: Date().addingTimeInterval(3600)
+        )
+        manager.scheduleTaskReminder(task: futureTask)
+        XCTAssertEqual(manager.lastScheduledTask?.title, "Future Task Reminder")
+
+        manager.cancelTaskReminder(task: futureTask)
+    }
+
     func testSharedInstance() {
         XCTAssertNotNil(NotificationManager.shared)
     }
@@ -48,6 +61,8 @@ final class NotificationManagerTests: XCTestCase {
     func testMockNotificationProtocolTracking() {
         final class MockNotificationManager: NotificationManagerProtocol {
             var notifiedModes: [FocusMode] = []
+            var scheduledTasks: [TaskItem] = []
+            var cancelledTasks: [TaskItem] = []
             var authorizationRequested = false
 
             func requestAuthorization(completion: ((Bool, Error?) -> Void)?) {
@@ -57,6 +72,14 @@ final class NotificationManagerTests: XCTestCase {
 
             func notifySessionCompleted(mode: FocusMode) {
                 notifiedModes.append(mode)
+            }
+
+            func scheduleTaskReminder(task: TaskItem) {
+                scheduledTasks.append(task)
+            }
+
+            func cancelTaskReminder(task: TaskItem) {
+                cancelledTasks.append(task)
             }
         }
 
@@ -71,5 +94,13 @@ final class NotificationManagerTests: XCTestCase {
         mock.notifySessionCompleted(mode: .longBreak)
 
         XCTAssertEqual(mock.notifiedModes, [.work, .shortBreak, .longBreak])
+
+        let sampleTask = TaskItem(title: "Mock task", reminderDate: Date().addingTimeInterval(600))
+        mock.scheduleTaskReminder(task: sampleTask)
+        XCTAssertEqual(mock.scheduledTasks.count, 1)
+        XCTAssertEqual(mock.scheduledTasks.first?.title, "Mock task")
+
+        mock.cancelTaskReminder(task: sampleTask)
+        XCTAssertEqual(mock.cancelledTasks.count, 1)
     }
 }

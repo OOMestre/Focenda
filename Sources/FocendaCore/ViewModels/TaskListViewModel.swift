@@ -59,6 +59,25 @@ public final class TaskListViewModel {
         }
     }
 
+    /// Tasks filtered for a specific Kanban column status, matching current search query
+    public func tasks(for status: TaskStatus) -> [TaskItem] {
+        tasks.filter { task in
+            guard task.status == status else { return false }
+            let trimmedSearch = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmedSearch.isEmpty {
+                return true
+            }
+            return task.title.localizedCaseInsensitiveContains(trimmedSearch) ||
+                   task.notes.localizedCaseInsensitiveContains(trimmedSearch) ||
+                   task.tags.contains { $0.localizedCaseInsensitiveContains(trimmedSearch) }
+        }.sorted { (t1: TaskItem, t2: TaskItem) -> Bool in
+            if t1.priority != t2.priority {
+                return t1.priority > t2.priority
+            }
+            return t1.createdAt > t2.createdAt
+        }
+    }
+
     public var completedTasksCount: Int {
         tasks.filter { $0.isCompleted }.count
     }
@@ -71,10 +90,25 @@ public final class TaskListViewModel {
         tasks.filter { !$0.isCompleted && $0.priority == .high }.count
     }
 
+    public var todoTasksCount: Int {
+        tasks.filter { $0.status == .todo }.count
+    }
+
+    public var inProgressTasksCount: Int {
+        tasks.filter { $0.status == .inProgress }.count
+    }
+
+    public var doneTasksCount: Int {
+        tasks.filter { $0.status == .done }.count
+    }
+
     public func addTask(
         title: String,
         notes: String = "",
         priority: TaskPriority = .medium,
+        status: TaskStatus = .todo,
+        reminderDate: Date? = nil,
+        dueDate: Date? = nil,
         tags: [String] = [],
         estimatedPomodoros: Int = 1
     ) {
@@ -85,22 +119,52 @@ public final class TaskListViewModel {
             title: trimmedTitle,
             notes: notes,
             priority: priority,
+            status: status,
+            reminderDate: reminderDate,
+            dueDate: dueDate,
             tags: tags,
             estimatedPomodoros: estimatedPomodoros
         )
         tasks.insert(newTask, at: 0)
+
+        if let reminderDate = reminderDate, reminderDate > Date() {
+            NotificationManager.shared.scheduleTaskReminder(task: newTask)
+        }
+
+        saveTasks()
+    }
+
+    /// Moves a task to a different Kanban status column
+    public func moveTask(id: UUID, to newStatus: TaskStatus) {
+        guard let index = tasks.firstIndex(where: { $0.id == id }) else { return }
+        tasks[index].status = newStatus
+        if newStatus == .done {
+            if tasks[index].completedAt == nil {
+                tasks[index].completedAt = Date()
+            }
+        } else {
+            tasks[index].completedAt = nil
+        }
         saveTasks()
     }
 
     public func toggleTaskCompletion(_ task: TaskItem) {
         if let index = tasks.firstIndex(where: { $0.id == task.id }) {
-            tasks[index].isCompleted.toggle()
-            tasks[index].completedAt = tasks[index].isCompleted ? Date() : nil
+            if tasks[index].status == .done {
+                tasks[index].status = .todo
+                tasks[index].completedAt = nil
+            } else {
+                tasks[index].status = .done
+                tasks[index].completedAt = Date()
+            }
             saveTasks()
         }
     }
 
     public func deleteTask(withId id: UUID) {
+        if let task = tasks.first(where: { $0.id == id }) {
+            NotificationManager.shared.cancelTaskReminder(task: task)
+        }
         tasks.removeAll { $0.id == id }
         saveTasks()
     }
@@ -108,6 +172,11 @@ public final class TaskListViewModel {
     public func updateTask(_ task: TaskItem) {
         if let index = tasks.firstIndex(where: { $0.id == task.id }) {
             tasks[index] = task
+            if let reminder = task.reminderDate, reminder > Date() {
+                NotificationManager.shared.scheduleTaskReminder(task: task)
+            } else if task.reminderDate == nil {
+                NotificationManager.shared.cancelTaskReminder(task: task)
+            }
             saveTasks()
         }
     }
@@ -115,6 +184,22 @@ public final class TaskListViewModel {
     public func incrementTaskPomodoro(taskId: UUID) {
         if let index = tasks.firstIndex(where: { $0.id == taskId }) {
             tasks[index].completedPomodoros += 1
+            saveTasks()
+        }
+    }
+
+    public func scheduleReminder(for taskId: UUID, at date: Date) {
+        if let index = tasks.firstIndex(where: { $0.id == taskId }) {
+            tasks[index].reminderDate = date
+            NotificationManager.shared.scheduleTaskReminder(task: tasks[index])
+            saveTasks()
+        }
+    }
+
+    public func removeReminder(for taskId: UUID) {
+        if let index = tasks.firstIndex(where: { $0.id == taskId }) {
+            NotificationManager.shared.cancelTaskReminder(task: tasks[index])
+            tasks[index].reminderDate = nil
             saveTasks()
         }
     }
@@ -138,22 +223,33 @@ public final class TaskListViewModel {
                 title: "Plan weekly productivity goals",
                 notes: "Block dedicated deep work focus sessions",
                 priority: .high,
+                status: .inProgress,
+                reminderDate: Calendar.current.date(byAdding: .hour, value: 2, to: Date()),
+                dueDate: Calendar.current.date(byAdding: .day, value: 1, to: Date()),
                 tags: ["Planning", "Focus"],
-                estimatedPomodoros: 2
+                estimatedPomodoros: 2,
+                completedPomodoros: 1
             ),
             TaskItem(
                 title: "Explore Focenda features",
-                notes: "Try out the focus timer and task list",
+                notes: "Try out the focus timer, kanban board, and habit tracker",
                 priority: .medium,
+                status: .todo,
+                reminderDate: Calendar.current.date(byAdding: .day, value: 1, to: Date()),
+                dueDate: Calendar.current.date(byAdding: .day, value: 3, to: Date()),
                 tags: ["Welcome"],
-                estimatedPomodoros: 1
+                estimatedPomodoros: 1,
+                completedPomodoros: 0
             ),
             TaskItem(
                 title: "Organize project tasks & priorities",
                 notes: "Categorize by urgency and impact",
                 priority: .low,
+                status: .done,
+                completedAt: Date(),
                 tags: ["Organization"],
-                estimatedPomodoros: 1
+                estimatedPomodoros: 1,
+                completedPomodoros: 1
             )
         ]
         saveTasks()
