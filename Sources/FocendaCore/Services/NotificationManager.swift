@@ -26,9 +26,13 @@ public final class NotificationManager: NotificationManagerProtocol {
 
     private static var isNotificationAvailable: Bool {
         guard NSClassFromString("XCTestCase") == nil,
+              NSClassFromString("XCTest") == nil,
               ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil,
+              ProcessInfo.processInfo.environment["XCTestBundlePath"] == nil,
+              !ProcessInfo.processInfo.arguments.contains(where: { $0.contains("xctest") || $0.contains("test") }),
               let bundleId = Bundle.main.bundleIdentifier,
               bundleId != "com.apple.dt.xctest.tool",
+              bundleId != "FocendaPackageTests",
               !bundleId.isEmpty else {
             return false
         }

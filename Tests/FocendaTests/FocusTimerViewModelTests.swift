@@ -11,6 +11,8 @@ final class FocusTimerViewModelTests: XCTestCase {
     }
 
     override func tearDown() {
+        viewModel?.pause()
+        viewModel?.reset()
         viewModel = nil
         super.tearDown()
     }

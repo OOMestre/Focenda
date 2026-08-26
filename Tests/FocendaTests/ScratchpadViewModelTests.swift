@@ -4,18 +4,18 @@ import XCTest
 final class ScratchpadViewModelTests: XCTestCase {
 
     var testDefaults: UserDefaults!
-    var suiteName: String!
+    private let testKey = "test_focenda_scratchpads_isolated"
 
     override func setUp() {
         super.setUp()
-        suiteName = "test_scratchpad_\(UUID().uuidString)"
-        testDefaults = UserDefaults(suiteName: suiteName)
+        testDefaults = UserDefaults.standard
+        testDefaults.removeObject(forKey: testKey)
+        testDefaults.removeObject(forKey: ScratchpadViewModel.userDefaultsKey)
     }
 
     override func tearDown() {
-        if let suiteName = suiteName {
-            testDefaults?.removePersistentDomain(forName: suiteName)
-        }
+        testDefaults.removeObject(forKey: testKey)
+        testDefaults.removeObject(forKey: ScratchpadViewModel.userDefaultsKey)
         testDefaults = nil
         super.tearDown()
     }
