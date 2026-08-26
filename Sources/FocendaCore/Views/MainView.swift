@@ -31,7 +31,8 @@ public struct MainView: View {
                 appState: appState,
                 timerVM: timerVM,
                 taskVM: taskVM,
-                bookmarkVM: bookmarkVM
+                bookmarkVM: bookmarkVM,
+                recurringReminderVM: recurringReminderVM
             )
             .navigationSplitViewColumnWidth(min: 220, ideal: 240, max: 300)
             .background(AppTheme.sidebarBackground)
@@ -53,6 +54,11 @@ public struct MainView: View {
                         timerVM: timerVM,
                         taskVM: taskVM,
                         recurringReminderVM: recurringReminderVM
+                    )
+                case .reminders:
+                    RemindersView(
+                        recurringReminderVM: recurringReminderVM,
+                        taskVM: taskVM
                     )
                 case .scratchpad:
                     ScratchpadView(viewModel: scratchpadVM)

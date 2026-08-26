@@ -133,6 +133,36 @@ final class RecurringReminderTests: XCTestCase {
         }
     }
 
+    func testNextFireDatePastTimeAdvancesToNextOccurrence() {
+        let calendar = Calendar.current
+        var comp = DateComponents()
+        comp.year = 2026
+        comp.month = 8
+        comp.day = 26
+        comp.hour = 17
+        comp.minute = 0
+        comp.second = 0
+        let refDate = calendar.date(from: comp)!
+
+        // Reminder was set for 9:00 AM (already passed for today)
+        comp.hour = 9
+        let morningTime = calendar.date(from: comp)!
+
+        let dailyReminder = RecurringReminder(
+            title: "Morning Routine",
+            time: morningTime,
+            repeatFrequency: .daily
+        )
+
+        let nextDate = dailyReminder.nextFireDate(after: refDate, calendar: calendar)
+        XCTAssertNotNil(nextDate)
+        if let next = nextDate {
+            XCTAssertEqual(calendar.component(.hour, from: next), 9)
+            XCTAssertEqual(calendar.component(.minute, from: next), 0)
+            XCTAssertEqual(calendar.component(.day, from: next), 27) // Tomorrow
+        }
+    }
+
     func testRecurringReminderViewModelCRUD() {
         let viewModel = RecurringReminderViewModel()
         viewModel.reminders = []
@@ -270,5 +300,21 @@ final class RecurringReminderTests: XCTestCase {
         viewModel.reminders = [r1, r2]
 
         viewModel.rescheduleAllNotifications()
+    }
+
+    func testNotificationManagerNotificationStrings() {
+        let reminder = RecurringReminder(
+            title: "Focus Block",
+            time: Date(),
+            repeatFrequency: .daily,
+            notes: "Deep work session"
+        )
+
+        let title = NotificationManager.recurringReminderTitle(for: reminder)
+        let body = NotificationManager.recurringReminderBody(for: reminder)
+
+        XCTAssertTrue(title.contains("Daily"))
+        XCTAssertTrue(title.contains("Focus Block"))
+        XCTAssertTrue(body.contains("Deep work session"))
     }
 }

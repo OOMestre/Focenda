@@ -5,6 +5,7 @@ public struct SidebarView: View {
     var timerVM: FocusTimerViewModel
     var taskVM: TaskListViewModel
     var bookmarkVM: BookmarkViewModel
+    var recurringReminderVM: RecurringReminderViewModel
 
     @State private var isPulsingDot = false
 
@@ -12,12 +13,14 @@ public struct SidebarView: View {
         appState: AppState,
         timerVM: FocusTimerViewModel,
         taskVM: TaskListViewModel,
-        bookmarkVM: BookmarkViewModel = BookmarkViewModel()
+        bookmarkVM: BookmarkViewModel = BookmarkViewModel(),
+        recurringReminderVM: RecurringReminderViewModel = RecurringReminderViewModel()
     ) {
         self.appState = appState
         self.timerVM = timerVM
         self.taskVM = taskVM
         self.bookmarkVM = bookmarkVM
+        self.recurringReminderVM = recurringReminderVM
     }
 
     public var body: some View {
@@ -30,6 +33,7 @@ public struct SidebarView: View {
                     pendingTasksCount: taskVM.pendingTasksCount,
                     inProgressTasksCount: taskVM.inProgressTasksCount,
                     totalBookmarksCount: bookmarkVM.bookmarks.count,
+                    activeRemindersCount: recurringReminderVM.activeReminders.count,
                     isPulsingDot: isPulsingDot
                 )
             }
@@ -123,6 +127,7 @@ public struct SidebarRowItem: View {
     public let pendingTasksCount: Int
     public let inProgressTasksCount: Int
     public let totalBookmarksCount: Int
+    public let activeRemindersCount: Int
     public let isPulsingDot: Bool
 
     public init(
@@ -132,6 +137,7 @@ public struct SidebarRowItem: View {
         pendingTasksCount: Int = 0,
         inProgressTasksCount: Int = 0,
         totalBookmarksCount: Int = 0,
+        activeRemindersCount: Int = 0,
         isPulsingDot: Bool = false
     ) {
         self.tab = tab
@@ -140,6 +146,7 @@ public struct SidebarRowItem: View {
         self.pendingTasksCount = pendingTasksCount
         self.inProgressTasksCount = inProgressTasksCount
         self.totalBookmarksCount = totalBookmarksCount
+        self.activeRemindersCount = activeRemindersCount
         self.isPulsingDot = isPulsingDot
     }
 
@@ -184,6 +191,19 @@ public struct SidebarRowItem: View {
                     .font(.caption2.bold())
                     .foregroundStyle(isSelected ? AppTheme.textPrimary : AppTheme.textSecondary)
                     .padding(.horizontal, 7)
+                    .padding(.vertical, 2)
+                    .background(
+                        Capsule()
+                            .fill(isSelected ? AppTheme.accent.opacity(0.15) : AppTheme.cardBackgroundSubtle)
+                    )
+                    .contentTransition(.numericText())
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
+            } else if tab == .reminders && activeRemindersCount > 0 {
+                Text("\(activeRemindersCount)")
+                    .font(.caption2.bold())
+                    .foregroundStyle(isSelected ? AppTheme.textPrimary : AppTheme.textSecondary)
+                    .padding(.horizontal, 6)
                     .padding(.vertical, 2)
                     .background(
                         Capsule()
