@@ -1,18 +1,21 @@
 import Foundation
 import UserNotifications
 
-/// Protocol defining notification operations for focus sessions
+/// Protocol defining notification operations for focus sessions and timed task reminders
 public protocol NotificationManagerProtocol: AnyObject {
     func requestAuthorization(completion: ((Bool, Error?) -> Void)?)
     func notifySessionCompleted(mode: FocusMode)
+    func scheduleTaskReminder(task: TaskItem)
+    func cancelTaskReminder(task: TaskItem)
 }
 
-/// Service managing native macOS system notifications for Focenda focus sessions and breaks
+/// Service managing native macOS system notifications for Focenda focus sessions and task reminders
 public final class NotificationManager: NotificationManagerProtocol {
     public static let shared = NotificationManager()
 
     private let center: UNUserNotificationCenter?
     public private(set) var lastNotifiedMode: FocusMode?
+    public private(set) var lastScheduledTask: TaskItem?
 
     public init(center: UNUserNotificationCenter? = nil) {
         if let center = center {
@@ -107,5 +110,51 @@ public final class NotificationManager: NotificationManagerProtocol {
                 print("Failed to schedule notification: \(error.localizedDescription)")
             }
         }
+    }
+
+    /// Schedules a timed calendar notification reminder for a task
+    public func scheduleTaskReminder(task: TaskItem) {
+        self.lastScheduledTask = task
+
+        guard let reminderDate = task.reminderDate, reminderDate > Date() else {
+            return
+        }
+
+        guard let center = center else {
+            return
+        }
+
+        let content = UNMutableNotificationContent()
+        content.title = "Task Reminder: \(task.title)"
+        if !task.notes.isEmpty {
+            content.body = task.notes
+        } else {
+            content.body = "Time to focus on '\(task.title)'."
+        }
+        content.sound = .default
+
+        let components = Calendar.current.dateComponents(
+            [.year, .month, .day, .hour, .minute, .second],
+            from: reminderDate
+        )
+        let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
+
+        let request = UNNotificationRequest(
+            identifier: "task-reminder-\(task.id.uuidString)",
+            content: content,
+            trigger: trigger
+        )
+
+        center.add(request) { error in
+            if let error = error {
+                print("Failed to schedule task reminder: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    /// Cancels a pending task reminder notification
+    public func cancelTaskReminder(task: TaskItem) {
+        guard let center = center else { return }
+        center.removePendingNotificationRequests(withIdentifiers: ["task-reminder-\(task.id.uuidString)"])
     }
 }

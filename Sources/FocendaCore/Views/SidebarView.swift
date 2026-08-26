@@ -28,6 +28,7 @@ public struct SidebarView: View {
                     isSelected: appState.selectedTab == tab,
                     timerIsRunning: timerVM.status == .running,
                     pendingTasksCount: taskVM.pendingTasksCount,
+                    inProgressTasksCount: taskVM.inProgressTasksCount,
                     habitsCompletedToday: habitVM.totalCompletionsToday,
                     totalHabitsCount: habitVM.habits.count,
                     longestHabitStreak: habitVM.longestStreak,
@@ -121,6 +122,7 @@ private struct SidebarRowItem: View {
     let isSelected: Bool
     let timerIsRunning: Bool
     let pendingTasksCount: Int
+    let inProgressTasksCount: Int
     let habitsCompletedToday: Int
     let totalHabitsCount: Int
     let longestHabitStreak: Int
@@ -164,6 +166,20 @@ private struct SidebarRowItem: View {
                                 .fill(isSelected ? AppTheme.accent.opacity(0.15) : AppTheme.cardBackgroundSubtle)
                         )
                         .contentTransition(.numericText())
+                } else if tab == .kanban && inProgressTasksCount > 0 {
+                    HStack(spacing: 3) {
+                        Circle()
+                            .fill(AppTheme.sandstone)
+                            .frame(width: 5, height: 5)
+                        Text("\(inProgressTasksCount)")
+                            .font(.caption2.bold())
+                            .foregroundStyle(isSelected ? AppTheme.textPrimary : AppTheme.textSecondary)
+                    }
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(AppTheme.sandstone.opacity(0.12))
+                    .clipShape(Capsule())
+                    .contentTransition(.numericText())
                 } else if tab == .habits && totalHabitsCount > 0 {
                     if habitsCompletedToday == totalHabitsCount {
                         HStack(spacing: 3) {
