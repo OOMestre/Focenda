@@ -5,6 +5,7 @@ public struct SidebarView: View {
     var timerVM: FocusTimerViewModel
     var taskVM: TaskListViewModel
     var bookmarkVM: BookmarkViewModel
+    var recurringReminderVM: RecurringReminderViewModel
 
     @State private var isPulsingDot = false
 
@@ -12,12 +13,14 @@ public struct SidebarView: View {
         appState: AppState,
         timerVM: FocusTimerViewModel,
         taskVM: TaskListViewModel,
-        bookmarkVM: BookmarkViewModel = BookmarkViewModel()
+        bookmarkVM: BookmarkViewModel = BookmarkViewModel(),
+        recurringReminderVM: RecurringReminderViewModel = RecurringReminderViewModel()
     ) {
         self.appState = appState
         self.timerVM = timerVM
         self.taskVM = taskVM
         self.bookmarkVM = bookmarkVM
+        self.recurringReminderVM = recurringReminderVM
     }
 
     public var body: some View {
@@ -30,6 +33,7 @@ public struct SidebarView: View {
                     pendingTasksCount: taskVM.pendingTasksCount,
                     inProgressTasksCount: taskVM.inProgressTasksCount,
                     totalBookmarksCount: bookmarkVM.bookmarks.count,
+                    activeRemindersCount: recurringReminderVM.activeReminders.count,
                     isPulsingDot: isPulsingDot
                 )
             }
@@ -122,6 +126,7 @@ private struct SidebarRowItem: View {
     let pendingTasksCount: Int
     let inProgressTasksCount: Int
     let totalBookmarksCount: Int
+    let activeRemindersCount: Int
     let isPulsingDot: Bool
 
     var body: some View {
@@ -165,6 +170,19 @@ private struct SidebarRowItem: View {
                     .font(.caption2.bold())
                     .foregroundStyle(isSelected ? AppTheme.textPrimary : AppTheme.textSecondary)
                     .padding(.horizontal, 7)
+                    .padding(.vertical, 2)
+                    .background(
+                        Capsule()
+                            .fill(isSelected ? AppTheme.accent.opacity(0.15) : AppTheme.cardBackgroundSubtle)
+                    )
+                    .contentTransition(.numericText())
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
+            } else if tab == .reminders && activeRemindersCount > 0 {
+                Text("\(activeRemindersCount)")
+                    .font(.caption2.bold())
+                    .foregroundStyle(isSelected ? AppTheme.textPrimary : AppTheme.textSecondary)
+                    .padding(.horizontal, 6)
                     .padding(.vertical, 2)
                     .background(
                         Capsule()
