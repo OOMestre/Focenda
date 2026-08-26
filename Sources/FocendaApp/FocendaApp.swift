@@ -11,6 +11,10 @@ struct FocendaApp: App {
     @State private var scratchpadVM = ScratchpadViewModel()
     @State private var bookmarkVM = BookmarkViewModel()
 
+    init() {
+        NotificationManager.shared.requestAuthorization()
+    }
+
     var body: some Scene {
         WindowGroup {
             MainView(
@@ -21,6 +25,9 @@ struct FocendaApp: App {
                 scratchpadVM: scratchpadVM,
                 bookmarkVM: bookmarkVM
             )
+            .task {
+                _ = try? await NotificationManager.shared.requestAuthorization()
+            }
         }
         .windowStyle(.titleBar)
         .windowToolbarStyle(.unified)
