@@ -142,7 +142,6 @@ final class MenuBarCardViewTests: XCTestCase {
         let timerVM = FocusTimerViewModel()
         let taskVM = TaskListViewModel()
         let scratchpadVM = ScratchpadViewModel()
-        let habitVM = HabitViewModel()
         let reminderVM = RecurringReminderViewModel()
         reminderVM.reminders = []
 
@@ -152,7 +151,6 @@ final class MenuBarCardViewTests: XCTestCase {
             timerVM: timerVM,
             taskVM: taskVM,
             scratchpadVM: scratchpadVM,
-            habitVM: habitVM,
             recurringReminderVM: reminderVM,
             initialSection: .reminders
         )

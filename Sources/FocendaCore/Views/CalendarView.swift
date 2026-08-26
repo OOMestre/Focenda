@@ -100,8 +100,6 @@ public struct CalendarView: View {
         let comp = Calendar.current.dateComponents([.year, .month], from: initialDate)
         _displayedMonth = State(initialValue: Calendar.current.date(from: comp) ?? startOfDay)
     }
-        _displayedMonth = State(initialValue: Calendar.current.date(from: comp) ?? startOfDay)
-    }
 
     public var body: some View {
         GeometryReader { geometry in
@@ -443,6 +441,7 @@ public struct CalendarView: View {
             withAnimation(.spring(response: 0.25, dampingFraction: 0.75)) {
                 hoveredPopoverDay = hovering ? day : nil
             }
+        }
         .popover(
             isPresented: Binding(
                 get: { isPopoverPresented },
@@ -464,7 +463,6 @@ public struct CalendarView: View {
         let dayTasks = tasks(for: day.date)
         let dayReminders = recurringReminderVM.reminders(for: day.date, calendar: calendar)
         let daySessions = sessions(for: day.date)
-        let dayHabits = habitsCompleted(for: day.date)
 
         return VStack(alignment: .leading, spacing: 10) {
             // Header
@@ -499,15 +497,6 @@ public struct CalendarView: View {
                         .font(.system(size: 9, weight: .bold))
                         .foregroundStyle(AppTheme.deepFocus)
                     Text("\(day.focusMinutes)m focus")
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(AppTheme.textPrimary)
-                }
-
-                HStack(spacing: 3) {
-                    Image(systemName: "flame.fill")
-                        .font(.system(size: 9, weight: .bold))
-                        .foregroundStyle(AppTheme.sandstone)
-                    Text("\(dayHabits.count) habits")
                         .font(.system(size: 10, weight: .semibold))
                         .foregroundStyle(AppTheme.textPrimary)
                 }
@@ -634,7 +623,6 @@ public struct CalendarView: View {
         .padding(12)
         .frame(width: 280)
         .background(AppTheme.cardBackground)
->>>>>>> subagent-Calendar--Reminders---Audio-Specialist-focenda-worker-68a22f1c
     }
 
     private func heatmapDotColor(level: Int, isSelected: Bool) -> Color {
@@ -857,7 +845,6 @@ public struct CalendarView: View {
                 )
 
                 agendaChip(
-                agendaChip(
                     icon: "repeat",
                     label: "\(dayReminders.count) rem",
                     color: AppTheme.accent
@@ -1057,7 +1044,6 @@ public struct CalendarView: View {
     }
 
     // MARK: - ⏱️ Focus Sessions Log Section
->>>>>>> subagent-Calendar--Reminders---Audio-Specialist-focenda-worker-68a22f1c
     private var focusSessionsLogSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {

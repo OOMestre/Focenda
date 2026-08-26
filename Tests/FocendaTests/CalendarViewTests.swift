@@ -502,7 +502,6 @@ final class CalendarViewTests: XCTestCase {
     func testCalendarViewWithRecurringReminders() {
         let timerVM = FocusTimerViewModel()
         let taskVM = TaskListViewModel()
-        let habitVM = HabitViewModel()
         let reminderVM = RecurringReminderViewModel()
         reminderVM.reminders = []
 
@@ -523,7 +522,6 @@ final class CalendarViewTests: XCTestCase {
         let calendarView = CalendarView(
             timerVM: timerVM,
             taskVM: taskVM,
-            habitVM: habitVM,
             recurringReminderVM: reminderVM,
             initialDate: august26
         )
@@ -558,12 +556,10 @@ final class CalendarViewTests: XCTestCase {
             isSelected: true,
             focusMinutes: 45,
             focusSessionsCount: 2,
-            habitsCompletedCount: 1,
             tasksCount: 2,
             dueTasksCount: 0,
             hasDueTasks: false,
             hasReminders: true,
-            hasHabitStreak: true,
             recurringRemindersCount: 2,
             hasRecurringReminders: true
         )
