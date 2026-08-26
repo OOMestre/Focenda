@@ -1,0 +1,14 @@
+# Internal Workflow & Agent Rules (Local Only)
+AGENTS.md
+.agents/
+.agent/
+
+# Swift Package Manager & Builds
+.build/
+dist/
+build/
+DerivedData/
+
+# macOS System Files
+.DS_Store
+.Trashes
