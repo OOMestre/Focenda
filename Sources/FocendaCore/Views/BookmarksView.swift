@@ -151,7 +151,7 @@ public struct BookmarksView: View {
 
     // MARK: - Category Filters
     private var categoryFilterSection: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
+        ScrollView(.horizontal, showsIndicators: true) {
             HStack(spacing: 8) {
                 ForEach(viewModel.allCategories, id: \.self) { category in
                     let isSelected = viewModel.selectedCategory.caseInsensitiveCompare(category) == .orderedSame
@@ -588,7 +588,7 @@ public struct BookmarksView: View {
                         .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(AppTheme.textSecondary)
 
-                    ScrollView(.horizontal, showsIndicators: false) {
+                    ScrollView(.horizontal, showsIndicators: true) {
                         HStack(spacing: 8) {
                             ForEach(availableIcons, id: \.self) { icon in
                                 Button {

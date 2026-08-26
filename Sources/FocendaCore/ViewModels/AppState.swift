@@ -6,7 +6,7 @@ import Observation
 public enum AppTab: String, CaseIterable, Identifiable {
     case dashboard = "Dashboard"
     case timer = "Focus Timer"
-    case kanban = "Tasks & Kanban"
+    case kanban = "Tasks"
     case calendar = "Calendar"
     case scratchpad = "Scratchpad"
     case bookmarks = "Bookmarks"

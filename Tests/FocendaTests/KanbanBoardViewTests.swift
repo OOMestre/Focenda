@@ -216,9 +216,18 @@ final class KanbanBoardViewTests: XCTestCase {
 
     func testAppTabEnumUnified() {
         let allTabs = AppTab.allCases
-        XCTAssertFalse(allTabs.map(\.rawValue).contains("Tasks"), "Standalone 'Tasks' tab must be removed")
         XCTAssertTrue(allTabs.contains(.kanban))
-        XCTAssertEqual(AppTab.kanban.rawValue, "Tasks & Kanban")
+        XCTAssertEqual(AppTab.kanban.rawValue, "Tasks")
         XCTAssertEqual(AppTab.kanban.iconName, "rectangle.split.3x1")
+    }
+
+    func testKanbanViewModes() {
+        let kanbanView = KanbanBoardView(taskVM: taskVM, showHeader: true, initialViewMode: .kanban)
+        XCTAssertEqual(kanbanView.viewMode, .kanban)
+        XCTAssertNotNil(kanbanView.body)
+        
+        let listView = KanbanBoardView(taskVM: taskVM, showHeader: true, initialViewMode: .list)
+        XCTAssertEqual(listView.viewMode, .list)
+        XCTAssertNotNil(listView.body)
     }
 }

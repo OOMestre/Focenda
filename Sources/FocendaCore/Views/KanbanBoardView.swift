@@ -107,14 +107,57 @@ public struct KanbanBoardView: View {
                         .stroke(AppTheme.border, lineWidth: 1)
                 )
 
-                // Top View Switcher Segmented Picker [ Kanban Board (Default) | List View ]
-                Picker("View Mode", selection: $viewMode) {
-                    ForEach(TaskViewMode.allCases) { mode in
-                        Label(mode.title, systemImage: mode.iconName).tag(mode)
+                // Compact Icon View Switcher [ Kanban Board | List View ]
+                HStack(spacing: 2) {
+                    Button {
+                        withAnimation(.spring(response: 0.25)) {
+                            viewMode = .kanban
+                        }
+                    } label: {
+                        Image(systemName: "rectangle.split.3x1")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(viewMode == .kanban ? AppTheme.accent : AppTheme.textSecondary)
+                            .frame(width: 28, height: 26)
+                            .background(
+                                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                    .fill(viewMode == .kanban ? AppTheme.accent.opacity(0.15) : Color.clear)
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                    .stroke(viewMode == .kanban ? AppTheme.accent.opacity(0.3) : Color.clear, lineWidth: 1)
+                            )
                     }
+                    .buttonStyle(.plain)
+                    .help("Kanban Board")
+
+                    Button {
+                        withAnimation(.spring(response: 0.25)) {
+                            viewMode = .list
+                        }
+                    } label: {
+                        Image(systemName: "list.bullet")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(viewMode == .list ? AppTheme.accent : AppTheme.textSecondary)
+                            .frame(width: 28, height: 26)
+                            .background(
+                                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                    .fill(viewMode == .list ? AppTheme.accent.opacity(0.15) : Color.clear)
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                    .stroke(viewMode == .list ? AppTheme.accent.opacity(0.3) : Color.clear, lineWidth: 1)
+                            )
+                    }
+                    .buttonStyle(.plain)
+                    .help("List View")
                 }
-                .pickerStyle(.segmented)
-                .frame(width: 240)
+                .padding(2)
+                .background(AppTheme.cardBackgroundSubtle)
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .stroke(AppTheme.border, lineWidth: 1)
+                )
                 .fixedSize(horizontal: true, vertical: false)
 
                 // Dynamic Status Overview or Quick Filters
@@ -171,7 +214,7 @@ public struct KanbanBoardView: View {
     // MARK: - 3-Column Kanban Board Layout
     private var kanbanBoardContent: some View {
         GeometryReader { geometry in
-            let minContentWidth: CGFloat = (240 * 3) + (16 * 2) + 40 // 792 minimum width for 3 columns
+            let minContentWidth: CGFloat = (280 * 3) + (16 * 2) + 40 // 912 minimum width for 3 columns
             let totalWidth = max(minContentWidth, geometry.size.width)
 
             ScrollView(.horizontal, showsIndicators: true) {
@@ -215,7 +258,7 @@ public struct KanbanBoardView: View {
                                 }
                             }
                         )
-                        .frame(minWidth: 240, maxWidth: .infinity, maxHeight: .infinity)
+                        .frame(minWidth: 280, idealWidth: 320, maxWidth: 360, maxHeight: .infinity)
                     }
                 }
                 .padding(20)

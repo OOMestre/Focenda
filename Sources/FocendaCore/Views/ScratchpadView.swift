@@ -22,24 +22,32 @@ public struct ScratchpadView: View {
             Divider()
 
             // Main 3-Pane Area (Folders Sidebar + Notes List + Editor)
-            HStack(spacing: 0) {
-                // Folder / Notebook Sidebar (Leftmost Column)
-                if viewModel.showFoldersSidebar {
-                    foldersSidebarPane
-                        .frame(width: 140)
+            GeometryReader { geometry in
+                let minPaneWidth: CGFloat = (viewModel.showFoldersSidebar ? 141 : 0) + 191 + 320
+                let totalPaneWidth = max(minPaneWidth, geometry.size.width)
 
-                    Divider()
+                ScrollView(.horizontal, showsIndicators: true) {
+                    HStack(spacing: 0) {
+                        // Folder / Notebook Sidebar (Leftmost Column)
+                        if viewModel.showFoldersSidebar {
+                            foldersSidebarPane
+                                .frame(width: 140)
+
+                            Divider()
+                        }
+
+                        // Notes List (Middle Master Column)
+                        notesListPane
+                            .frame(width: 190)
+
+                        Divider()
+
+                        // Editor Pane (Right Detail Column)
+                        editorPane
+                            .frame(minWidth: 320, maxWidth: .infinity)
+                    }
+                    .frame(minWidth: totalPaneWidth, minHeight: geometry.size.height, alignment: .leading)
                 }
-
-                // Notes List (Middle Master Column)
-                notesListPane
-                    .frame(width: 190)
-
-                Divider()
-
-                // Editor Pane (Right Detail Column)
-                editorPane
-                    .frame(minWidth: 0, maxWidth: .infinity)
             }
             .frame(minWidth: 0, maxWidth: .infinity, maxHeight: .infinity)
         }
@@ -127,7 +135,7 @@ public struct ScratchpadView: View {
             )
 
             // Category Chips (All + 5 Categories)
-            ScrollView(.horizontal, showsIndicators: false) {
+            ScrollView(.horizontal, showsIndicators: true) {
                 HStack(spacing: 5) {
                     categoryChip(title: "All", color: nil)
                     ForEach(ScratchpadColor.allCases) { color in
