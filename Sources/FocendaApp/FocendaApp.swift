@@ -8,6 +8,7 @@ struct FocendaApp: App {
     @State private var timerVM = FocusTimerViewModel()
     @State private var taskVM = TaskListViewModel()
     @State private var habitVM = HabitViewModel()
+    @State private var scratchpadVM = ScratchpadViewModel()
 
     var body: some Scene {
         WindowGroup {
@@ -15,7 +16,8 @@ struct FocendaApp: App {
                 appState: appState,
                 timerVM: timerVM,
                 taskVM: taskVM,
-                habitVM: habitVM
+                habitVM: habitVM,
+                scratchpadVM: scratchpadVM
             )
         }
         .windowStyle(.titleBar)
@@ -36,7 +38,10 @@ struct FocendaApp: App {
         } label: {
             HStack(spacing: 4) {
                 Image(systemName: "timer")
-                Text(timerVM.status == .running ? timerVM.formattedTimeRemaining : "Focenda")
+                if timerVM.status == .running {
+                    Text(timerVM.formattedTimeRemaining)
+                        .monospacedDigit()
+                }
             }
         }
         .menuBarExtraStyle(.window)

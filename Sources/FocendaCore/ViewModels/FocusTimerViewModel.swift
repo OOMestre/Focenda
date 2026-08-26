@@ -60,6 +60,7 @@ public final class FocusTimerViewModel {
     public func start() {
         guard status != .running else { return }
         status = .running
+
         timer?.invalidate()
         timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
             Task { @MainActor [weak self] in
@@ -96,6 +97,20 @@ public final class FocusTimerViewModel {
         currentMode = mode
         status = .idle
         resetToCurrentMode()
+    }
+
+    /// Adjust remaining time by a delta in seconds (clamped to minimum 60s)
+    public func adjustTime(bySeconds seconds: Int) {
+        let updated = max(60, timeRemainingSeconds + seconds)
+        timeRemainingSeconds = updated
+        if updated > totalDurationSeconds {
+            totalDurationSeconds = updated
+        }
+    }
+
+    /// Convenience method to adjust remaining time by minutes (e.g. +5 or -5)
+    public func adjustTime(byMinutes minutes: Int) {
+        adjustTime(bySeconds: minutes * 60)
     }
 
     public func tick() {

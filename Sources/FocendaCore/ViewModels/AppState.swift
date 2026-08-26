@@ -8,6 +8,7 @@ public enum AppTab: String, CaseIterable, Identifiable {
     case timer = "Focus Timer"
     case tasks = "Tasks"
     case habits = "Habits"
+    case scratchpad = "Scratchpad"
     case stats = "Statistics"
     case settings = "Settings"
 
@@ -19,6 +20,7 @@ public enum AppTab: String, CaseIterable, Identifiable {
         case .timer: return "timer"
         case .tasks: return "checklist"
         case .habits: return "flame.fill"
+        case .scratchpad: return "square.and.pencil"
         case .stats: return "chart.bar.xaxis"
         case .settings: return "gearshape"
         }

@@ -5,17 +5,20 @@ public struct MainView: View {
     @State private var timerVM: FocusTimerViewModel
     @State private var taskVM: TaskListViewModel
     @State private var habitVM: HabitViewModel
+    @State private var scratchpadVM: ScratchpadViewModel
 
     public init(
         appState: AppState = AppState(),
         timerVM: FocusTimerViewModel = FocusTimerViewModel(),
         taskVM: TaskListViewModel = TaskListViewModel(),
-        habitVM: HabitViewModel = HabitViewModel()
+        habitVM: HabitViewModel = HabitViewModel(),
+        scratchpadVM: ScratchpadViewModel = ScratchpadViewModel()
     ) {
         _appState = State(initialValue: appState)
         _timerVM = State(initialValue: timerVM)
         _taskVM = State(initialValue: taskVM)
         _habitVM = State(initialValue: habitVM)
+        _scratchpadVM = State(initialValue: scratchpadVM)
     }
 
     public var body: some View {
@@ -42,6 +45,8 @@ public struct MainView: View {
                 TaskListView(taskVM: taskVM)
             case .habits:
                 HabitTrackerView(habitVM: habitVM)
+            case .scratchpad:
+                ScratchpadView(viewModel: scratchpadVM)
             case .stats:
                 StatsView(
                     timerVM: timerVM,

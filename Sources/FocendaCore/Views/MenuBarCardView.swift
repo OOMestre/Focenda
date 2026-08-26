@@ -6,13 +6,67 @@ public struct MenuBarCardView: View {
     public var timerVM: FocusTimerViewModel
     public var appState: AppState?
 
-    public init(timerVM: FocusTimerViewModel, appState: AppState? = nil) {
+    @State private var isPresented: Bool = false
+    @State private var isHovered: Bool = false
+
+    public init(
+        timerVM: FocusTimerViewModel,
+        appState: AppState? = nil
+    ) {
         self.timerVM = timerVM
         self.appState = appState
     }
 
     public var body: some View {
-        VStack(spacing: 16) {
+        cardBody
+            .padding(18)
+            .frame(width: 320)
+            .background(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(Color(nsColor: .windowBackgroundColor))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .strokeBorder(
+                        LinearGradient(
+                            colors: [
+                                timerVM.currentMode.themeColor.opacity(isHovered ? 0.75 : 0.22),
+                                timerVM.currentMode.themeColor.opacity(isHovered ? 0.4 : 0.08)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: isHovered ? 1.8 : 1.0
+                    )
+            )
+            .shadow(
+                color: isHovered ? timerVM.currentMode.themeColor.opacity(0.35) : Color.black.opacity(0.08),
+                radius: isHovered ? 14 : 6,
+                x: 0,
+                y: isHovered ? 4 : 2
+            )
+            .scaleEffect(y: isPresented ? 1.0 : 0.88, anchor: .top)
+            .opacity(isPresented ? 1.0 : 0.0)
+            .animation(.spring(response: 0.28, dampingFraction: 0.75), value: isHovered)
+            .animation(.spring(response: 0.32, dampingFraction: 0.76), value: isPresented)
+            .onHover { hovering in
+                isHovered = hovering
+            }
+            .onAppear {
+                isPresented = false
+                DispatchQueue.main.async {
+                    withAnimation(.spring(response: 0.32, dampingFraction: 0.76)) {
+                        isPresented = true
+                    }
+                }
+            }
+            .onDisappear {
+                isPresented = false
+            }
+    }
+
+    private var cardBody: some View {
+        VStack(spacing: 14) {
             // Header: Title & Active Mode Tag
             headerSection
 
@@ -21,6 +75,9 @@ public struct MenuBarCardView: View {
 
             // Mini Circular Progress & Countdown
             miniProgressRingSection
+
+            // Quick Preset Buttons (-5m, +5m)
+            quickPresetSection
 
             // Cycle progress dots
             cycleDotsSection
@@ -31,14 +88,11 @@ public struct MenuBarCardView: View {
             // Footer actions
             footerSection
         }
-        .padding(18)
-        .frame(width: 290)
-        .background(Color(nsColor: .windowBackgroundColor))
     }
 
     // MARK: - Header
     private var headerSection: some View {
-        HStack {
+        HStack(alignment: .center) {
             HStack(spacing: 6) {
                 Image(systemName: "timer")
                     .foregroundStyle(timerVM.currentMode.themeColor)
@@ -50,14 +104,14 @@ public struct MenuBarCardView: View {
             Spacer()
 
             // Active Mode Tag
-            HStack(spacing: 5) {
+            HStack(spacing: 4) {
                 Image(systemName: timerVM.currentMode.iconName)
                     .font(.caption2)
                 Text(timerVM.currentMode.rawValue)
                     .font(.caption.weight(.semibold))
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 3)
             .background(timerVM.currentMode.themeColor.opacity(0.15))
             .foregroundStyle(timerVM.currentMode.themeColor)
             .clipShape(Capsule())
@@ -69,7 +123,9 @@ public struct MenuBarCardView: View {
         HStack(spacing: 6) {
             ForEach(FocusMode.allCases) { mode in
                 Button {
-                    timerVM.switchMode(to: mode)
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.72)) {
+                        timerVM.switchMode(to: mode)
+                    }
                 } label: {
                     Text(shortModeTitle(for: mode))
                         .font(.caption2.weight(.medium))
@@ -88,7 +144,7 @@ public struct MenuBarCardView: View {
                         )
                         .clipShape(Capsule())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(SpringScaleButtonStyle())
             }
         }
     }
@@ -132,7 +188,7 @@ public struct MenuBarCardView: View {
             // Center Countdown Readout
             VStack(spacing: 2) {
                 Text(timerVM.formattedTimeRemaining)
-                    .font(.system(size: 30, weight: .bold, design: .rounded))
+                    .font(.system(size: 28, weight: .bold, design: .rounded))
                     .monospacedDigit()
                     .foregroundStyle(.primary)
 
@@ -141,8 +197,8 @@ public struct MenuBarCardView: View {
                     .foregroundStyle(timerVM.currentMode.themeColor)
             }
         }
-        .frame(width: 140, height: 140)
-        .padding(.vertical, 4)
+        .frame(width: 130, height: 130)
+        .padding(.vertical, 2)
     }
 
     private var statusText: String {
@@ -154,6 +210,75 @@ public struct MenuBarCardView: View {
         case .idle:
             return "READY"
         }
+    }
+
+    // MARK: - Quick Presets
+    private var quickPresetSection: some View {
+        HStack(spacing: 12) {
+            // -5m Preset Button
+            Button {
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.65)) {
+                    timerVM.adjustTime(byMinutes: -5)
+                }
+            } label: {
+                HStack(spacing: 2) {
+                    Image(systemName: "minus")
+                        .font(.system(size: 8, weight: .bold))
+                    Text("5m")
+                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(
+                    Capsule()
+                        .fill(Color.primary.opacity(0.06))
+                )
+                .overlay(
+                    Capsule()
+                        .stroke(Color.primary.opacity(0.1), lineWidth: 1)
+                )
+                .foregroundStyle(.secondary)
+            }
+            .buttonStyle(SpringScaleButtonStyle())
+            .help("Subtract 5 minutes")
+
+            Spacer()
+
+            // Mode Label
+            Text(timerVM.currentMode.rawValue)
+                .font(.caption2.weight(.medium))
+                .foregroundStyle(.secondary)
+
+            Spacer()
+
+            // +5m Preset Button
+            Button {
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.65)) {
+                    timerVM.adjustTime(byMinutes: 5)
+                }
+            } label: {
+                HStack(spacing: 2) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 8, weight: .bold))
+                    Text("5m")
+                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(
+                    Capsule()
+                        .fill(Color.primary.opacity(0.06))
+                )
+                .overlay(
+                    Capsule()
+                        .stroke(Color.primary.opacity(0.1), lineWidth: 1)
+                )
+                .foregroundStyle(.secondary)
+            }
+            .buttonStyle(SpringScaleButtonStyle())
+            .help("Add 5 minutes")
+        }
+        .padding(.horizontal, 8)
     }
 
     // MARK: - Cycle Dots
@@ -183,7 +308,7 @@ public struct MenuBarCardView: View {
                 timerVM.reset()
             } label: {
                 Image(systemName: "arrow.counterclockwise")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 13, weight: .semibold))
                     .frame(width: 34, height: 34)
             }
             .buttonStyle(.bordered)
@@ -192,15 +317,17 @@ public struct MenuBarCardView: View {
 
             // Play / Pause Button
             Button {
-                if timerVM.status == .running {
-                    timerVM.pause()
-                } else {
-                    timerVM.start()
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
+                    if timerVM.status == .running {
+                        timerVM.pause()
+                    } else {
+                        timerVM.start()
+                    }
                 }
             } label: {
                 Image(systemName: timerVM.status == .running ? "pause.fill" : "play.fill")
                     .font(.system(size: 16, weight: .bold))
-                    .frame(width: 48, height: 48)
+                    .frame(width: 44, height: 44)
             }
             .buttonStyle(.borderedProminent)
             .tint(timerVM.currentMode.themeColor)
@@ -213,7 +340,7 @@ public struct MenuBarCardView: View {
                 timerVM.skip()
             } label: {
                 Image(systemName: "forward.fill")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 13, weight: .semibold))
                     .frame(width: 34, height: 34)
             }
             .buttonStyle(.bordered)
@@ -258,5 +385,15 @@ public struct MenuBarCardView: View {
         if let window = NSApp.windows.first(where: { $0.canBecomeKey && $0.isVisible }) ?? NSApp.windows.first {
             window.makeKeyAndOrderFront(nil)
         }
+    }
+}
+
+// MARK: - Spring Scale Button Style
+
+private struct SpringScaleButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.88 : 1.0)
+            .animation(.spring(response: 0.25, dampingFraction: 0.6), value: configuration.isPressed)
     }
 }

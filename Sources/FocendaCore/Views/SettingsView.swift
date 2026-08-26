@@ -4,6 +4,14 @@ public struct SettingsView: View {
     @Bindable var appState: AppState
     var timerVM: FocusTimerViewModel
 
+    public init(
+        appState: AppState,
+        timerVM: FocusTimerViewModel
+    ) {
+        self.appState = appState
+        self.timerVM = timerVM
+    }
+
     public var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {

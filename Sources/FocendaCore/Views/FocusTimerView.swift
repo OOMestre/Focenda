@@ -8,109 +8,109 @@ public struct FocusTimerView: View {
     }
 
     public var body: some View {
-        VStack(spacing: 20) {
-            // Mode selectors
-            HStack(spacing: 12) {
-                ForEach(FocusMode.allCases) { mode in
-                    ModeSelectorButton(
-                        mode: mode,
-                        isSelected: timerVM.currentMode == mode
-                    ) {
-                        withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
-                            timerVM.switchMode(to: mode)
+        ScrollView {
+            VStack(spacing: 20) {
+                // Mode selectors
+                HStack(spacing: 12) {
+                    ForEach(FocusMode.allCases) { mode in
+                        ModeSelectorButton(
+                            mode: mode,
+                            isSelected: timerVM.currentMode == mode
+                        ) {
+                            withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
+                                timerVM.switchMode(to: mode)
+                            }
                         }
                     }
                 }
-            }
-            .padding(.top, 12)
+                .padding(.top, 12)
 
-            Spacer()
+                // Circular progress ring with running pulse effect
+                CircularProgressView(
+                    progress: timerVM.progress,
+                    formattedTime: timerVM.formattedTimeRemaining,
+                    subtitle: timerVM.currentMode.rawValue,
+                    themeColor: timerVM.currentMode.themeColor,
+                    isRunning: timerVM.status == .running
+                )
+                .padding(.vertical, 8)
 
-            // Circular progress ring with running pulse effect
-            CircularProgressView(
-                progress: timerVM.progress,
-                formattedTime: timerVM.formattedTimeRemaining,
-                subtitle: timerVM.currentMode.rawValue,
-                themeColor: timerVM.currentMode.themeColor,
-                isRunning: timerVM.status == .running
-            )
-
-            // Motivational message
-            Text(timerVM.currentMode.motivationalMessage)
-                .font(.body)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 32)
-                .transition(.opacity.combined(with: .scale(scale: 0.98)))
-                .id(timerVM.currentMode)
-
-            // Pomodoro cycle dots
-            HStack(spacing: 8) {
-                Text("Pomodoro Cycle:")
-                    .font(.caption)
+                // Motivational message
+                Text(timerVM.currentMode.motivationalMessage)
+                    .font(.body)
                     .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 32)
+                    .transition(.opacity.combined(with: .scale(scale: 0.98)))
+                    .id(timerVM.currentMode)
 
-                ForEach(0..<4) { index in
-                    let isCompleted = (timerVM.completedWorkSessionsCount % 4) > index
-                    Circle()
-                        .fill(
-                            isCompleted
-                                ? timerVM.currentMode.themeColor
-                                : Color.secondary.opacity(0.25)
-                        )
-                        .frame(width: isCompleted ? 10 : 8, height: isCompleted ? 10 : 8)
-                        .shadow(
-                            color: isCompleted ? timerVM.currentMode.themeColor.opacity(0.4) : .clear,
-                            radius: 4,
-                            x: 0,
-                            y: 1
-                        )
-                        .animation(.spring(response: 0.35, dampingFraction: 0.65), value: timerVM.completedWorkSessionsCount)
-                }
-            }
+                // Pomodoro cycle dots
+                HStack(spacing: 8) {
+                    Text("Pomodoro Cycle:")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
 
-            Spacer()
-
-            // Controls with interactive hover scale feedback
-            HStack(spacing: 24) {
-                HoverScaleButton(
-                    icon: "arrow.counterclockwise",
-                    size: 48,
-                    fontSize: 18,
-                    helpText: "Reset current session"
-                ) {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                        timerVM.reset()
+                    ForEach(0..<4) { index in
+                        let isCompleted = (timerVM.completedWorkSessionsCount % 4) > index
+                        Circle()
+                            .fill(
+                                isCompleted
+                                    ? timerVM.currentMode.themeColor
+                                    : Color.secondary.opacity(0.25)
+                            )
+                            .frame(width: isCompleted ? 10 : 8, height: isCompleted ? 10 : 8)
+                            .shadow(
+                                color: isCompleted ? timerVM.currentMode.themeColor.opacity(0.4) : .clear,
+                                radius: 4,
+                                x: 0,
+                                y: 1
+                            )
+                            .animation(.spring(response: 0.35, dampingFraction: 0.65), value: timerVM.completedWorkSessionsCount)
                     }
                 }
 
-                PrimaryPlayPauseButton(
-                    isRunning: timerVM.status == .running,
-                    themeColor: timerVM.currentMode.themeColor
-                ) {
-                    withAnimation(.spring(response: 0.35, dampingFraction: 0.65)) {
-                        if timerVM.status == .running {
-                            timerVM.pause()
-                        } else {
-                            timerVM.start()
+                // Controls with interactive hover scale feedback
+                HStack(spacing: 24) {
+                    HoverScaleButton(
+                        icon: "arrow.counterclockwise",
+                        size: 48,
+                        fontSize: 18,
+                        helpText: "Reset current session"
+                    ) {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                            timerVM.reset()
+                        }
+                    }
+
+                    PrimaryPlayPauseButton(
+                        isRunning: timerVM.status == .running,
+                        themeColor: timerVM.currentMode.themeColor
+                    ) {
+                        withAnimation(.spring(response: 0.35, dampingFraction: 0.65)) {
+                            if timerVM.status == .running {
+                                timerVM.pause()
+                            } else {
+                                timerVM.start()
+                            }
+                        }
+                    }
+
+                    HoverScaleButton(
+                        icon: "forward.fill",
+                        size: 48,
+                        fontSize: 18,
+                        helpText: "Skip to next cycle"
+                    ) {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                            timerVM.skip()
                         }
                     }
                 }
-
-                HoverScaleButton(
-                    icon: "forward.fill",
-                    size: 48,
-                    fontSize: 18,
-                    helpText: "Skip to next cycle"
-                ) {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                        timerVM.skip()
-                    }
-                }
+                .padding(.vertical, 4)
+                .padding(.bottom, 24)
             }
-            .padding(.bottom, 20)
+            .padding(.horizontal, 24)
         }
-        .padding(.horizontal, 24)
         .navigationTitle("Focus Timer")
         .animation(.spring(response: 0.4, dampingFraction: 0.75), value: timerVM.currentMode)
     }
