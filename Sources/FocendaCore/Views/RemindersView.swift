@@ -67,8 +67,8 @@ public struct RemindersView: View {
             Divider()
                 .background(AppTheme.border)
 
-            // Scrollable Content Area with horizontal & vertical scrollbars
-            ScrollView([.horizontal, .vertical], showsIndicators: true) {
+            // Scrollable Content Area
+            ScrollView(.vertical, showsIndicators: true) {
                 VStack(alignment: .leading, spacing: 20) {
                     // In-App Alert Banner if triggered
                     if let alert = activeAlertBanner {
@@ -96,7 +96,7 @@ public struct RemindersView: View {
                     }
                 }
                 .padding(20)
-                .frame(minWidth: 700, maxWidth: .infinity, alignment: .leading)
+                .frame(maxWidth: .infinity, alignment: .topLeading)
             }
         }
         .frame(minWidth: 0, maxWidth: .infinity, maxHeight: .infinity)
@@ -125,8 +125,37 @@ public struct RemindersView: View {
 
     // MARK: - Header Bar
     private var headerBar: some View {
-        HStack(spacing: 14) {
-            VStack(alignment: .leading, spacing: 2) {
+        ViewThatFits(in: .horizontal) {
+            // Wide layout
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "bell.badge.fill")
+                            .font(.system(size: 18, weight: .bold))
+                            .foregroundStyle(AppTheme.accent)
+
+                        Text("Reminders & Alerts")
+                            .font(.system(size: 18, weight: .bold, design: .rounded))
+                            .foregroundStyle(AppTheme.textPrimary)
+                    }
+
+                    Text("Manage scheduled alerts, recurring focus prompts, and task deadlines.")
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.textSecondary)
+                        .lineLimit(1)
+                }
+
+                Spacer(minLength: 8)
+
+                searchFieldView
+
+                testChimeButton
+
+                newReminderButton
+            }
+
+            // Compact 2-row layout
+            VStack(alignment: .leading, spacing: 10) {
                 HStack(spacing: 8) {
                     Image(systemName: "bell.badge.fill")
                         .font(.system(size: 18, weight: .bold))
@@ -135,78 +164,81 @@ public struct RemindersView: View {
                     Text("Reminders & Alerts")
                         .font(.system(size: 18, weight: .bold, design: .rounded))
                         .foregroundStyle(AppTheme.textPrimary)
+
+                    Spacer()
+
+                    testChimeButton
+                    newReminderButton
                 }
 
-                Text("Manage scheduled alerts, recurring focus prompts, and task deadlines.")
-                    .font(.caption)
-                    .foregroundStyle(AppTheme.textSecondary)
-                    .lineLimit(1)
+                searchFieldView
             }
-
-            Spacer(minLength: 12)
-
-            // Search Field
-            HStack(spacing: 6) {
-                Image(systemName: "magnifyingglass")
-                    .font(.system(size: 12))
-                    .foregroundStyle(AppTheme.textTertiary)
-
-                TextField("Search reminders or notes...", text: $searchQuery)
-                    .textFieldStyle(.plain)
-                    .font(.system(size: 13))
-                    .foregroundStyle(AppTheme.textPrimary)
-
-                if !searchQuery.isEmpty {
-                    Button {
-                        searchQuery = ""
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 12))
-                            .foregroundStyle(AppTheme.textTertiary)
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
-            .frame(minWidth: 160, idealWidth: 200, maxWidth: 260)
-            .background(AppTheme.cardBackground)
-            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .stroke(AppTheme.border, lineWidth: 1)
-            )
-
-            // Test All Chime Button
-            Button {
-                triggerChimeFeedback()
-            } label: {
-                Label("Test Chime", systemImage: "speaker.wave.2.fill")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(AppTheme.textPrimary)
-            }
-            .buttonStyle(.bordered)
-            .controlSize(.regular)
-            .help("Play the rich native notification alert chime")
-
-            // + New Reminder Prominent Button
-            Button {
-                resetForm()
-                showingAddSheet = true
-            } label: {
-                Label("New Reminder", systemImage: "plus")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(Color.white)
-            }
-            .buttonStyle(.borderedProminent)
-            .tint(AppTheme.accent)
-            .controlSize(.regular)
-            .help("Create a new recurring reminder schedule")
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 12)
         .frame(minWidth: 0, maxWidth: .infinity)
         .background(AppTheme.background)
+    }
+
+    private var searchFieldView: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 12))
+                .foregroundStyle(AppTheme.textTertiary)
+
+            TextField("Search reminders or notes...", text: $searchQuery)
+                .textFieldStyle(.plain)
+                .font(.system(size: 13))
+                .foregroundStyle(AppTheme.textPrimary)
+
+            if !searchQuery.isEmpty {
+                Button {
+                    searchQuery = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 12))
+                        .foregroundStyle(AppTheme.textTertiary)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .frame(minWidth: 140, idealWidth: 180, maxWidth: 240)
+        .background(AppTheme.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .stroke(AppTheme.border, lineWidth: 1)
+        )
+    }
+
+    private var testChimeButton: some View {
+        Button {
+            triggerChimeFeedback()
+        } label: {
+            Label("Test Chime", systemImage: "speaker.wave.2.fill")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(AppTheme.textPrimary)
+        }
+        .buttonStyle(.bordered)
+        .controlSize(.regular)
+        .help("Play the rich native notification alert chime")
+    }
+
+    private var newReminderButton: some View {
+        Button {
+            resetForm()
+            showingAddSheet = true
+        } label: {
+            Label("New Reminder", systemImage: "plus")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(Color.white)
+        }
+        .buttonStyle(.borderedProminent)
+        .tint(AppTheme.accent)
+        .controlSize(.regular)
+        .help("Create a new recurring reminder schedule")
     }
 
     // MARK: - In-App Alert Banner
@@ -291,11 +323,9 @@ public struct RemindersView: View {
 
         return LazyVGrid(
             columns: [
-                GridItem(.flexible(minimum: 180), spacing: 14),
-                GridItem(.flexible(minimum: 180), spacing: 14),
-                GridItem(.flexible(minimum: 220), spacing: 14)
+                GridItem(.adaptive(minimum: 180, maximum: .infinity), spacing: 12)
             ],
-            spacing: 14
+            spacing: 12
         ) {
             statCard(
                 title: "Total Reminders",

@@ -79,7 +79,7 @@ public struct MainView: View {
             .background(AppTheme.background)
         }
         .navigationSplitViewStyle(.balanced)
-        .frame(minWidth: 860, minHeight: 580)
+        .frame(minWidth: 980, minHeight: 640)
         .background(AppTheme.background)
         .preferredColorScheme(appState.selectedTheme.colorScheme)
         .id(appState.selectedTheme)

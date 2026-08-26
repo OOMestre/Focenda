@@ -214,11 +214,14 @@ public struct KanbanBoardView: View {
     // MARK: - 3-Column Kanban Board Layout
     private var kanbanBoardContent: some View {
         GeometryReader { geometry in
-            let minContentWidth: CGFloat = (280 * 3) + (16 * 2) + 40 // 912 minimum width for 3 columns
+            let columnWidth: CGFloat = 320
+            let spacing: CGFloat = 16
+            let padding: CGFloat = 40
+            let minContentWidth: CGFloat = (columnWidth * 3) + (spacing * 2) + padding
             let totalWidth = max(minContentWidth, geometry.size.width)
 
-            ScrollView([.horizontal, .vertical], showsIndicators: true) {
-                HStack(alignment: .top, spacing: 16) {
+            ScrollView(.horizontal, showsIndicators: true) {
+                HStack(alignment: .top, spacing: spacing) {
                     ForEach(TaskStatus.allCases) { status in
                         KanbanColumnView(
                             status: status,
@@ -258,12 +261,14 @@ public struct KanbanBoardView: View {
                                 }
                             }
                         )
-                        .frame(minWidth: 280, idealWidth: 320, maxWidth: 360, maxHeight: .infinity)
+                        .frame(width: columnWidth)
+                        .frame(maxHeight: .infinity)
                     }
                 }
                 .padding(20)
                 .frame(minWidth: totalWidth, minHeight: geometry.size.height, alignment: .topLeading)
             }
+            .forceVisibleScrollers(horizontal: true, vertical: false)
         }
     }
 

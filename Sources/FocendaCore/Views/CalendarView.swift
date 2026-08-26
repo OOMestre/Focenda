@@ -104,7 +104,10 @@ public struct CalendarView: View {
 
     public var body: some View {
         GeometryReader { geometry in
-            let isCompact = geometry.size.width < 760
+            let minCalendarWidth: CGFloat = 520
+            let agendaWidth: CGFloat = 360
+            let totalContentWidth: CGFloat = minCalendarWidth + agendaWidth + 1
+            let totalWidth = max(totalContentWidth, geometry.size.width)
 
             VStack(spacing: 0) {
                 // In-App Reminder Alert Banner (if active)
@@ -118,44 +121,30 @@ public struct CalendarView: View {
                         ))
                 }
 
-                if isCompact {
-                    ScrollView([.horizontal, .vertical], showsIndicators: true) {
-                        VStack(spacing: 20) {
-                            calendarMonthSection
-                                .padding(.horizontal, 16)
-                                .padding(.top, 16)
-
-                            Divider()
-                                .background(AppTheme.border)
-                                .padding(.horizontal, 16)
-
-                            selectedDayAgendaSection
-                                .padding(.horizontal, 16)
-                                .padding(.bottom, 24)
-                        }
-                        .frame(minWidth: 440, alignment: .topLeading)
-                    }
-                } else {
+                ScrollView(.horizontal, showsIndicators: true) {
                     HStack(spacing: 0) {
                         // Left Column: Monthly Calendar & Navigation
-                        ScrollView([.horizontal, .vertical], showsIndicators: true) {
+                        ScrollView(.vertical, showsIndicators: true) {
                             calendarMonthSection
                                 .padding(20)
+                                .frame(minWidth: minCalendarWidth, maxWidth: .infinity)
                         }
-                        .frame(minWidth: 320, maxWidth: .infinity)
+                        .frame(minWidth: minCalendarWidth, maxWidth: .infinity)
 
                         Divider()
                             .background(AppTheme.border)
 
                         // Right Column: Selected Day Agenda & Timebox Pane
-                        ScrollView([.horizontal, .vertical], showsIndicators: true) {
+                        ScrollView(.vertical, showsIndicators: true) {
                             selectedDayAgendaSection
                                 .padding(20)
                         }
-                        .frame(minWidth: 320, idealWidth: 380, maxWidth: 440)
+                        .frame(width: agendaWidth)
                         .background(AppTheme.cardBackgroundSubtle.opacity(0.35))
                     }
+                    .frame(minWidth: totalWidth, minHeight: geometry.size.height, alignment: .topLeading)
                 }
+                .forceVisibleScrollers(horizontal: true, vertical: false)
             }
         }
         .background(AppTheme.background)
