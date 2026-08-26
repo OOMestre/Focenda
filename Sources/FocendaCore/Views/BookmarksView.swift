@@ -48,9 +48,11 @@ public struct BookmarksView: View {
                         bookmarksGridSection
                     }
                 }
-                .padding(24)
+                .padding(20)
+                .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
             }
         }
+        .frame(minWidth: 0, maxWidth: .infinity, maxHeight: .infinity)
         .background(AppTheme.background)
         .navigationTitle("Focus Hub")
         .sheet(isPresented: $showingAddSheet) {
@@ -63,22 +65,20 @@ public struct BookmarksView: View {
 
     // MARK: - Header Bar
     private var headerBar: some View {
-        HStack(spacing: 16) {
+        HStack(spacing: 14) {
             VStack(alignment: .leading, spacing: 2) {
                 Text("Focus Hub & Quick Links")
-                    .font(.system(size: 20, weight: .bold, design: .rounded))
+                    .font(.system(size: 18, weight: .bold, design: .rounded))
                     .foregroundStyle(AppTheme.textPrimary)
                     .lineLimit(1)
-                    .fixedSize(horizontal: true, vertical: false)
 
                 Text("One-click access to essential reference docs, tools, and flow resources.")
                     .font(.caption)
                     .foregroundStyle(AppTheme.textSecondary)
                     .lineLimit(1)
-                    .fixedSize(horizontal: true, vertical: false)
             }
 
-            Spacer(minLength: 12)
+            Spacer(minLength: 8)
 
             // Search Field
             HStack(spacing: 6) {
@@ -104,7 +104,7 @@ public struct BookmarksView: View {
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
-            .frame(minWidth: 180, idealWidth: 220, maxWidth: 260)
+            .frame(minWidth: 140, idealWidth: 180, maxWidth: 240)
             .background(AppTheme.cardBackground)
             .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
             .overlay(
@@ -120,7 +120,6 @@ public struct BookmarksView: View {
                 Label("Add Link", systemImage: "plus")
                     .font(.system(size: 13, weight: .medium))
                     .lineLimit(1)
-                    .fixedSize(horizontal: true, vertical: false)
             }
             .buttonStyle(.borderedProminent)
             .tint(AppTheme.deepFocus)
@@ -144,8 +143,9 @@ public struct BookmarksView: View {
             .fixedSize()
             .help("More options")
         }
-        .padding(.horizontal, 24)
-        .padding(.vertical, 14)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 12)
+        .frame(minWidth: 0, maxWidth: .infinity)
         .background(AppTheme.background)
     }
 
@@ -167,7 +167,6 @@ public struct BookmarksView: View {
                                 .font(.system(size: 12, weight: isSelected ? .semibold : .regular))
                                 .foregroundStyle(isSelected ? AppTheme.accent : AppTheme.textPrimary)
                                 .lineLimit(1)
-                                .fixedSize(horizontal: true, vertical: false)
 
                             Text("\(count)")
                                 .font(.system(size: 10, weight: .bold).monospacedDigit())
@@ -179,7 +178,6 @@ public struct BookmarksView: View {
                                         .fill(isSelected ? AppTheme.accent.opacity(0.18) : AppTheme.cardBackgroundSubtle)
                                 )
                                 .lineLimit(1)
-                                .fixedSize(horizontal: true, vertical: false)
                         }
                         .padding(.horizontal, 10)
                         .padding(.vertical, 6)
@@ -209,9 +207,7 @@ public struct BookmarksView: View {
 
         return LazyVGrid(
             columns: [
-                GridItem(.flexible(minimum: 140)),
-                GridItem(.flexible(minimum: 140)),
-                GridItem(.flexible(minimum: 140))
+                GridItem(.adaptive(minimum: 140, maximum: .infinity), spacing: 12)
             ],
             spacing: 12
         ) {
@@ -255,13 +251,11 @@ public struct BookmarksView: View {
                     .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(AppTheme.textTertiary)
                     .lineLimit(1)
-                    .fixedSize(horizontal: true, vertical: false)
 
                 Text(value)
                     .font(.system(size: 16, weight: .bold, design: .rounded))
                     .foregroundStyle(AppTheme.textPrimary)
                     .lineLimit(1)
-                    .fixedSize(horizontal: true, vertical: false)
             }
 
             Spacer()
@@ -279,7 +273,7 @@ public struct BookmarksView: View {
     private var bookmarksGridSection: some View {
         LazyVGrid(
             columns: [
-                GridItem(.adaptive(minimum: 260, maximum: .infinity), spacing: 14)
+                GridItem(.adaptive(minimum: 220, maximum: .infinity), spacing: 14)
             ],
             spacing: 14
         ) {
@@ -315,7 +309,6 @@ public struct BookmarksView: View {
                             Image(systemName: "pin.fill")
                                 .font(.system(size: 10))
                                 .foregroundStyle(AppTheme.sandstone)
-                                .fixedSize(horizontal: true, vertical: false)
                         }
                     }
 
@@ -336,7 +329,6 @@ public struct BookmarksView: View {
                     .background(AppTheme.cardBackgroundSubtle)
                     .clipShape(Capsule())
                     .lineLimit(1)
-                    .fixedSize(horizontal: true, vertical: false)
             }
 
             Divider()
@@ -353,12 +345,10 @@ public struct BookmarksView: View {
                         Text("Open Link")
                             .font(.system(size: 12, weight: .semibold))
                             .lineLimit(1)
-                            .fixedSize(horizontal: true, vertical: false)
 
                         Image(systemName: "arrow.up.right")
                             .font(.system(size: 10, weight: .bold))
                             .lineLimit(1)
-                            .fixedSize(horizontal: true, vertical: false)
                     }
                     .foregroundStyle(.white)
                     .padding(.horizontal, 12)
@@ -374,7 +364,6 @@ public struct BookmarksView: View {
                         .font(.system(size: 10).monospacedDigit())
                         .foregroundStyle(AppTheme.textTertiary)
                         .lineLimit(1)
-                        .fixedSize(horizontal: true, vertical: false)
                 }
 
                 Spacer()

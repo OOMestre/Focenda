@@ -203,22 +203,40 @@ final class MenuBarCardViewTests: XCTestCase {
         }
     }
 
-    func testMenuBarCardViewNoteTabAndColorSelection() {
+    func testMenuBarCardViewFolderSelectionAndSync() {
+        let timerVM = FocusTimerViewModel()
         let scratchpadVM = ScratchpadViewModel()
-        scratchpadVM.selectColor(.lavender)
-        XCTAssertEqual(scratchpadVM.selectedColor, .lavender)
+        scratchpadVM.createFolder("Sprint 43")
 
-        scratchpadVM.selectColor(.emerald)
-        XCTAssertEqual(scratchpadVM.selectedColor, .emerald)
+        let cardView = MenuBarCardView(
+            timerVM: timerVM,
+            scratchpadVM: scratchpadVM,
+            initialSection: .quickNote
+        )
 
-        scratchpadVM.selectColor(.amber)
-        XCTAssertEqual(scratchpadVM.selectedColor, .amber)
+        XCTAssertNotNil(cardView)
+        XCTAssertTrue(scratchpadVM.folders.contains("Sprint 43"))
+        XCTAssertEqual(cardView.selectedSection, .quickNote)
+    }
 
-        scratchpadVM.selectColor(.sky)
-        XCTAssertEqual(scratchpadVM.selectedColor, .sky)
+    func testMenuBarCardViewSaveQuickNoteIntoUserFolder() {
+        let timerVM = FocusTimerViewModel()
+        let scratchpadVM = ScratchpadViewModel()
+        scratchpadVM.createFolder("Architecture")
 
-        scratchpadVM.selectColor(.rose)
-        XCTAssertEqual(scratchpadVM.selectedColor, .rose)
+        let cardView = MenuBarCardView(
+            timerVM: timerVM,
+            scratchpadVM: scratchpadVM,
+            initialSection: .quickNote
+        )
+        XCTAssertNotNil(cardView)
+
+        let initialCount = scratchpadVM.noteCount(for: "Architecture")
+        _ = scratchpadVM.createNote(title: "", content: "New architecture note", folder: "Architecture")
+
+        XCTAssertEqual(scratchpadVM.noteCount(for: "Architecture"), initialCount + 1)
+        XCTAssertEqual(scratchpadVM.notes.first?.folder, "Architecture")
+        XCTAssertEqual(scratchpadVM.notes.first?.content, "New architecture note")
     }
 
     func testFocusSessionCompletedNotificationTriggersInMenuBarView() {
