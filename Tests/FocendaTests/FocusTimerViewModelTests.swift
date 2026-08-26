@@ -67,6 +67,15 @@ final class FocusTimerViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.progress, 0.0)
     }
 
+    func testSkipAdvancesMode() {
+        viewModel.start()
+        viewModel.skip()
+
+        XCTAssertEqual(viewModel.status, .idle)
+        XCTAssertEqual(viewModel.currentMode, .shortBreak)
+        XCTAssertEqual(viewModel.timeRemainingSeconds, 5 * 60)
+    }
+
     func testSessionCompletionTransitionsToBreak() {
         viewModel.timeRemainingSeconds = 0
         viewModel.start()
@@ -91,5 +100,12 @@ final class FocusTimerViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.completedWorkSessionsCount, 4)
         XCTAssertEqual(viewModel.currentMode, .longBreak)
         XCTAssertEqual(viewModel.timeRemainingSeconds, 15 * 60)
+    }
+
+    func testTodayFocusMinutes() {
+        viewModel.timeRemainingSeconds = 0
+        viewModel.completeCurrentSession()
+
+        XCTAssertEqual(viewModel.todayFocusMinutes, 25)
     }
 }

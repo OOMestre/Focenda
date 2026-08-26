@@ -1,11 +1,19 @@
 import SwiftUI
 
 public struct MainView: View {
-    @State private var appState = AppState()
-    @State private var timerVM = FocusTimerViewModel()
-    @State private var taskVM = TaskListViewModel()
+    @State private var appState: AppState
+    @State private var timerVM: FocusTimerViewModel
+    @State private var taskVM: TaskListViewModel
 
-    public init() {}
+    public init(
+        appState: AppState = AppState(),
+        timerVM: FocusTimerViewModel = FocusTimerViewModel(),
+        taskVM: TaskListViewModel = TaskListViewModel()
+    ) {
+        _appState = State(initialValue: appState)
+        _timerVM = State(initialValue: timerVM)
+        _taskVM = State(initialValue: taskVM)
+    }
 
     public var body: some View {
         NavigationSplitView {

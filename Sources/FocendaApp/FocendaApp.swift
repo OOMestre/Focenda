@@ -4,9 +4,17 @@ import FocendaCore
 
 @main
 struct FocendaApp: App {
+    @State private var appState = AppState()
+    @State private var timerVM = FocusTimerViewModel()
+    @State private var taskVM = TaskListViewModel()
+
     var body: some Scene {
         WindowGroup {
-            MainView()
+            MainView(
+                appState: appState,
+                timerVM: timerVM,
+                taskVM: taskVM
+            )
         }
         .windowStyle(.titleBar)
         .windowToolbarStyle(.unified)
@@ -21,19 +29,15 @@ struct FocendaApp: App {
         }
 
         #if os(macOS)
-        MenuBarExtra("Focenda", systemImage: "timer") {
-            Button("Open Focenda") {
-                NSApp.activate(ignoringOtherApps: true)
-                if let window = NSApp.windows.first {
-                    window.makeKeyAndOrderFront(nil)
-                }
+        MenuBarExtra(isInserted: .constant(true)) {
+            MenuBarCardView(timerVM: timerVM, appState: appState)
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: "timer")
+                Text(timerVM.status == .running ? timerVM.formattedTimeRemaining : "Focenda")
             }
-            Divider()
-            Button("Quit Focenda") {
-                NSApplication.shared.terminate(nil)
-            }
-            .keyboardShortcut("q")
         }
+        .menuBarExtraStyle(.window)
         #endif
     }
 }

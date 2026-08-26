@@ -87,6 +87,7 @@ public final class FocusTimerViewModel {
 
     public func skip() {
         pause()
+        status = .idle
         advanceToNextMode()
     }
 
@@ -124,13 +125,14 @@ public final class FocusTimerViewModel {
             completedWorkSessionsCount += 1
         }
 
+        NotificationManager.shared.notifySessionCompleted(mode: currentMode)
         playCompletionSound()
         advanceToNextMode()
     }
 
     private func advanceToNextMode() {
         if currentMode == .work {
-            if completedWorkSessionsCount % 4 == 0 {
+            if completedWorkSessionsCount > 0 && completedWorkSessionsCount % 4 == 0 {
                 currentMode = .longBreak
             } else {
                 currentMode = .shortBreak
