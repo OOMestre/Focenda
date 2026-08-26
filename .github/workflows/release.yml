@@ -1,0 +1,55 @@
+name: Release Build & Publish
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g. v0.1.0 or v0.1.0-beta.1)'
+        required: true
+        default: 'v0.1.0'
+
+jobs:
+  release:
+    name: Build & Publish Release
+    runs-on: macos-14
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Run Tests
+        run: swift test
+
+      - name: Build Staging / Release Bundle
+        run: ./scripts/build-staging.sh
+
+      - name: Package App as ZIP
+        run: |
+          cd dist
+          zip -r -X ../Focenda-macOS.zip "Focenda Staging.app"
+
+      - name: Determine Prerelease Status
+        id: check-prerelease
+        run: |
+          TAG_NAME="${{ github.ref_name }}"
+          if [[ -z "$TAG_NAME" || "$TAG_NAME" == "main" || "$TAG_NAME" == "staging" ]]; then
+            TAG_NAME="${{ github.event.inputs.version }}"
+          fi
+          echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
+          if [[ "$TAG_NAME" == *"beta"* || "$TAG_NAME" == *"rc"* || "$TAG_NAME" == *"alpha"* ]]; then
+            echo "is_prerelease=true" >> $GITHUB_OUTPUT
+          else
+            echo "is_prerelease=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.check-prerelease.outputs.tag_name }}
+          name: Focenda ${{ steps.check-prerelease.outputs.tag_name }}
+          prerelease: ${{ steps.check-prerelease.outputs.is_prerelease == 'true' }}
+          files: Focenda-macOS.zip
+          generate_release_notes: true
