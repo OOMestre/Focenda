@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Animated circular progress ring for the focus timer with pulsing glow effects
+/// Animated circular progress ring for the focus timer with calm, minimal, and organic styling
 public struct CircularProgressView: View {
     public let progress: Double
     public let formattedTime: String
@@ -14,7 +14,7 @@ public struct CircularProgressView: View {
         progress: Double,
         formattedTime: String,
         subtitle: String,
-        themeColor: Color = .indigo,
+        themeColor: Color = AppTheme.deepFocus,
         isRunning: Bool = false
     ) {
         self.progress = progress
@@ -26,79 +26,53 @@ public struct CircularProgressView: View {
 
     public var body: some View {
         ZStack {
-            // Subtle breathing background glow when active
-            if isRunning {
-                Circle()
-                    .fill(
-                        RadialGradient(
-                            gradient: Gradient(colors: [
-                                themeColor.opacity(isPulsing ? 0.18 : 0.08),
-                                themeColor.opacity(0.0)
-                            ]),
-                            center: .center,
-                            startRadius: 70,
-                            endRadius: 155
-                        )
-                    )
-                    .frame(width: 300, height: 300)
-                    .scaleEffect(isPulsing ? 1.05 : 0.98)
-                    .animation(
-                        .easeInOut(duration: 2.0).repeatForever(autoreverses: true),
-                        value: isPulsing
-                    )
-            }
+            // Subtle ambient backdrop ring
+            Circle()
+                .fill(themeColor.opacity(0.03))
+                .frame(width: 256, height: 256)
 
             // Background track ring
             Circle()
                 .stroke(
                     themeColor.opacity(0.12),
-                    lineWidth: 16
+                    lineWidth: 14
                 )
 
-            // Dynamic progress ring with glowing shadow
+            // Dynamic progress ring with natural soft depth
             Circle()
                 .trim(from: 0.0, to: CGFloat(min(self.progress, 1.0)))
                 .stroke(
-                    AngularGradient(
-                        gradient: Gradient(colors: [
-                            themeColor.opacity(0.85),
-                            themeColor,
-                            themeColor.opacity(0.95)
-                        ]),
-                        center: .center,
-                        startAngle: .degrees(0),
-                        endAngle: .degrees(360)
-                    ),
-                    style: StrokeStyle(lineWidth: 16, lineCap: .round, lineJoin: .round)
+                    themeColor,
+                    style: StrokeStyle(lineWidth: 14, lineCap: .round, lineJoin: .round)
                 )
                 .rotationEffect(.degrees(-90))
                 .shadow(
-                    color: isRunning ? themeColor.opacity(isPulsing ? 0.6 : 0.25) : .clear,
-                    radius: isPulsing ? 14 : 8,
+                    color: Color.black.opacity(isRunning ? 0.06 : 0.0),
+                    radius: 4,
                     x: 0,
-                    y: 0
+                    y: 2
                 )
                 .animation(.easeInOut(duration: 0.35), value: progress)
 
             // Center time readout & mode subtitle
-            VStack(spacing: 8) {
+            VStack(spacing: 6) {
                 Text(formattedTime)
-                    .font(.system(size: 56, weight: .bold, design: .rounded))
+                    .font(.system(size: 54, weight: .bold, design: .rounded))
                     .monospacedDigit()
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .contentTransition(.numericText())
 
                 HStack(spacing: 6) {
                     if isRunning {
                         Circle()
                             .fill(themeColor)
-                            .frame(width: 7, height: 7)
-                            .scaleEffect(isPulsing ? 1.2 : 0.8)
-                            .opacity(isPulsing ? 1.0 : 0.5)
+                            .frame(width: 6, height: 6)
+                            .scaleEffect(isPulsing ? 1.15 : 0.85)
+                            .opacity(isPulsing ? 1.0 : 0.6)
                     }
 
                     Text(subtitle)
-                        .font(.headline)
+                        .font(.headline.weight(.medium))
                         .foregroundStyle(themeColor)
                 }
             }
@@ -107,11 +81,21 @@ public struct CircularProgressView: View {
         .padding(16)
         .onAppear {
             if isRunning {
-                isPulsing = true
+                withAnimation(.easeInOut(duration: 2.0).repeatForever(autoreverses: true)) {
+                    isPulsing = true
+                }
             }
         }
         .onChange(of: isRunning) { _, newValue in
-            isPulsing = newValue
+            if newValue {
+                withAnimation(.easeInOut(duration: 2.0).repeatForever(autoreverses: true)) {
+                    isPulsing = true
+                }
+            } else {
+                withAnimation {
+                    isPulsing = false
+                }
+            }
         }
     }
 }

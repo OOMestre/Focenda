@@ -3,7 +3,7 @@ import SwiftUI
 import Observation
 import AppKit
 
-/// Five color-coded scratchpad categories inspired by Tot
+/// Five color-coded scratchpad categories in calm organic tones
 public enum ScratchpadColor: String, CaseIterable, Identifiable, Codable {
     case amber = "Amber"
     case lavender = "Lavender"
@@ -16,15 +16,15 @@ public enum ScratchpadColor: String, CaseIterable, Identifiable, Codable {
     public var color: Color {
         switch self {
         case .amber:
-            return Color(red: 0.96, green: 0.62, blue: 0.04)
+            return Color(red: 0.72, green: 0.52, blue: 0.28)
         case .lavender:
-            return Color(red: 0.65, green: 0.55, blue: 0.98)
+            return Color(red: 0.48, green: 0.45, blue: 0.56)
         case .sky:
-            return Color(red: 0.22, green: 0.65, blue: 0.97)
+            return Color(red: 0.33, green: 0.48, blue: 0.56)
         case .emerald:
-            return Color(red: 0.06, green: 0.73, blue: 0.51)
+            return Color(red: 0.28, green: 0.45, blue: 0.36)
         case .rose:
-            return Color(red: 0.96, green: 0.25, blue: 0.37)
+            return Color(red: 0.68, green: 0.38, blue: 0.32)
         }
     }
 

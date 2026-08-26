@@ -57,7 +57,7 @@ public struct SidebarView: View {
             HStack(spacing: 12) {
                 ZStack {
                     Circle()
-                        .fill(timerVM.currentMode.themeColor.opacity(0.15))
+                        .fill(timerVM.currentMode.themeColor.opacity(0.12))
                         .frame(width: 32, height: 32)
 
                     Image(systemName: timerVM.currentMode.iconName)
@@ -68,9 +68,10 @@ public struct SidebarView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(timerVM.currentMode.rawValue)
                         .font(.caption.bold())
+                        .foregroundStyle(AppTheme.textPrimary)
                     Text(timerVM.formattedTimeRemaining)
                         .font(.caption2.monospacedDigit())
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                 }
 
                 Spacer()
@@ -91,6 +92,7 @@ public struct SidebarView: View {
                         .background(
                             Circle()
                                 .fill(timerVM.currentMode.themeColor)
+                                .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
                         )
                 }
                 .buttonStyle(.plain)
@@ -99,12 +101,12 @@ public struct SidebarView: View {
             .padding(10)
             .background(
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(Color(nsColor: .controlBackgroundColor))
-                    .shadow(color: Color.black.opacity(0.04), radius: 4, x: 0, y: 1)
+                    .fill(AppTheme.cardBackground)
+                    .shadow(color: Color.black.opacity(0.03), radius: 3, x: 0, y: 1)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .stroke(timerVM.currentMode.themeColor.opacity(0.18), lineWidth: 1)
+                    .stroke(AppTheme.subtleBorder, lineWidth: 1)
             )
             .padding(.horizontal, 12)
             .padding(.bottom, 12)
@@ -129,6 +131,7 @@ private struct SidebarRowItem: View {
             HStack {
                 Text(tab.rawValue)
                     .font(.body.weight(isSelected ? .semibold : .regular))
+                    .foregroundStyle(isSelected ? AppTheme.textPrimary : AppTheme.textSecondary)
 
                 Spacer()
 
@@ -136,29 +139,29 @@ private struct SidebarRowItem: View {
                 if tab == .timer && timerIsRunning {
                     HStack(spacing: 4) {
                         Circle()
-                            .fill(Color.green)
-                            .frame(width: 7, height: 7)
-                            .scaleEffect(isPulsingDot ? 1.2 : 0.8)
+                            .fill(AppTheme.success)
+                            .frame(width: 6, height: 6)
+                            .scaleEffect(isPulsingDot ? 1.15 : 0.85)
                             .opacity(isPulsingDot ? 1.0 : 0.6)
-                            .animation(.easeInOut(duration: 1.2).repeatForever(autoreverses: true), value: isPulsingDot)
+                            .animation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true), value: isPulsingDot)
 
                         Text("RUNNING")
                             .font(.system(size: 9, weight: .bold))
-                            .foregroundStyle(Color.green)
+                            .foregroundStyle(AppTheme.success)
                     }
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
-                    .background(Color.green.opacity(0.12))
+                    .background(AppTheme.success.opacity(0.12))
                     .clipShape(Capsule())
                 } else if tab == .tasks && pendingTasksCount > 0 {
                     Text("\(pendingTasksCount)")
                         .font(.caption2.bold())
-                        .foregroundStyle(isSelected ? Color.primary : Color.secondary)
+                        .foregroundStyle(isSelected ? AppTheme.textPrimary : AppTheme.textSecondary)
                         .padding(.horizontal, 7)
                         .padding(.vertical, 2)
                         .background(
                             Capsule()
-                                .fill(isSelected ? Color.primary.opacity(0.12) : Color.secondary.opacity(0.15))
+                                .fill(isSelected ? AppTheme.accent.opacity(0.15) : AppTheme.cardBackgroundSubtle)
                         )
                         .contentTransition(.numericText())
                 } else if tab == .habits && totalHabitsCount > 0 {
@@ -169,30 +172,30 @@ private struct SidebarRowItem: View {
                             Text("DONE")
                                 .font(.system(size: 9, weight: .bold))
                         }
-                        .foregroundStyle(Color.green)
+                        .foregroundStyle(AppTheme.success)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
-                        .background(Color.green.opacity(0.12))
+                        .background(AppTheme.success.opacity(0.12))
                         .clipShape(Capsule())
                     } else if longestHabitStreak > 0 {
                         HStack(spacing: 3) {
                             Image(systemName: "flame.fill")
                                 .font(.system(size: 8))
-                                .foregroundStyle(Color.orange)
+                                .foregroundStyle(AppTheme.sandstone)
                             Text("\(longestHabitStreak)d")
                                 .font(.caption2.bold())
-                                .foregroundStyle(isSelected ? Color.primary : Color.secondary)
+                                .foregroundStyle(isSelected ? AppTheme.textPrimary : AppTheme.textSecondary)
                         }
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
-                        .background(Color.orange.opacity(0.12))
+                        .background(AppTheme.sandstone.opacity(0.12))
                         .clipShape(Capsule())
                     }
                 }
             }
         } icon: {
             Image(systemName: tab.iconName)
-                .foregroundStyle(isSelected ? Color.accentColor : Color.secondary)
+                .foregroundStyle(isSelected ? AppTheme.accent : AppTheme.textTertiary)
         }
     }
 }

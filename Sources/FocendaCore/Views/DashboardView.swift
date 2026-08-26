@@ -29,6 +29,7 @@ public struct DashboardView: View {
             }
             .padding(28)
         }
+        .background(AppTheme.background)
         .navigationTitle("Dashboard")
     }
 
@@ -36,32 +37,29 @@ public struct DashboardView: View {
     private var headerSection: some View {
         HStack(alignment: .center) {
             HStack(spacing: 16) {
-                // Subtle icon flair
+                // Subtle organic icon container
                 ZStack {
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [Color.indigo, Color.purple],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
+                        .fill(AppTheme.accent.opacity(0.12))
                         .frame(width: 48, height: 48)
-                        .shadow(color: Color.indigo.opacity(0.3), radius: 8, x: 0, y: 3)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .stroke(AppTheme.accent.opacity(0.25), lineWidth: 1)
+                        )
 
                     Image(systemName: greetingIcon)
                         .font(.title2)
-                        .foregroundStyle(.white)
+                        .foregroundStyle(AppTheme.accent)
                 }
 
                 VStack(alignment: .leading, spacing: 3) {
                     Text(greetingTitle)
                         .font(.system(size: 26, weight: .bold, design: .rounded))
-                        .foregroundStyle(.primary)
+                        .foregroundStyle(AppTheme.textPrimary)
 
                     Text("Track your daily focus flow and accomplish your high-impact goals.")
                         .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                 }
             }
 
@@ -79,8 +77,9 @@ public struct DashboardView: View {
                     .font(.headline)
             }
             .buttonStyle(.borderedProminent)
+            .tint(AppTheme.deepFocus)
             .controlSize(.large)
-            .shadow(color: Color.accentColor.opacity(0.25), radius: 6, x: 0, y: 2)
+            .shadow(color: Color.black.opacity(0.08), radius: 4, x: 0, y: 2)
         }
     }
 
@@ -120,7 +119,7 @@ public struct DashboardView: View {
                 value: "\(timerVM.todayFocusMinutes) min",
                 subtitle: "Goal: \(appState.dailyFocusGoalMinutes) min",
                 icon: "clock.badge.checkmark.fill",
-                color: .indigo
+                color: AppTheme.deepFocus
             )
 
             StatCard(
@@ -128,7 +127,7 @@ public struct DashboardView: View {
                 value: "\(timerVM.completedWorkSessionsCount)",
                 subtitle: "\(timerVM.completedSessionsCount) total cycles",
                 icon: "brain.head.profile",
-                color: .teal
+                color: AppTheme.shortBreak
             )
 
             StatCard(
@@ -136,7 +135,7 @@ public struct DashboardView: View {
                 value: "\(taskVM.pendingTasksCount)",
                 subtitle: "\(taskVM.highPriorityPendingCount) high priority",
                 icon: "checklist",
-                color: .orange
+                color: AppTheme.sandstone
             )
 
             StatCard(
@@ -144,7 +143,7 @@ public struct DashboardView: View {
                 value: "\(taskVM.completedTasksCount)",
                 subtitle: "Keep up the momentum!",
                 icon: "checkmark.seal.fill",
-                color: .green
+                color: AppTheme.success
             )
         }
     }
@@ -155,17 +154,17 @@ public struct DashboardView: View {
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 8) {
                     Circle()
-                        .fill(timerVM.status == .running ? Color.green : timerVM.currentMode.themeColor)
-                        .frame(width: 9, height: 9)
-                        .shadow(color: (timerVM.status == .running ? Color.green : timerVM.currentMode.themeColor).opacity(0.6), radius: 4, x: 0, y: 0)
+                        .fill(timerVM.status == .running ? AppTheme.success : timerVM.currentMode.themeColor)
+                        .frame(width: 8, height: 8)
 
                     Text(timerVM.status == .running ? "Active Session" : "Current Focus Session")
                         .font(.headline)
+                        .foregroundStyle(AppTheme.textPrimary)
                 }
 
                 Text(timerVM.currentMode.motivationalMessage)
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(AppTheme.textSecondary)
             }
 
             Spacer()
@@ -193,7 +192,7 @@ public struct DashboardView: View {
                         .background(
                             Circle()
                                 .fill(timerVM.currentMode.themeColor)
-                                .shadow(color: timerVM.currentMode.themeColor.opacity(0.35), radius: 6, x: 0, y: 2)
+                                .shadow(color: Color.black.opacity(0.12), radius: 4, x: 0, y: 2)
                         )
                 }
                 .buttonStyle(.plain)
@@ -203,21 +202,12 @@ public struct DashboardView: View {
         .padding(20)
         .background(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(timerVM.currentMode.themeColor.opacity(0.07))
+                .fill(AppTheme.cardBackground)
+                .shadow(color: Color.black.opacity(0.035), radius: 4, x: 0, y: 1)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(
-                    LinearGradient(
-                        colors: [
-                            timerVM.currentMode.themeColor.opacity(0.35),
-                            timerVM.currentMode.themeColor.opacity(0.1)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
-                    lineWidth: 1
-                )
+                .stroke(timerVM.currentMode.themeColor.opacity(0.22), lineWidth: 1)
         )
         .animation(.spring(response: 0.35, dampingFraction: 0.75), value: timerVM.currentMode)
     }
@@ -229,6 +219,7 @@ public struct DashboardView: View {
                 HStack(spacing: 8) {
                     Text("Daily Habit Streaks")
                         .font(.title2.bold())
+                        .foregroundStyle(AppTheme.textPrimary)
 
                     if !habitVM.habits.isEmpty {
                         Text("\(habitVM.totalCompletionsToday)/\(habitVM.habits.count) done today")
@@ -237,9 +228,9 @@ public struct DashboardView: View {
                             .padding(.vertical, 3)
                             .background(
                                 Capsule()
-                                    .fill(habitVM.totalCompletionsToday == habitVM.habits.count ? Color.green.opacity(0.15) : Color.accentColor.opacity(0.12))
+                                    .fill(habitVM.totalCompletionsToday == habitVM.habits.count ? AppTheme.success.opacity(0.15) : AppTheme.accent.opacity(0.12))
                             )
-                            .foregroundStyle(habitVM.totalCompletionsToday == habitVM.habits.count ? Color.green : Color.accentColor)
+                            .foregroundStyle(habitVM.totalCompletionsToday == habitVM.habits.count ? AppTheme.success : AppTheme.accent)
                     }
                 }
 
@@ -251,7 +242,7 @@ public struct DashboardView: View {
                     }
                 }
                 .buttonStyle(.plain)
-                .foregroundStyle(Color.accentColor)
+                .foregroundStyle(AppTheme.accent)
                 .font(.subheadline.weight(.medium))
             }
 
@@ -275,13 +266,14 @@ public struct DashboardView: View {
         HStack(spacing: 14) {
             Image(systemName: "flame")
                 .font(.title)
-                .foregroundStyle(.orange)
+                .foregroundStyle(AppTheme.sandstone)
             VStack(alignment: .leading, spacing: 2) {
                 Text("No active habits")
                     .font(.headline)
+                    .foregroundStyle(AppTheme.textPrimary)
                 Text("Start tracking daily routines to unlock consistency streaks.")
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(AppTheme.textSecondary)
             }
             Spacer()
             Button("Explore Habits") {
@@ -290,8 +282,7 @@ public struct DashboardView: View {
             .buttonStyle(.bordered)
         }
         .padding(16)
-        .background(Color.primary.opacity(0.02))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .calmCard(cornerRadius: 12)
     }
 
     // MARK: - Featured Tasks
@@ -305,6 +296,7 @@ public struct DashboardView: View {
             HStack {
                 Text("Featured Tasks")
                     .font(.title2.bold())
+                    .foregroundStyle(AppTheme.textPrimary)
 
                 Spacer()
 
@@ -314,7 +306,7 @@ public struct DashboardView: View {
                     }
                 }
                 .buttonStyle(.plain)
-                .foregroundStyle(Color.accentColor)
+                .foregroundStyle(AppTheme.accent)
                 .font(.subheadline.weight(.medium))
             }
 
@@ -338,18 +330,18 @@ public struct DashboardView: View {
     private var emptyTasksView: some View {
         VStack(spacing: 10) {
             Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 40))
-                .foregroundStyle(.green)
+                .font(.system(size: 38))
+                .foregroundStyle(AppTheme.success)
             Text("All tasks completed!")
                 .font(.headline)
+                .foregroundStyle(AppTheme.textPrimary)
             Text("Enjoy your free time or add new goals.")
                 .font(.subheadline)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(AppTheme.textSecondary)
         }
         .frame(maxWidth: .infinity)
         .padding(32)
-        .background(Color.primary.opacity(0.02))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .calmCard(cornerRadius: 12)
     }
 }
 
@@ -368,22 +360,22 @@ private struct DashboardHabitCard: View {
                 .font(.headline)
                 .foregroundStyle(habit.color)
                 .frame(width: 34, height: 34)
-                .background(habit.color.opacity(0.15))
+                .background(habit.color.opacity(0.12))
                 .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(habit.title)
                     .font(.subheadline.bold())
                     .lineLimit(1)
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(AppTheme.textPrimary)
 
                 HStack(spacing: 3) {
                     Image(systemName: "flame.fill")
                         .font(.system(size: 9))
-                        .foregroundStyle(habit.streakCount > 0 ? Color.orange : Color.secondary.opacity(0.6))
+                        .foregroundStyle(habit.streakCount > 0 ? AppTheme.sandstone : AppTheme.textTertiary)
                     Text("\(habit.streakCount)d streak")
                         .font(.caption2)
-                        .foregroundStyle(habit.streakCount > 0 ? Color.orange : Color.secondary)
+                        .foregroundStyle(habit.streakCount > 0 ? AppTheme.sandstone : AppTheme.textSecondary)
                 }
             }
 
@@ -400,27 +392,18 @@ private struct DashboardHabitCard: View {
             } label: {
                 Image(systemName: habit.isCompletedToday ? "checkmark.circle.fill" : "circle")
                     .font(.title3)
-                    .foregroundStyle(habit.isCompletedToday ? Color.green : Color.secondary.opacity(0.7))
-                    .scaleEffect(isBouncing ? 1.3 : 1.0)
+                    .foregroundStyle(habit.isCompletedToday ? AppTheme.success : AppTheme.textTertiary)
+                    .scaleEffect(isBouncing ? 1.25 : 1.0)
             }
             .buttonStyle(.plain)
             .help(habit.isCompletedToday ? "Completed today" : "Mark as completed today")
         }
         .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(isHovered ? Color(nsColor: .controlBackgroundColor) : Color.primary.opacity(0.02))
-                .shadow(
-                    color: isHovered ? Color.black.opacity(0.05) : Color.clear,
-                    radius: 5,
-                    x: 0,
-                    y: 2
-                )
-        )
+        .calmCard(isHovered: isHovered, cornerRadius: 10)
         .overlay(
             RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .stroke(
-                    habit.isCompletedToday ? Color.green.opacity(0.25) : Color.primary.opacity(0.04),
+                    habit.isCompletedToday ? AppTheme.success.opacity(0.3) : AppTheme.subtleBorder,
                     lineWidth: 1
                 )
         )
@@ -452,8 +435,8 @@ private struct FeaturedTaskRowView: View {
             } label: {
                 Image(systemName: task.isCompleted ? "checkmark.circle.fill" : "circle")
                     .font(.title3)
-                    .foregroundStyle(task.isCompleted ? Color.green : Color.secondary)
-                    .scaleEffect(isChecking ? 1.3 : 1.0)
+                    .foregroundStyle(task.isCompleted ? AppTheme.success : AppTheme.textTertiary)
+                    .scaleEffect(isChecking ? 1.25 : 1.0)
             }
             .buttonStyle(.plain)
             .help(task.isCompleted ? "Mark as active" : "Mark as completed")
@@ -461,13 +444,13 @@ private struct FeaturedTaskRowView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(task.title)
                     .font(.body.weight(task.isCompleted ? .regular : .medium))
-                    .strikethrough(task.isCompleted, color: .secondary)
-                    .foregroundStyle(task.isCompleted ? .secondary : .primary)
+                    .strikethrough(task.isCompleted, color: AppTheme.textSecondary)
+                    .foregroundStyle(task.isCompleted ? AppTheme.textSecondary : AppTheme.textPrimary)
 
                 if !task.notes.isEmpty {
                     Text(task.notes)
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                 }
             }
 
@@ -480,35 +463,12 @@ private struct FeaturedTaskRowView: View {
             .font(.caption2.bold())
             .padding(.horizontal, 8)
             .padding(.vertical, 3)
-            .background(task.priority.color.opacity(0.14))
+            .background(task.priority.color.opacity(0.12))
             .foregroundStyle(task.priority.color)
             .clipShape(Capsule())
         }
         .padding(14)
-        .background(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(isHovered ? Color(nsColor: .controlBackgroundColor) : Color.primary.opacity(0.02))
-                .shadow(
-                    color: isHovered ? Color.black.opacity(0.06) : Color.clear,
-                    radius: 6,
-                    x: 0,
-                    y: 2
-                )
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .stroke(
-                    LinearGradient(
-                        colors: [
-                            Color.primary.opacity(isHovered ? 0.14 : 0.04),
-                            Color.primary.opacity(isHovered ? 0.06 : 0.01)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
-                    lineWidth: 1
-                )
-        )
+        .calmCard(isHovered: isHovered, cornerRadius: 10)
         .scaleEffect(isHovered ? 1.008 : 1.0)
         .animation(.spring(response: 0.25, dampingFraction: 0.75), value: isHovered)
         .onHover { hovering in

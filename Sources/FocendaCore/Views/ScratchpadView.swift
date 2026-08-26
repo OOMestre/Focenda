@@ -41,7 +41,7 @@ public struct ScratchpadView: View {
             // Bottom Status & Stats Bar
             bottomStatusBar
         }
-        .background(Color(nsColor: .windowBackgroundColor))
+        .background(AppTheme.background)
         .navigationTitle("Scratchpad")
         .confirmationDialog(
             "Delete Note?",
@@ -85,7 +85,7 @@ public struct ScratchpadView: View {
                 } label: {
                     Image(systemName: "sidebar.left")
                         .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(viewModel.showNotesSidebar ? Color.accentColor : Color.secondary)
+                        .foregroundStyle(viewModel.showNotesSidebar ? AppTheme.accent : AppTheme.textSecondary)
                 }
                 .buttonStyle(.bordered)
                 .controlSize(.small)
@@ -98,10 +98,11 @@ public struct ScratchpadView: View {
                             .foregroundStyle(viewModel.selectedColor.color)
                         Text("Quick Scratchpad")
                             .font(.headline.bold())
+                            .foregroundStyle(AppTheme.textPrimary)
                     }
                     Text("Distraction-free thoughts and scratch notes.")
                         .font(.caption2)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                 }
             }
 
@@ -117,11 +118,11 @@ public struct ScratchpadView: View {
             .padding(.vertical, 5)
             .background(
                 Capsule()
-                    .fill(Color.primary.opacity(0.04))
+                    .fill(AppTheme.cardBackgroundSubtle)
             )
             .overlay(
                 Capsule()
-                    .stroke(Color.primary.opacity(0.08), lineWidth: 1)
+                    .stroke(AppTheme.subtleBorder, lineWidth: 1)
             )
             .fixedSize(horizontal: true, vertical: false)
 
@@ -143,6 +144,7 @@ public struct ScratchpadView: View {
                     .font(.caption.weight(.medium))
                 }
                 .buttonStyle(.borderedProminent)
+                .tint(AppTheme.deepFocus)
                 .controlSize(.small)
                 .help("Create a new note in the selected category")
 
@@ -163,7 +165,7 @@ public struct ScratchpadView: View {
                         Text(copiedFeedback ? "Copied!" : "Copy")
                     }
                     .font(.caption.weight(.medium))
-                    .foregroundStyle(copiedFeedback ? Color.green : Color.primary)
+                    .foregroundStyle(copiedFeedback ? AppTheme.success : AppTheme.textPrimary)
                 }
                 .buttonStyle(.bordered)
                 .controlSize(.small)
@@ -175,7 +177,7 @@ public struct ScratchpadView: View {
                 } label: {
                     Image(systemName: "trash")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                 }
                 .buttonStyle(.bordered)
                 .controlSize(.small)
@@ -184,6 +186,7 @@ public struct ScratchpadView: View {
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 12)
+        .background(AppTheme.background)
     }
 
     // MARK: - Color Tab Button (Clean Horizontal Dots with Halo Ring)
@@ -201,15 +204,14 @@ public struct ScratchpadView: View {
                 ZStack {
                     if isSelected {
                         Circle()
-                            .strokeBorder(color.color.opacity(0.7), lineWidth: 2)
+                            .strokeBorder(color.color.opacity(0.6), lineWidth: 2)
                             .frame(width: 20, height: 20)
                             .transition(.scale.combined(with: .opacity))
                     }
 
                     Circle()
                         .fill(color.color)
-                        .frame(width: isSelected ? 12 : 12, height: isSelected ? 12 : 12)
-                        .shadow(color: isSelected ? color.color.opacity(0.4) : .clear, radius: 2, x: 0, y: 1)
+                        .frame(width: 12, height: 12)
 
                     if hasContent && !isSelected {
                         Circle()
@@ -222,7 +224,7 @@ public struct ScratchpadView: View {
                 // Horizontal Label
                 Text(color.rawValue)
                     .font(.system(size: 12, weight: isSelected ? .semibold : .medium))
-                    .foregroundStyle(isSelected ? color.color : Color.secondary)
+                    .foregroundStyle(isSelected ? color.color : AppTheme.textSecondary)
                     .lineLimit(1)
                     .fixedSize(horizontal: true, vertical: false)
             }
@@ -230,11 +232,11 @@ public struct ScratchpadView: View {
             .padding(.vertical, 5)
             .background(
                 Capsule()
-                    .fill(isSelected ? color.color.opacity(0.14) : Color.clear)
+                    .fill(isSelected ? color.color.opacity(0.12) : Color.clear)
             )
             .overlay(
                 Capsule()
-                    .stroke(isSelected ? color.color.opacity(0.35) : Color.clear, lineWidth: 1)
+                    .stroke(isSelected ? color.color.opacity(0.3) : Color.clear, lineWidth: 1)
             )
         }
         .buttonStyle(.plain)
@@ -248,11 +250,12 @@ public struct ScratchpadView: View {
             HStack(spacing: 6) {
                 Image(systemName: "magnifyingglass")
                     .font(.system(size: 12))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(AppTheme.textTertiary)
 
                 TextField("Search notes...", text: $viewModel.searchQuery)
                     .textFieldStyle(.plain)
                     .font(.system(size: 12))
+                    .foregroundStyle(AppTheme.textPrimary)
 
                 if !viewModel.searchQuery.isEmpty {
                     Button {
@@ -260,7 +263,7 @@ public struct ScratchpadView: View {
                     } label: {
                         Image(systemName: "xmark.circle.fill")
                             .font(.system(size: 11))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(AppTheme.textTertiary)
                     }
                     .buttonStyle(.plain)
                 }
@@ -269,7 +272,11 @@ public struct ScratchpadView: View {
             .padding(.vertical, 6)
             .background(
                 RoundedRectangle(cornerRadius: 7, style: .continuous)
-                    .fill(Color(nsColor: .controlBackgroundColor))
+                    .fill(AppTheme.cardBackground)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                    .stroke(AppTheme.border, lineWidth: 1)
             )
             .padding(.horizontal, 10)
             .padding(.top, 10)
@@ -295,10 +302,10 @@ public struct ScratchpadView: View {
                     Spacer()
                     Image(systemName: "doc.text.magnifyingglass")
                         .font(.system(size: 28))
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(AppTheme.textTertiary)
                     Text(viewModel.searchQuery.isEmpty ? "No notes found" : "No matching notes")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                     if !viewModel.searchQuery.isEmpty {
                         Button("Clear Search") {
                             viewModel.searchQuery = ""
@@ -327,7 +334,7 @@ public struct ScratchpadView: View {
             HStack {
                 Text("\(viewModel.filteredNotes.count) \(viewModel.filteredNotes.count == 1 ? "note" : "notes")")
                     .font(.caption2)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(AppTheme.textSecondary)
 
                 Spacer()
 
@@ -349,9 +356,9 @@ public struct ScratchpadView: View {
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
-            .background(Color(nsColor: .controlBackgroundColor).opacity(0.5))
+            .background(AppTheme.cardBackgroundSubtle)
         }
-        .background(Color(nsColor: .windowBackgroundColor).opacity(0.7))
+        .background(AppTheme.background)
     }
 
     // MARK: - Color Filter Chip
@@ -371,17 +378,17 @@ public struct ScratchpadView: View {
                 }
                 Text(title)
                     .font(.system(size: 11, weight: isSelected ? .semibold : .regular))
-                    .foregroundStyle(isSelected ? (color?.color ?? Color.primary) : Color.secondary)
+                    .foregroundStyle(isSelected ? (color?.color ?? AppTheme.textPrimary) : AppTheme.textSecondary)
             }
             .padding(.horizontal, 7)
             .padding(.vertical, 3)
             .background(
                 Capsule()
-                    .fill(isSelected ? (color?.color.opacity(0.15) ?? Color.primary.opacity(0.1)) : Color.clear)
+                    .fill(isSelected ? (color?.color.opacity(0.12) ?? AppTheme.accent.opacity(0.12)) : Color.clear)
             )
             .overlay(
                 Capsule()
-                    .stroke(isSelected ? (color?.color.opacity(0.3) ?? Color.primary.opacity(0.2)) : Color.clear, lineWidth: 1)
+                    .stroke(isSelected ? (color?.color.opacity(0.3) ?? AppTheme.border) : Color.clear, lineWidth: 1)
             )
         }
         .buttonStyle(.plain)
@@ -408,7 +415,7 @@ public struct ScratchpadView: View {
                     HStack {
                         Text(note.displayTitle)
                             .font(.system(size: 13, weight: isSelected ? .bold : .medium))
-                            .foregroundStyle(isSelected ? Color.primary : Color.primary.opacity(0.85))
+                            .foregroundStyle(isSelected ? AppTheme.textPrimary : AppTheme.textPrimary.opacity(0.85))
                             .lineLimit(1)
 
                         Spacer(minLength: 4)
@@ -422,20 +429,20 @@ public struct ScratchpadView: View {
 
                     Text(note.snippet)
                         .font(.caption2)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                         .lineLimit(2)
                         .multilineTextAlignment(.leading)
 
                     HStack {
                         Text(note.formattedDate)
                             .font(.system(size: 10))
-                            .foregroundStyle(.tertiary)
+                            .foregroundStyle(AppTheme.textTertiary)
 
                         Spacer()
 
                         Text("\(note.wordCount)w")
                             .font(.system(size: 10).monospacedDigit())
-                            .foregroundStyle(.tertiary)
+                            .foregroundStyle(AppTheme.textTertiary)
                     }
                     .padding(.top, 1)
                 }
@@ -444,11 +451,11 @@ public struct ScratchpadView: View {
             .padding(.vertical, 7)
             .background(
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(isSelected ? note.color.color.opacity(0.14) : Color.primary.opacity(0.02))
+                    .fill(isSelected ? note.color.color.opacity(0.12) : AppTheme.cardBackgroundSubtle.opacity(0.5))
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .stroke(isSelected ? note.color.color.opacity(0.35) : Color.primary.opacity(0.04), lineWidth: 1)
+                    .stroke(isSelected ? note.color.color.opacity(0.3) : AppTheme.subtleBorder, lineWidth: 1)
             )
         }
         .buttonStyle(.plain)
@@ -514,7 +521,7 @@ public struct ScratchpadView: View {
                         .frame(width: 14, height: 14)
                         .overlay(
                             Circle()
-                                .stroke(Color.primary.opacity(0.2), lineWidth: 1)
+                                .stroke(AppTheme.border, lineWidth: 1)
                         )
                 }
                 .menuStyle(.borderlessButton)
@@ -525,6 +532,7 @@ public struct ScratchpadView: View {
                 TextField("Untitled Note", text: $viewModel.currentTitle)
                     .font(.title3.weight(.bold))
                     .textFieldStyle(.plain)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .focused($isTitleFocused)
                     .onChange(of: viewModel.currentTitle) { _, _ in
                         viewModel.saveToUserDefaults()
@@ -540,7 +548,7 @@ public struct ScratchpadView: View {
                 } label: {
                     Image(systemName: viewModel.currentNote.isPinned ? "pin.fill" : "pin")
                         .font(.system(size: 13))
-                        .foregroundStyle(viewModel.currentNote.isPinned ? viewModel.selectedColor.color : Color.secondary)
+                        .foregroundStyle(viewModel.currentNote.isPinned ? viewModel.selectedColor.color : AppTheme.textTertiary)
                 }
                 .buttonStyle(.plain)
                 .help(viewModel.currentNote.isPinned ? "Unpin Note" : "Pin Note")
@@ -548,7 +556,7 @@ public struct ScratchpadView: View {
                 // Last Updated Timestamp
                 Text("Edited " + viewModel.currentNote.formattedDate)
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(AppTheme.textSecondary)
             }
             .padding(.horizontal, 24)
             .padding(.top, 14)
@@ -558,11 +566,11 @@ public struct ScratchpadView: View {
             ZStack(alignment: .topLeading) {
                 // Background tint matching category
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(Color(nsColor: .textBackgroundColor).opacity(0.65))
+                    .fill(AppTheme.cardBackground)
                     .overlay(
                         RoundedRectangle(cornerRadius: 12, style: .continuous)
                             .stroke(
-                                viewModel.selectedColor.color.opacity(0.2),
+                                viewModel.selectedColor.color.opacity(0.18),
                                 lineWidth: 1
                             )
                     )
@@ -572,6 +580,7 @@ public struct ScratchpadView: View {
                 // TextEditor with real-time keystroke saving
                 TextEditor(text: $viewModel.currentContent)
                     .font(.system(size: 15, weight: .regular, design: .default))
+                    .foregroundStyle(AppTheme.textPrimary)
                     .lineSpacing(5)
                     .focused($isEditorFocused)
                     .scrollContentBackground(.hidden)
@@ -585,7 +594,7 @@ public struct ScratchpadView: View {
                 if viewModel.currentContent.isEmpty {
                     Text("Jot down quick thoughts, ideas, or snippets while staying in deep focus...")
                         .font(.system(size: 15))
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(AppTheme.textTertiary)
                         .padding(.horizontal, 32)
                         .padding(.top, 24)
                         .allowsHitTesting(false)
@@ -593,6 +602,7 @@ public struct ScratchpadView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
+        .background(AppTheme.background)
     }
 
     // MARK: - Bottom Status Bar
@@ -605,7 +615,7 @@ public struct ScratchpadView: View {
                     .frame(width: 8, height: 8)
                 Text("\(viewModel.selectedColor.rawValue) Category")
                     .font(.caption2.weight(.semibold))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(AppTheme.textSecondary)
             }
 
             Spacer()
@@ -614,23 +624,23 @@ public struct ScratchpadView: View {
             HStack(spacing: 12) {
                 Text("\(viewModel.wordCount) \(viewModel.wordCount == 1 ? "word" : "words")")
                     .font(.caption.monospacedDigit())
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(AppTheme.textSecondary)
 
                 Text("•")
                     .font(.caption2)
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(AppTheme.textTertiary)
 
                 Text("\(viewModel.characterCount) \(viewModel.characterCount == 1 ? "character" : "characters")")
                     .font(.caption.monospacedDigit())
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(AppTheme.textSecondary)
 
                 Text("•")
                     .font(.caption2)
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(AppTheme.textTertiary)
 
                 Text("\(viewModel.lineCount) \(viewModel.lineCount == 1 ? "line" : "lines")")
                     .font(.caption.monospacedDigit())
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(AppTheme.textSecondary)
             }
 
             Spacer()
@@ -639,14 +649,14 @@ public struct ScratchpadView: View {
             HStack(spacing: 4) {
                 Image(systemName: "checkmark.circle.fill")
                     .font(.caption2)
-                    .foregroundStyle(.green)
+                    .foregroundStyle(AppTheme.success)
                 Text("Saved")
                     .font(.caption2)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(AppTheme.textSecondary)
             }
         }
         .padding(.horizontal, 24)
         .padding(.vertical, 10)
-        .background(Color(nsColor: .windowBackgroundColor).opacity(0.9))
+        .background(AppTheme.background)
     }
 }

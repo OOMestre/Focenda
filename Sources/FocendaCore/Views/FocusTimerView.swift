@@ -9,7 +9,7 @@ public struct FocusTimerView: View {
 
     public var body: some View {
         ScrollView {
-            VStack(spacing: 20) {
+            VStack(spacing: 24) {
                 // Mode selectors
                 HStack(spacing: 12) {
                     ForEach(FocusMode.allCases) { mode in
@@ -25,7 +25,7 @@ public struct FocusTimerView: View {
                 }
                 .padding(.top, 12)
 
-                // Circular progress ring with running pulse effect
+                // Circular progress ring with calm organic depth
                 CircularProgressView(
                     progress: timerVM.progress,
                     formattedTime: timerVM.formattedTimeRemaining,
@@ -38,7 +38,7 @@ public struct FocusTimerView: View {
                 // Motivational message
                 Text(timerVM.currentMode.motivationalMessage)
                     .font(.body)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(AppTheme.textSecondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 32)
                     .transition(.opacity.combined(with: .scale(scale: 0.98)))
@@ -48,7 +48,7 @@ public struct FocusTimerView: View {
                 HStack(spacing: 8) {
                     Text("Pomodoro Cycle:")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(AppTheme.textSecondary)
 
                     ForEach(0..<4) { index in
                         let isCompleted = (timerVM.completedWorkSessionsCount % 4) > index
@@ -56,15 +56,9 @@ public struct FocusTimerView: View {
                             .fill(
                                 isCompleted
                                     ? timerVM.currentMode.themeColor
-                                    : Color.secondary.opacity(0.25)
+                                    : AppTheme.border
                             )
-                            .frame(width: isCompleted ? 10 : 8, height: isCompleted ? 10 : 8)
-                            .shadow(
-                                color: isCompleted ? timerVM.currentMode.themeColor.opacity(0.4) : .clear,
-                                radius: 4,
-                                x: 0,
-                                y: 1
-                            )
+                            .frame(width: isCompleted ? 9 : 7, height: isCompleted ? 9 : 7)
                             .animation(.spring(response: 0.35, dampingFraction: 0.65), value: timerVM.completedWorkSessionsCount)
                     }
                 }
@@ -111,6 +105,7 @@ public struct FocusTimerView: View {
             }
             .padding(.horizontal, 24)
         }
+        .background(AppTheme.background)
         .navigationTitle("Focus Timer")
         .animation(.spring(response: 0.4, dampingFraction: 0.75), value: timerVM.currentMode)
     }
@@ -138,18 +133,22 @@ private struct ModeSelectorButton: View {
             .background(
                 isSelected
                     ? mode.themeColor
-                    : (isHovered ? Color.primary.opacity(0.1) : Color.primary.opacity(0.05))
+                    : (isHovered ? AppTheme.cardBackgroundSubtle : AppTheme.cardBackground)
             )
             .foregroundStyle(
                 isSelected
                     ? .white
-                    : .primary
+                    : (isHovered ? AppTheme.textPrimary : AppTheme.textSecondary)
             )
             .clipShape(Capsule())
-            .scaleEffect(isHovered ? 1.04 : 1.0)
+            .overlay(
+                Capsule()
+                    .stroke(isSelected ? Color.clear : (isHovered ? AppTheme.border : AppTheme.subtleBorder), lineWidth: 1)
+            )
+            .scaleEffect(isHovered ? 1.03 : 1.0)
             .shadow(
-                color: isSelected ? mode.themeColor.opacity(0.3) : .clear,
-                radius: 6,
+                color: isSelected ? Color.black.opacity(0.08) : Color.clear,
+                radius: 4,
                 x: 0,
                 y: 2
             )
@@ -180,13 +179,13 @@ private struct PrimaryPlayPauseButton: View {
                     Circle()
                         .fill(themeColor)
                         .shadow(
-                            color: themeColor.opacity(isHovered ? 0.45 : 0.28),
-                            radius: isHovered ? 12 : 8,
+                            color: Color.black.opacity(isHovered ? 0.16 : 0.10),
+                            radius: isHovered ? 8 : 5,
                             x: 0,
-                            y: isHovered ? 5 : 3
+                            y: isHovered ? 3 : 2
                         )
                 )
-                .scaleEffect(isHovered ? 1.06 : 1.0)
+                .scaleEffect(isHovered ? 1.05 : 1.0)
         }
         .buttonStyle(.plain)
         .onHover { hovering in
@@ -211,26 +210,26 @@ private struct HoverScaleButton: View {
         Button(action: action) {
             Image(systemName: icon)
                 .font(.system(size: fontSize, weight: .semibold))
-                .foregroundStyle(isHovered ? .primary : .secondary)
+                .foregroundStyle(isHovered ? AppTheme.textPrimary : AppTheme.textSecondary)
                 .frame(width: size, height: size)
                 .background(
                     Circle()
-                        .fill(isHovered ? Color(nsColor: .controlBackgroundColor) : Color.primary.opacity(0.04))
+                        .fill(isHovered ? AppTheme.cardBackgroundSubtle : AppTheme.cardBackground)
                         .shadow(
-                            color: Color.black.opacity(isHovered ? 0.08 : 0.0),
-                            radius: 4,
+                            color: Color.black.opacity(isHovered ? 0.06 : 0.02),
+                            radius: 3,
                             x: 0,
-                            y: 2
+                            y: 1
                         )
                 )
                 .overlay(
                     Circle()
                         .stroke(
-                            Color.primary.opacity(isHovered ? 0.15 : 0.06),
+                            isHovered ? AppTheme.border : AppTheme.subtleBorder,
                             lineWidth: 1
                         )
                 )
-                .scaleEffect(isHovered ? 1.08 : 1.0)
+                .scaleEffect(isHovered ? 1.06 : 1.0)
         }
         .buttonStyle(.plain)
         .onHover { hovering in

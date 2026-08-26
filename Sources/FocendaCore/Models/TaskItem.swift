@@ -23,9 +23,9 @@ public enum TaskPriority: String, CaseIterable, Identifiable, Codable, Comparabl
 
     public var color: Color {
         switch self {
-        case .low: return .blue
-        case .medium: return .orange
-        case .high: return .red
+        case .low: return AppTheme.riverSlate
+        case .medium: return AppTheme.sandstone
+        case .high: return AppTheme.terracotta
         }
     }
 

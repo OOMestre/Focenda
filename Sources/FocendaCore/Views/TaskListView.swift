@@ -20,22 +20,27 @@ public struct TaskListView: View {
                 HStack(spacing: 12) {
                     HStack {
                         Image(systemName: "magnifyingglass")
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(AppTheme.textTertiary)
                         TextField("Search tasks by title, notes, or tags...", text: $taskVM.searchQuery)
                             .textFieldStyle(.plain)
+                            .foregroundStyle(AppTheme.textPrimary)
                         if !taskVM.searchQuery.isEmpty {
                             Button {
                                 taskVM.searchQuery = ""
                             } label: {
                                 Image(systemName: "xmark.circle.fill")
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(AppTheme.textTertiary)
                             }
                             .buttonStyle(.plain)
                         }
                     }
                     .padding(8)
-                    .background(Color(nsColor: .controlBackgroundColor))
+                    .background(AppTheme.cardBackground)
                     .clipShape(RoundedRectangle(cornerRadius: 8))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(AppTheme.border, lineWidth: 1)
+                    )
 
                     Button {
                         showingAddTaskSheet = true
@@ -44,6 +49,7 @@ public struct TaskListView: View {
                             .font(.headline)
                     }
                     .buttonStyle(.borderedProminent)
+                    .tint(AppTheme.deepFocus)
                     .controlSize(.regular)
                 }
 
@@ -61,7 +67,7 @@ public struct TaskListView: View {
                 }
             }
             .padding(16)
-            .background(Color(nsColor: .windowBackgroundColor))
+            .background(AppTheme.background)
 
             Divider()
 
@@ -70,16 +76,18 @@ public struct TaskListView: View {
                 VStack(spacing: 14) {
                     Spacer()
                     Image(systemName: "tray.fill")
-                        .font(.system(size: 44))
-                        .foregroundStyle(.secondary.opacity(0.6))
+                        .font(.system(size: 40))
+                        .foregroundStyle(AppTheme.textTertiary.opacity(0.6))
                     Text("No tasks found")
                         .font(.title3.bold())
+                        .foregroundStyle(AppTheme.textPrimary)
                     Text("Adjust your filter or create a new task to get things done.")
                         .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                     Spacer()
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(AppTheme.background)
             } else {
                 List {
                     ForEach(taskVM.filteredTasks) { task in
@@ -98,17 +106,21 @@ public struct TaskListView: View {
                         )
                         .listRowSeparator(.hidden)
                         .listRowInsets(EdgeInsets(top: 4, leading: 12, bottom: 4, trailing: 12))
+                        .listRowBackground(Color.clear)
                     }
                 }
                 .listStyle(.plain)
+                .background(AppTheme.background)
                 .animation(.default, value: taskVM.filteredTasks)
             }
         }
+        .background(AppTheme.background)
         .navigationTitle("Tasks")
         .sheet(isPresented: $showingAddTaskSheet) {
             VStack(alignment: .leading, spacing: 18) {
                 Text("New Task")
                     .font(.title2.bold())
+                    .foregroundStyle(AppTheme.textPrimary)
 
                 TextField("Task title (e.g. Finish quarterly report)", text: $newTaskTitle)
                     .textFieldStyle(.roundedBorder)
@@ -130,6 +142,7 @@ public struct TaskListView: View {
                         .textFieldStyle(.roundedBorder)
 
                     Stepper("Estimated Pomodoros: \(newTaskEstimatedPomodoros)", value: $newTaskEstimatedPomodoros, in: 1...10)
+                        .foregroundStyle(AppTheme.textPrimary)
                 }
 
                 HStack {
@@ -156,6 +169,7 @@ public struct TaskListView: View {
                         showingAddTaskSheet = false
                     }
                     .buttonStyle(.borderedProminent)
+                    .tint(AppTheme.deepFocus)
                     .disabled(newTaskTitle.trimmingCharacters(in: .whitespaces).isEmpty)
                     .keyboardShortcut(.defaultAction)
                 }
@@ -191,8 +205,8 @@ private struct TaskRowView: View {
             } label: {
                 Image(systemName: task.isCompleted ? "checkmark.circle.fill" : "circle")
                     .font(.title3)
-                    .foregroundStyle(task.isCompleted ? Color.green : Color.secondary)
-                    .scaleEffect(isChecking ? 1.3 : 1.0)
+                    .foregroundStyle(task.isCompleted ? AppTheme.success : AppTheme.textTertiary)
+                    .scaleEffect(isChecking ? 1.25 : 1.0)
             }
             .buttonStyle(.plain)
             .help(task.isCompleted ? "Mark as active" : "Mark as completed")
@@ -200,13 +214,13 @@ private struct TaskRowView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(task.title)
                     .font(.body.weight(task.isCompleted ? .regular : .medium))
-                    .strikethrough(task.isCompleted, color: .secondary)
-                    .foregroundStyle(task.isCompleted ? .secondary : .primary)
+                    .strikethrough(task.isCompleted, color: AppTheme.textSecondary)
+                    .foregroundStyle(task.isCompleted ? AppTheme.textSecondary : AppTheme.textPrimary)
 
                 if !task.notes.isEmpty {
                     Text(task.notes)
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                 }
 
                 if !task.tags.isEmpty {
@@ -216,8 +230,8 @@ private struct TaskRowView: View {
                                 .font(.caption2.bold())
                                 .padding(.horizontal, 7)
                                 .padding(.vertical, 2)
-                                .background(Color.secondary.opacity(0.12))
-                                .foregroundStyle(.secondary)
+                                .background(AppTheme.cardBackgroundSubtle)
+                                .foregroundStyle(AppTheme.textSecondary)
                                 .clipShape(Capsule())
                         }
                     }
@@ -233,10 +247,10 @@ private struct TaskRowView: View {
                 Text("\(task.completedPomodoros)/\(task.estimatedPomodoros)")
             }
             .font(.caption.bold())
-            .foregroundStyle(.secondary)
+            .foregroundStyle(AppTheme.textSecondary)
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
-            .background(Color.primary.opacity(0.04))
+            .background(AppTheme.cardBackgroundSubtle)
             .clipShape(Capsule())
 
             // Priority badge
@@ -247,7 +261,7 @@ private struct TaskRowView: View {
             .font(.caption2.bold())
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
-            .background(task.priority.color.opacity(0.14))
+            .background(task.priority.color.opacity(0.12))
             .foregroundStyle(task.priority.color)
             .clipShape(Capsule())
 
@@ -255,9 +269,9 @@ private struct TaskRowView: View {
             Button(action: onDelete) {
                 Image(systemName: "trash")
                     .font(.caption)
-                    .foregroundStyle(.red.opacity(isHovered ? 0.85 : 0.4))
+                    .foregroundStyle(AppTheme.terracotta.opacity(isHovered ? 0.9 : 0.4))
                     .frame(width: 24, height: 24)
-                    .background(isHovered ? Color.red.opacity(0.1) : Color.clear)
+                    .background(isHovered ? AppTheme.terracotta.opacity(0.12) : Color.clear)
                     .clipShape(Circle())
             }
             .buttonStyle(.plain)
@@ -265,23 +279,7 @@ private struct TaskRowView: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
-        .background(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(isHovered ? Color(nsColor: .controlBackgroundColor) : Color.primary.opacity(0.02))
-                .shadow(
-                    color: isHovered ? Color.black.opacity(0.06) : Color.clear,
-                    radius: 6,
-                    x: 0,
-                    y: 2
-                )
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .stroke(
-                    isHovered ? Color.primary.opacity(0.08) : Color.primary.opacity(0.03),
-                    lineWidth: 1
-                )
-        )
+        .calmCard(isHovered: isHovered, cornerRadius: 10)
         .scaleEffect(isHovered ? 1.008 : 1.0)
         .animation(.spring(response: 0.25, dampingFraction: 0.75), value: isHovered)
         .onHover { hovering in

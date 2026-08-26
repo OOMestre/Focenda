@@ -37,11 +37,11 @@ public enum FocusMode: String, CaseIterable, Identifiable, Codable {
     public var themeColor: Color {
         switch self {
         case .work:
-            return .indigo
+            return AppTheme.deepFocus
         case .shortBreak:
-            return .teal
+            return AppTheme.shortBreak
         case .longBreak:
-            return .mint
+            return AppTheme.longBreak
         }
     }
 

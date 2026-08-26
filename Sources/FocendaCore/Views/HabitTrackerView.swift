@@ -7,7 +7,7 @@ public struct HabitTrackerView: View {
     // New Habit State
     @State private var newTitle = ""
     @State private var selectedIcon = "flame.fill"
-    @State private var selectedColorHex = "#F59E0B"
+    @State private var selectedColorHex = "#344E41"
     @State private var targetDaysPerWeek = 7
 
     public init(habitVM: HabitViewModel) {
@@ -23,6 +23,7 @@ public struct HabitTrackerView: View {
             }
             .padding(28)
         }
+        .background(AppTheme.background)
         .navigationTitle("Habits")
         .sheet(isPresented: $showingAddSheet) {
             addHabitSheet
@@ -35,9 +36,10 @@ public struct HabitTrackerView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Daily Habits & Streaks")
                     .font(.system(size: 28, weight: .bold, design: .rounded))
+                    .foregroundStyle(AppTheme.textPrimary)
                 Text("Build consistency through daily repetition and track your momentum.")
                     .font(.body)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(AppTheme.textSecondary)
             }
 
             Spacer()
@@ -45,7 +47,7 @@ public struct HabitTrackerView: View {
             Button {
                 newTitle = ""
                 selectedIcon = "flame.fill"
-                selectedColorHex = "#F59E0B"
+                selectedColorHex = "#344E41"
                 targetDaysPerWeek = 7
                 showingAddSheet = true
             } label: {
@@ -53,8 +55,9 @@ public struct HabitTrackerView: View {
                     .font(.headline)
             }
             .buttonStyle(.borderedProminent)
+            .tint(AppTheme.deepFocus)
             .controlSize(.large)
-            .shadow(color: Color.accentColor.opacity(0.25), radius: 6, x: 0, y: 2)
+            .shadow(color: Color.black.opacity(0.08), radius: 4, x: 0, y: 2)
         }
     }
 
@@ -66,7 +69,7 @@ public struct HabitTrackerView: View {
                 value: "\(habitVM.habits.count)",
                 subtitle: "\(habitVM.habits.count) total tracked routines",
                 icon: "repeat",
-                color: .indigo
+                color: AppTheme.deepFocus
             )
 
             StatCard(
@@ -74,15 +77,15 @@ public struct HabitTrackerView: View {
                 value: "\(habitVM.totalCompletionsToday)/\(habitVM.habits.count)",
                 subtitle: "\(Int(habitVM.completionRateToday * 100))% consistency rate",
                 icon: "checkmark.seal.fill",
-                color: .green
+                color: AppTheme.success
             )
 
             StatCard(
                 title: "Best Streak",
                 value: "\(habitVM.longestStreak) \(habitVM.longestStreak == 1 ? "day" : "days")",
-                subtitle: habitVM.longestStreak > 0 ? "Momentum in progress 🔥" : "Start your streak today",
+                subtitle: habitVM.longestStreak > 0 ? "Momentum in progress" : "Start your streak today",
                 icon: "flame.fill",
-                color: .orange
+                color: AppTheme.sandstone
             )
         }
     }
@@ -93,13 +96,14 @@ public struct HabitTrackerView: View {
             HStack {
                 Text("Your Habits")
                     .font(.title2.bold())
+                    .foregroundStyle(AppTheme.textPrimary)
 
                 Spacer()
 
                 if !habitVM.habits.isEmpty {
                     Text("Click any day dot or toggle button to mark complete")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                 }
             }
 
@@ -132,12 +136,13 @@ public struct HabitTrackerView: View {
         VStack(spacing: 14) {
             Image(systemName: "flame")
                 .font(.system(size: 44))
-                .foregroundStyle(.orange.opacity(0.7))
+                .foregroundStyle(AppTheme.sandstone.opacity(0.7))
             Text("No habits configured yet")
                 .font(.title3.bold())
+                .foregroundStyle(AppTheme.textPrimary)
             Text("Create a new routine or reload sample habits to start building streaks.")
                 .font(.subheadline)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(AppTheme.textSecondary)
 
             Button("Load Default Habits") {
                 withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
@@ -149,8 +154,7 @@ public struct HabitTrackerView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(40)
-        .background(Color.primary.opacity(0.02))
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .calmCard(cornerRadius: 14)
     }
 
     // MARK: - New Habit Sheet
@@ -158,11 +162,12 @@ public struct HabitTrackerView: View {
         VStack(alignment: .leading, spacing: 20) {
             Text("Create New Habit")
                 .font(.title2.bold())
+                .foregroundStyle(AppTheme.textPrimary)
 
             VStack(alignment: .leading, spacing: 8) {
                 Text("Habit Title")
                     .font(.caption.bold())
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(AppTheme.textSecondary)
 
                 TextField("e.g. Read 20 Pages, Morning Meditation", text: $newTitle)
                     .textFieldStyle(.roundedBorder)
@@ -171,15 +176,16 @@ public struct HabitTrackerView: View {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Weekly Target")
                     .font(.caption.bold())
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(AppTheme.textSecondary)
 
                 Stepper("Target: \(targetDaysPerWeek) \(targetDaysPerWeek == 1 ? "day" : "days") per week", value: $targetDaysPerWeek, in: 1...7)
+                    .foregroundStyle(AppTheme.textPrimary)
             }
 
             VStack(alignment: .leading, spacing: 8) {
                 Text("Icon")
                     .font(.caption.bold())
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(AppTheme.textSecondary)
 
                 let availableIcons = [
                     "flame.fill", "drop.fill", "brain.head.profile", "book.fill",
@@ -195,11 +201,11 @@ public struct HabitTrackerView: View {
                         } label: {
                             Image(systemName: icon)
                                 .font(.title3)
-                                .foregroundStyle(selectedIcon == icon ? Color(hex: selectedColorHex) : Color.secondary)
+                                .foregroundStyle(selectedIcon == icon ? Color(hex: selectedColorHex) : AppTheme.textSecondary)
                                 .frame(width: 38, height: 38)
                                 .background(
                                     RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                        .fill(selectedIcon == icon ? Color(hex: selectedColorHex).opacity(0.18) : Color(nsColor: .controlBackgroundColor))
+                                        .fill(selectedIcon == icon ? Color(hex: selectedColorHex).opacity(0.16) : AppTheme.cardBackgroundSubtle)
                                 )
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 8, style: .continuous)
@@ -214,12 +220,12 @@ public struct HabitTrackerView: View {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Theme Color")
                     .font(.caption.bold())
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(AppTheme.textSecondary)
 
                 let availableColors = [
-                    "#F59E0B", "#6366F1", "#10B981", "#06B6D4",
-                    "#EF4444", "#EC4899", "#8B5CF6", "#3B82F6",
-                    "#14B8A6", "#F97316"
+                    "#344E41", "#4D6A53", "#9C5B42", "#B27B38",
+                    "#4A6B7C", "#5B8266", "#A67C38", "#6B657D",
+                    "#8C584E", "#3C4858"
                 ]
 
                 HStack(spacing: 12) {
@@ -232,7 +238,7 @@ public struct HabitTrackerView: View {
                                 .frame(width: 28, height: 28)
                                 .overlay(
                                     Circle()
-                                        .stroke(Color.primary, lineWidth: selectedColorHex == colorHex ? 2.5 : 0)
+                                        .stroke(AppTheme.textPrimary, lineWidth: selectedColorHex == colorHex ? 2.5 : 0)
                                         .padding(selectedColorHex == colorHex ? -3 : 0)
                                 )
                         }
@@ -259,6 +265,7 @@ public struct HabitTrackerView: View {
                     showingAddSheet = false
                 }
                 .buttonStyle(.borderedProminent)
+                .tint(AppTheme.deepFocus)
                 .disabled(newTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 .keyboardShortcut(.defaultAction)
             }
@@ -278,7 +285,6 @@ struct HabitCardView: View {
 
     @State private var isHovered = false
     @State private var isBouncing = false
-    @State private var flamePulse = false
 
     var body: some View {
         VStack(spacing: 16) {
@@ -289,52 +295,44 @@ struct HabitCardView: View {
                     .font(.title2)
                     .foregroundStyle(habit.color)
                     .frame(width: 44, height: 44)
-                    .background(habit.color.opacity(0.14))
+                    .background(habit.color.opacity(0.12))
                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(habit.title)
                         .font(.headline)
-                        .foregroundStyle(.primary)
+                        .foregroundStyle(AppTheme.textPrimary)
 
                     Text("Target: \(habit.targetDaysPerWeek) \(habit.targetDaysPerWeek == 1 ? "day" : "days")/week")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                 }
 
                 Spacer()
 
-                // Animated Flame Streak Badge
+                // Calm Streak Badge
                 HStack(spacing: 5) {
                     Image(systemName: "flame.fill")
-                        .foregroundStyle(habit.streakCount > 0 ? Color.orange : Color.secondary.opacity(0.5))
-                        .scaleEffect(habit.streakCount > 0 && flamePulse ? 1.2 : 1.0)
-                        .animation(
-                            habit.streakCount > 0 ? .easeInOut(duration: 1.0).repeatForever(autoreverses: true) : .default,
-                            value: flamePulse
-                        )
+                        .foregroundStyle(habit.streakCount > 0 ? AppTheme.sandstone : AppTheme.textTertiary)
 
                     Text("\(habit.streakCount) \(habit.streakCount == 1 ? "day" : "days")")
                         .font(.subheadline.bold())
-                        .foregroundStyle(habit.streakCount > 0 ? Color.orange : Color.secondary)
+                        .foregroundStyle(habit.streakCount > 0 ? AppTheme.sandstone : AppTheme.textSecondary)
                 }
                 .padding(.horizontal, 10)
                 .padding(.vertical, 5)
                 .background(
                     Capsule()
-                        .fill(habit.streakCount > 0 ? Color.orange.opacity(0.14) : Color.primary.opacity(0.04))
+                        .fill(habit.streakCount > 0 ? AppTheme.sandstone.opacity(0.12) : AppTheme.cardBackgroundSubtle)
                 )
-                .onAppear {
-                    flamePulse = true
-                }
 
                 // Delete Habit Button
                 Button(action: onDelete) {
                     Image(systemName: "trash")
                         .font(.caption)
-                        .foregroundStyle(.red.opacity(isHovered ? 0.85 : 0.4))
+                        .foregroundStyle(AppTheme.terracotta.opacity(isHovered ? 0.9 : 0.4))
                         .frame(width: 24, height: 24)
-                        .background(isHovered ? Color.red.opacity(0.1) : Color.clear)
+                        .background(isHovered ? AppTheme.terracotta.opacity(0.12) : Color.clear)
                         .clipShape(Circle())
                 }
                 .buttonStyle(.plain)
@@ -391,20 +389,11 @@ struct HabitCardView: View {
             }
         }
         .padding(18)
-        .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(Color(nsColor: .controlBackgroundColor))
-                .shadow(
-                    color: isHovered ? habit.color.opacity(0.10) : Color.black.opacity(0.04),
-                    radius: isHovered ? 10 : 5,
-                    x: 0,
-                    y: isHovered ? 4 : 2
-                )
-        )
+        .calmCard(isHovered: isHovered, cornerRadius: 14)
         .overlay(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .stroke(
-                    habit.isCompletedToday ? habit.color.opacity(0.4) : Color.primary.opacity(0.06),
+                    habit.isCompletedToday ? habit.color.opacity(0.35) : AppTheme.subtleBorder,
                     lineWidth: 1
                 )
         )
@@ -473,14 +462,14 @@ struct DayCompletionDot: View {
             VStack(spacing: 4) {
                 Text(day.symbol)
                     .font(.system(size: 10, weight: .bold))
-                    .foregroundStyle(day.isToday ? Color.accentColor : Color.secondary)
+                    .foregroundStyle(day.isToday ? AppTheme.accent : AppTheme.textSecondary)
 
                 ZStack {
                     Circle()
                         .fill(
                             isCompleted
                                 ? color
-                                : (day.isToday ? color.opacity(0.15) : Color.primary.opacity(0.05))
+                                : (day.isToday ? color.opacity(0.12) : AppTheme.cardBackgroundSubtle)
                         )
                         .frame(width: 26, height: 26)
 
@@ -499,7 +488,7 @@ struct DayCompletionDot: View {
 
                 Text(day.dayNumber)
                     .font(.system(size: 9))
-                    .foregroundStyle(day.isToday ? Color.accentColor : Color.secondary.opacity(0.8))
+                    .foregroundStyle(day.isToday ? AppTheme.accent : AppTheme.textTertiary)
             }
         }
         .buttonStyle(.plain)

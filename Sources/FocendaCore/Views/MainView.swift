@@ -30,35 +30,40 @@ public struct MainView: View {
                 habitVM: habitVM
             )
             .navigationSplitViewColumnWidth(min: 210, ideal: 230, max: 280)
+            .background(AppTheme.sidebarBackground)
         } detail: {
-            switch appState.selectedTab {
-            case .dashboard:
-                DashboardView(
-                    appState: appState,
-                    timerVM: timerVM,
-                    taskVM: taskVM,
-                    habitVM: habitVM
-                )
-            case .timer:
-                FocusTimerView(timerVM: timerVM)
-            case .tasks:
-                TaskListView(taskVM: taskVM)
-            case .habits:
-                HabitTrackerView(habitVM: habitVM)
-            case .scratchpad:
-                ScratchpadView(viewModel: scratchpadVM)
-            case .stats:
-                StatsView(
-                    timerVM: timerVM,
-                    taskVM: taskVM
-                )
-            case .settings:
-                SettingsView(
-                    appState: appState,
-                    timerVM: timerVM
-                )
+            Group {
+                switch appState.selectedTab {
+                case .dashboard:
+                    DashboardView(
+                        appState: appState,
+                        timerVM: timerVM,
+                        taskVM: taskVM,
+                        habitVM: habitVM
+                    )
+                case .timer:
+                    FocusTimerView(timerVM: timerVM)
+                case .tasks:
+                    TaskListView(taskVM: taskVM)
+                case .habits:
+                    HabitTrackerView(habitVM: habitVM)
+                case .scratchpad:
+                    ScratchpadView(viewModel: scratchpadVM)
+                case .stats:
+                    StatsView(
+                        timerVM: timerVM,
+                        taskVM: taskVM
+                    )
+                case .settings:
+                    SettingsView(
+                        appState: appState,
+                        timerVM: timerVM
+                    )
+                }
             }
+            .background(AppTheme.background)
         }
         .frame(minWidth: 860, minHeight: 580)
+        .background(AppTheme.background)
     }
 }
