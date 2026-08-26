@@ -31,8 +31,6 @@ public struct MenuBarCardView: View {
     @State public var selectedSection: MenuBarSection = .focus
     @State private var isPresented: Bool = false
     @State private var isHovered: Bool = false
-    @State private var dragOffset: CGSize = .zero
-    @State private var accumulatedOffset: CGSize = .zero
 
     // Quick Task state
     @State private var newTaskTitle: String = ""
@@ -85,13 +83,10 @@ public struct MenuBarCardView: View {
                 x: 0,
                 y: isHovered ? 3 : 1
             )
-            .offset(dragOffset)
             .scaleEffect(y: isPresented ? 1.0 : 0.88, anchor: .top)
             .opacity(isPresented ? 1.0 : 0.0)
             .animation(.spring(response: 0.28, dampingFraction: 0.75), value: isHovered)
             .animation(.spring(response: 0.32, dampingFraction: 0.76), value: isPresented)
-            .animation(.spring(response: 0.35, dampingFraction: 0.75), value: dragOffset)
-            .gesture(dragGesture)
             .onHover { hovering in
                 isHovered = hovering
             }
@@ -110,21 +105,13 @@ public struct MenuBarCardView: View {
             }
     }
 
-    private var dragGesture: some Gesture {
-        DragGesture()
-            .onChanged { value in
-                dragOffset = CGSize(
-                    width: accumulatedOffset.width + value.translation.width,
-                    height: accumulatedOffset.height + value.translation.height
-                )
-            }
-            .onEnded { value in
-                dragOffset = CGSize(
-                    width: accumulatedOffset.width + value.translation.width,
-                    height: accumulatedOffset.height + value.translation.height
-                )
-                accumulatedOffset = dragOffset
-            }
+    private func detachToFloatingWindow() {
+        FloatingMiniTimerPanel.shared.show(
+            timerVM: timerVM,
+            taskVM: taskVM,
+            scratchpadVM: scratchpadVM,
+            at: NSEvent.mouseLocation
+        )
     }
 
     private var cardBody: some View {
@@ -156,29 +143,39 @@ public struct MenuBarCardView: View {
         }
     }
 
-    // MARK: - Drag Handle
+    // MARK: - Drag / Detach Handle
     private var dragHandleSection: some View {
         HStack {
             Spacer()
-            Capsule()
-                .fill(Color.secondary.opacity(0.3))
-                .frame(width: 36, height: 4)
-                .help("Drag to move")
+            Button {
+                detachToFloatingWindow()
+            } label: {
+                HStack(spacing: 5) {
+                    Capsule()
+                        .fill(Color.secondary.opacity(0.4))
+                        .frame(width: 36, height: 4)
+                    Image(systemName: "arrow.up.left.and.down.right.and.arrow.up.right.and.down.left")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(AppTheme.textTertiary)
+                }
+                .padding(.vertical, 4)
+                .padding(.horizontal, 10)
+                .background(AppTheme.cardBackgroundSubtle.opacity(0.6))
+                .clipShape(Capsule())
+            }
+            .buttonStyle(.plain)
+            .help("Drag or click to detach floating window across screen")
             Spacer()
         }
         .padding(.top, -4)
         .padding(.bottom, 2)
         .contentShape(Rectangle())
-        .onTapGesture(count: 2) {
-            snapToDefaultPosition()
-        }
-    }
-
-    private func snapToDefaultPosition() {
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
-            dragOffset = .zero
-            accumulatedOffset = .zero
-        }
+        .gesture(
+            DragGesture(minimumDistance: 2)
+                .onChanged { _ in
+                    detachToFloatingWindow()
+                }
+        )
     }
 
     // MARK: - Segmented Control Bar
