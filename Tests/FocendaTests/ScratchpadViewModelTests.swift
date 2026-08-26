@@ -62,6 +62,21 @@ final class ScratchpadViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel2.note(for: .rose)?.content, "")
     }
 
+    func testKeystrokePersistence() {
+        let viewModel1 = ScratchpadViewModel(userDefaults: testDefaults)
+        viewModel1.currentTitle = "Instant Title"
+        viewModel1.currentContent = "Keystroke character 1"
+
+        let viewModel2 = ScratchpadViewModel(userDefaults: testDefaults)
+        XCTAssertEqual(viewModel2.currentTitle, "Instant Title")
+        XCTAssertEqual(viewModel2.currentContent, "Keystroke character 1")
+
+        // Simulate typing keystroke by keystroke
+        viewModel1.currentContent = "Keystroke character 12"
+        let viewModel3 = ScratchpadViewModel(userDefaults: testDefaults)
+        XCTAssertEqual(viewModel3.currentContent, "Keystroke character 12")
+    }
+
     func testWordAndCharacterAndLineCount() {
         let viewModel = ScratchpadViewModel(userDefaults: testDefaults)
 
@@ -137,6 +152,18 @@ final class ScratchpadViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel2.note(for: .rose)?.title, "Meeting Notes")
     }
 
+    func testUpdateColor() {
+        let viewModel = ScratchpadViewModel(userDefaults: testDefaults)
+        XCTAssertEqual(viewModel.currentNote.color, .amber)
+
+        viewModel.updateColor(.lavender)
+        XCTAssertEqual(viewModel.currentNote.color, .lavender)
+        XCTAssertEqual(viewModel.selectedColor, .lavender)
+
+        let viewModel2 = ScratchpadViewModel(userDefaults: testDefaults)
+        XCTAssertEqual(viewModel2.notes.first?.color, .lavender)
+    }
+
     func testSearchAndFilterNotes() {
         let viewModel = ScratchpadViewModel(userDefaults: testDefaults)
         viewModel.notes[0].title = "Swift Architecture"
@@ -167,6 +194,35 @@ final class ScratchpadViewModelTests: XCTestCase {
         viewModel.togglePin(for: lastNote)
         XCTAssertTrue(viewModel.notes.first(where: { $0.id == lastNote.id })?.isPinned == true)
         XCTAssertEqual(viewModel.filteredNotes.first?.id, lastNote.id)
+    }
+
+    func testRelativeFormattedDate() {
+        var note = ScratchpadNote(color: .sky, title: "Quick Note", content: "Content")
+        note.updatedAt = Date()
+        XCTAssertEqual(note.relativeFormattedDate, "Just now")
+
+        note.updatedAt = Date().addingTimeInterval(-120) // 2 mins ago
+        XCTAssertEqual(note.relativeFormattedDate, "2m ago")
+
+        note.updatedAt = Date().addingTimeInterval(-7200) // 2 hours ago
+        XCTAssertEqual(note.relativeFormattedDate, "2h ago")
+
+        note.updatedAt = Date().addingTimeInterval(-172800) // 2 days ago
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMM d"
+        XCTAssertEqual(note.relativeFormattedDate, formatter.string(from: note.updatedAt))
+    }
+
+    func testDisplayTitleAndSnippet() {
+        var note = ScratchpadNote(color: .emerald, title: "", content: "")
+        XCTAssertEqual(note.displayTitle, "Emerald Note")
+
+        note.content = "First line header\nSecond line content"
+        XCTAssertEqual(note.displayTitle, "First line header")
+
+        note.title = "Explicit Title"
+        XCTAssertEqual(note.displayTitle, "Explicit Title")
+        XCTAssertEqual(note.snippet, "First line header Second line content")
     }
 
     func testBackwardsCompatibilityDecoding() throws {
