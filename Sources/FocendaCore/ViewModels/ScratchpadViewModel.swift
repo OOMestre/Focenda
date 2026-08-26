@@ -60,7 +60,7 @@ public struct ScratchpadNote: Identifiable, Codable, Equatable {
     ) {
         self.id = id
         self.color = color
-        self.title = title.isEmpty ? color.rawValue : title
+        self.title = title
         self.content = content
         self.createdAt = createdAt
         self.updatedAt = updatedAt
@@ -86,10 +86,6 @@ public struct ScratchpadNote: Identifiable, Codable, Equatable {
             self.id = uuid
         } else {
             self.id = UUID()
-        }
-
-        if self.title.isEmpty {
-            self.title = self.color.rawValue
         }
     }
 
@@ -146,6 +142,26 @@ public struct ScratchpadNote: Identifiable, Codable, Equatable {
             return "Yesterday, " + formatter.string(from: updatedAt)
         } else {
             formatter.dateFormat = "MMM d, HH:mm"
+            return formatter.string(from: updatedAt)
+        }
+    }
+
+    public var relativeFormattedDate: String {
+        let now = Date()
+        let interval = now.timeIntervalSince(updatedAt)
+        if interval < 60 {
+            return "Just now"
+        } else if interval < 3600 {
+            let minutes = max(1, Int(interval / 60))
+            return "\(minutes)m ago"
+        } else if interval < 86400 {
+            let hours = max(1, Int(interval / 3600))
+            return "\(hours)h ago"
+        } else if Calendar.current.isDateInYesterday(updatedAt) {
+            return "Yesterday"
+        } else {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "MMM d"
             return formatter.string(from: updatedAt)
         }
     }
@@ -213,6 +229,11 @@ public final class ScratchpadViewModel {
             } else if let index = notes.firstIndex(where: { $0.color == selectedColor }) {
                 notes[index] = newValue
                 saveToUserDefaults()
+            } else {
+                notes.insert(newValue, at: 0)
+                selectedNoteId = newValue.id
+                selectedColor = newValue.color
+                saveToUserDefaults()
             }
         }
     }
@@ -271,7 +292,7 @@ public final class ScratchpadViewModel {
 
     @discardableResult
     public func createNote(color: ScratchpadColor? = nil, title: String = "", content: String = "") -> ScratchpadNote {
-        let noteColor = color ?? selectedColor
+        let noteColor = color ?? selectedFilterColor ?? selectedColor
         let newTitle = title.isEmpty ? "\(noteColor.rawValue) Scratchpad" : title
         let note = ScratchpadNote(
             color: noteColor,
@@ -288,7 +309,7 @@ public final class ScratchpadViewModel {
     public func deleteNote(id: UUID) {
         notes.removeAll(where: { $0.id == id })
         if notes.isEmpty {
-            let fallback = ScratchpadNote(color: selectedColor)
+            let fallback = ScratchpadNote(color: selectedColor, title: "\(selectedColor.rawValue) Scratchpad")
             notes.append(fallback)
             selectedNoteId = fallback.id
         } else if selectedNoteId == id {
@@ -326,6 +347,12 @@ public final class ScratchpadViewModel {
             notes[index].content = text
             notes[index].updatedAt = Date()
             saveToUserDefaults()
+        } else {
+            var newNote = ScratchpadNote(color: selectedColor, title: "\(selectedColor.rawValue) Scratchpad", content: text)
+            newNote.updatedAt = Date()
+            notes.insert(newNote, at: 0)
+            selectedNoteId = newNote.id
+            saveToUserDefaults()
         }
     }
 
@@ -339,6 +366,12 @@ public final class ScratchpadViewModel {
             notes[index].title = title
             notes[index].updatedAt = Date()
             saveToUserDefaults()
+        } else {
+            var newNote = ScratchpadNote(color: selectedColor, title: title)
+            newNote.updatedAt = Date()
+            notes.insert(newNote, at: 0)
+            selectedNoteId = newNote.id
+            saveToUserDefaults()
         }
     }
 
@@ -349,6 +382,8 @@ public final class ScratchpadViewModel {
             notes[index].updatedAt = Date()
             selectedColor = color
             saveToUserDefaults()
+        } else {
+            selectedColor = color
         }
     }
 
