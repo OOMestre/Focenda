@@ -19,14 +19,12 @@ final class MenuBarCardViewTests: XCTestCase {
         let timerVM = FocusTimerViewModel()
         let taskVM = TaskListViewModel()
         let scratchpadVM = ScratchpadViewModel()
-        let habitVM = HabitViewModel()
         let appState = AppState()
 
         let cardView = MenuBarCardView(
             timerVM: timerVM,
             taskVM: taskVM,
             scratchpadVM: scratchpadVM,
-            habitVM: habitVM,
             appState: appState
         )
 
@@ -169,13 +167,11 @@ final class MenuBarCardViewTests: XCTestCase {
         let timerVM = FocusTimerViewModel()
         let taskVM = TaskListViewModel()
         let scratchpadVM = ScratchpadViewModel()
-        let habitVM = HabitViewModel()
 
         let cardView = MenuBarCardView(
             timerVM: timerVM,
             taskVM: taskVM,
             scratchpadVM: scratchpadVM,
-            habitVM: habitVM
         )
 
         let body = cardView.body
@@ -186,7 +182,6 @@ final class MenuBarCardViewTests: XCTestCase {
         let timerVM = FocusTimerViewModel()
         let taskVM = TaskListViewModel()
         let scratchpadVM = ScratchpadViewModel()
-        let habitVM = HabitViewModel()
         let appState = AppState()
 
         for section in MenuBarSection.allCases {
@@ -194,8 +189,7 @@ final class MenuBarCardViewTests: XCTestCase {
                 timerVM: timerVM,
                 taskVM: taskVM,
                 scratchpadVM: scratchpadVM,
-                habitVM: habitVM,
-                appState: appState,
+                    appState: appState,
                 initialSection: section
             )
             XCTAssertNotNil(cardView.body)

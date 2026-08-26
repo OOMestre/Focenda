@@ -4,7 +4,6 @@ public struct MainView: View {
     @State private var appState: AppState
     @State private var timerVM: FocusTimerViewModel
     @State private var taskVM: TaskListViewModel
-    @State private var habitVM: HabitViewModel
     @State private var scratchpadVM: ScratchpadViewModel
     @State private var bookmarkVM: BookmarkViewModel
 
@@ -12,14 +11,12 @@ public struct MainView: View {
         appState: AppState = AppState(),
         timerVM: FocusTimerViewModel = FocusTimerViewModel(),
         taskVM: TaskListViewModel = TaskListViewModel(),
-        habitVM: HabitViewModel = HabitViewModel(),
         scratchpadVM: ScratchpadViewModel = ScratchpadViewModel(),
         bookmarkVM: BookmarkViewModel = BookmarkViewModel()
     ) {
         _appState = State(initialValue: appState)
         _timerVM = State(initialValue: timerVM)
         _taskVM = State(initialValue: taskVM)
-        _habitVM = State(initialValue: habitVM)
         _scratchpadVM = State(initialValue: scratchpadVM)
         _bookmarkVM = State(initialValue: bookmarkVM)
     }
@@ -30,7 +27,6 @@ public struct MainView: View {
                 appState: appState,
                 timerVM: timerVM,
                 taskVM: taskVM,
-                habitVM: habitVM,
                 bookmarkVM: bookmarkVM
             )
             .navigationSplitViewColumnWidth(min: 220, ideal: 240, max: 280)
@@ -42,8 +38,7 @@ public struct MainView: View {
                     DashboardView(
                         appState: appState,
                         timerVM: timerVM,
-                        taskVM: taskVM,
-                        habitVM: habitVM
+                        taskVM: taskVM
                     )
                 case .timer:
                     FocusTimerView(timerVM: timerVM)
@@ -51,13 +46,10 @@ public struct MainView: View {
                     TaskListView(taskVM: taskVM)
                 case .kanban:
                     KanbanBoardView(taskVM: taskVM)
-                case .habits:
-                    HabitTrackerView(habitVM: habitVM)
                 case .calendar:
                     CalendarView(
                         timerVM: timerVM,
-                        taskVM: taskVM,
-                        habitVM: habitVM
+                        taskVM: taskVM
                     )
                 case .scratchpad:
                     ScratchpadView(viewModel: scratchpadVM)
@@ -79,5 +71,7 @@ public struct MainView: View {
         }
         .frame(minWidth: 860, minHeight: 580)
         .background(AppTheme.background)
+        .preferredColorScheme(appState.selectedTheme.colorScheme)
+        .id(appState.selectedTheme)
     }
 }

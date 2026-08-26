@@ -7,25 +7,21 @@ final class CalendarViewTests: XCTestCase {
     func testCalendarViewInitialization() {
         let timerVM = FocusTimerViewModel()
         let taskVM = TaskListViewModel()
-        let habitVM = HabitViewModel()
 
         let calendarView = CalendarView(
             timerVM: timerVM,
-            taskVM: taskVM,
-            habitVM: habitVM
+            taskVM: taskVM
         )
 
         XCTAssertNotNil(calendarView)
         XCTAssertNotNil(calendarView.timerVM)
         XCTAssertNotNil(calendarView.taskVM)
-        XCTAssertNotNil(calendarView.habitVM)
         XCTAssertTrue(Calendar.current.isDateInToday(calendarView.selectedDate))
     }
 
     func testCalendarViewCustomInitialDate() {
         let timerVM = FocusTimerViewModel()
         let taskVM = TaskListViewModel()
-        let habitVM = HabitViewModel()
 
         var components = DateComponents()
         components.year = 2026
@@ -36,7 +32,6 @@ final class CalendarViewTests: XCTestCase {
         let calendarView = CalendarView(
             timerVM: timerVM,
             taskVM: taskVM,
-            habitVM: habitVM,
             initialDate: customDate
         )
 
@@ -48,7 +43,6 @@ final class CalendarViewTests: XCTestCase {
     func testCalculateDaysInMonth() {
         let timerVM = FocusTimerViewModel()
         let taskVM = TaskListViewModel()
-        let habitVM = HabitViewModel()
 
         var components = DateComponents()
         components.year = 2026
@@ -59,7 +53,6 @@ final class CalendarViewTests: XCTestCase {
         let calendarView = CalendarView(
             timerVM: timerVM,
             taskVM: taskVM,
-            habitVM: habitVM,
             initialDate: august2026
         )
 
@@ -82,7 +75,6 @@ final class CalendarViewTests: XCTestCase {
     func testFocusMinutesAndHeatmapLevels() {
         let timerVM = FocusTimerViewModel()
         let taskVM = TaskListViewModel()
-        let habitVM = HabitViewModel()
 
         var components = DateComponents()
         components.year = 2026
@@ -94,7 +86,6 @@ final class CalendarViewTests: XCTestCase {
         let calendarView = CalendarView(
             timerVM: timerVM,
             taskVM: taskVM,
-            habitVM: habitVM,
             initialDate: testDate
         )
 
@@ -116,9 +107,7 @@ final class CalendarViewTests: XCTestCase {
             isSelected: true,
             focusMinutes: 25,
             focusSessionsCount: 1,
-            habitsCompletedCount: 0,
-            tasksCount: 0,
-            hasHabitStreak: false
+            tasksCount: 0
         )
         XCTAssertEqual(day1.focusHeatmapLevel, 1)
 
@@ -136,9 +125,7 @@ final class CalendarViewTests: XCTestCase {
             isSelected: true,
             focusMinutes: 65,
             focusSessionsCount: 2,
-            habitsCompletedCount: 0,
-            tasksCount: 0,
-            hasHabitStreak: false
+            tasksCount: 0
         )
         XCTAssertEqual(day2.focusHeatmapLevel, 3)
 
@@ -151,9 +138,7 @@ final class CalendarViewTests: XCTestCase {
             isSelected: false,
             focusMinutes: 50,
             focusSessionsCount: 2,
-            habitsCompletedCount: 0,
-            tasksCount: 0,
-            hasHabitStreak: false
+            tasksCount: 0
         )
         XCTAssertEqual(dayLevel2.focusHeatmapLevel, 2)
 
@@ -165,52 +150,15 @@ final class CalendarViewTests: XCTestCase {
             isSelected: false,
             focusMinutes: 0,
             focusSessionsCount: 0,
-            habitsCompletedCount: 0,
-            tasksCount: 0,
-            hasHabitStreak: false
+            tasksCount: 0
         )
         XCTAssertEqual(dayLevel0.focusHeatmapLevel, 0)
-    }
-
-    func testHabitsCompletedForDate() {
-        let timerVM = FocusTimerViewModel()
-        let taskVM = TaskListViewModel()
-        let habitVM = HabitViewModel()
-        habitVM.habits = []
-
-        var components = DateComponents()
-        components.year = 2026
-        components.month = 8
-        components.day = 10
-        let testDate = Calendar.current.date(from: components)!
-
-        let habit1 = HabitItem(
-            title: "Morning Routine",
-            completedDates: [testDate]
-        )
-        let habit2 = HabitItem(
-            title: "Hydration",
-            completedDates: []
-        )
-        habitVM.habits = [habit1, habit2]
-
-        let calendarView = CalendarView(
-            timerVM: timerVM,
-            taskVM: taskVM,
-            habitVM: habitVM,
-            initialDate: testDate
-        )
-
-        let completed = calendarView.habitsCompleted(for: testDate)
-        XCTAssertEqual(completed.count, 1)
-        XCTAssertEqual(completed.first?.title, "Morning Routine")
     }
 
     func testTasksForDate() {
         let timerVM = FocusTimerViewModel()
         let taskVM = TaskListViewModel()
         taskVM.tasks = []
-        let habitVM = HabitViewModel()
 
         var components = DateComponents()
         components.year = 2026
@@ -229,7 +177,6 @@ final class CalendarViewTests: XCTestCase {
         let calendarView = CalendarView(
             timerVM: timerVM,
             taskVM: taskVM,
-            habitVM: habitVM,
             initialDate: testDate
         )
 
@@ -242,7 +189,6 @@ final class CalendarViewTests: XCTestCase {
         let timerVM = FocusTimerViewModel()
         let taskVM = TaskListViewModel()
         taskVM.tasks = []
-        let habitVM = HabitViewModel()
 
         let createdDate = Calendar.current.date(byAdding: .day, value: -5, to: Date())!
         let futureDueDate = Calendar.current.date(byAdding: .day, value: 3, to: Date())!
@@ -257,7 +203,6 @@ final class CalendarViewTests: XCTestCase {
         let calendarView = CalendarView(
             timerVM: timerVM,
             taskVM: taskVM,
-            habitVM: habitVM,
             initialDate: futureDueDate
         )
 
@@ -276,7 +221,6 @@ final class CalendarViewTests: XCTestCase {
         let timerVM = FocusTimerViewModel()
         let taskVM = TaskListViewModel()
         taskVM.tasks = []
-        let habitVM = HabitViewModel()
 
         let createdDate = Calendar.current.date(byAdding: .day, value: -10, to: Date())!
         let reminderDate = Calendar.current.date(byAdding: .day, value: 5, to: Date())!
@@ -291,7 +235,6 @@ final class CalendarViewTests: XCTestCase {
         let calendarView = CalendarView(
             timerVM: timerVM,
             taskVM: taskVM,
-            habitVM: habitVM,
             initialDate: reminderDate
         )
 
@@ -300,45 +243,10 @@ final class CalendarViewTests: XCTestCase {
         XCTAssertEqual(tasksOnReminderDay.first?.title, "Follow up on feedback")
     }
 
-    func testTasksForDateAllMatchingConditions() {
-        let timerVM = FocusTimerViewModel()
-        let taskVM = TaskListViewModel()
-        taskVM.tasks = []
-        let habitVM = HabitViewModel()
-
-        let today = Date()
-        let pastDate = Calendar.current.date(byAdding: .day, value: -3, to: today)!
-
-        let task1 = TaskItem(title: "Active Today Task", createdAt: pastDate)
-        let task2 = TaskItem(title: "Completed Past Task", isCompleted: true, createdAt: pastDate, completedAt: pastDate)
-        let task3 = TaskItem(title: "Created Past Incomplete", status: .inProgress, createdAt: pastDate)
-
-        taskVM.tasks = [task1, task2, task3]
-
-        let calendarView = CalendarView(
-            timerVM: timerVM,
-            taskVM: taskVM,
-            habitVM: habitVM,
-            initialDate: today
-        )
-
-        // Today should include active pending tasks
-        let todayTasks = calendarView.tasks(for: today)
-        XCTAssertTrue(todayTasks.contains(where: { $0.title == "Active Today Task" }))
-        XCTAssertTrue(todayTasks.contains(where: { $0.title == "Created Past Incomplete" }))
-        XCTAssertFalse(todayTasks.contains(where: { $0.title == "Completed Past Task" }))
-
-        // Past date should include tasks completed on that date or created on that date
-        let pastTasks = calendarView.tasks(for: pastDate)
-        XCTAssertTrue(pastTasks.contains(where: { $0.title == "Completed Past Task" }))
-        XCTAssertTrue(pastTasks.contains(where: { $0.title == "Active Today Task" }))
-    }
-
     func testDueDateBadgeLabels() {
         let timerVM = FocusTimerViewModel()
         let taskVM = TaskListViewModel()
-        let habitVM = HabitViewModel()
-        let calendarView = CalendarView(timerVM: timerVM, taskVM: taskVM, habitVM: habitVM)
+        let calendarView = CalendarView(timerVM: timerVM, taskVM: taskVM)
 
         let today = Date()
         let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: today)!
@@ -383,8 +291,7 @@ final class CalendarViewTests: XCTestCase {
     func testReminderBadgeFormat() {
         let timerVM = FocusTimerViewModel()
         let taskVM = TaskListViewModel()
-        let habitVM = HabitViewModel()
-        let calendarView = CalendarView(timerVM: timerVM, taskVM: taskVM, habitVM: habitVM)
+        let calendarView = CalendarView(timerVM: timerVM, taskVM: taskVM)
 
         var components = DateComponents()
         components.year = 2026
@@ -412,12 +319,10 @@ final class CalendarViewTests: XCTestCase {
             isSelected: false,
             focusMinutes: 45,
             focusSessionsCount: 2,
-            habitsCompletedCount: 1,
             tasksCount: 4,
             dueTasksCount: 2,
             hasDueTasks: true,
-            hasReminders: true,
-            hasHabitStreak: true
+            hasReminders: true
         )
 
         XCTAssertEqual(day.dueTasksCount, 2)
@@ -431,7 +336,6 @@ final class CalendarViewTests: XCTestCase {
         let timerVM = FocusTimerViewModel()
         let taskVM = TaskListViewModel()
         taskVM.tasks = []
-        let habitVM = HabitViewModel()
 
         var components = DateComponents()
         components.year = 2026
@@ -447,7 +351,6 @@ final class CalendarViewTests: XCTestCase {
         let calendarView = CalendarView(
             timerVM: timerVM,
             taskVM: taskVM,
-            habitVM: habitVM,
             initialDate: aug18
         )
 
@@ -465,8 +368,6 @@ final class CalendarViewTests: XCTestCase {
         let timerVM = FocusTimerViewModel()
         let taskVM = TaskListViewModel()
         taskVM.tasks = []
-        let habitVM = HabitViewModel()
-        habitVM.habits = []
 
         var components = DateComponents()
         components.year = 2026
@@ -482,10 +383,6 @@ final class CalendarViewTests: XCTestCase {
             FocusSession(mode: .work, durationSeconds: 20 * 60, completedAt: aug10)
         ]
 
-        habitVM.habits = [
-            HabitItem(title: "Read", completedDates: [aug5, aug10])
-        ]
-
         taskVM.tasks = [
             TaskItem(title: "Task 1", isCompleted: true, createdAt: aug5, completedAt: aug5)
         ]
@@ -493,14 +390,12 @@ final class CalendarViewTests: XCTestCase {
         let calendarView = CalendarView(
             timerVM: timerVM,
             taskVM: taskVM,
-            habitVM: habitVM,
             initialDate: aug5
         )
 
         let stats = calendarView.calculateMonthlyStats(for: aug5)
         XCTAssertEqual(stats.totalFocusMinutes, 50)
         XCTAssertEqual(stats.sessionsCount, 2)
-        XCTAssertEqual(stats.habitsCompleted, 2)
         XCTAssertEqual(stats.tasksCompleted, 1)
         XCTAssertEqual(stats.activeDays, 2)
     }
@@ -508,7 +403,6 @@ final class CalendarViewTests: XCTestCase {
     func testMonthNavigationDates() {
         let timerVM = FocusTimerViewModel()
         let taskVM = TaskListViewModel()
-        let habitVM = HabitViewModel()
 
         var components = DateComponents()
         components.year = 2026
@@ -519,7 +413,6 @@ final class CalendarViewTests: XCTestCase {
         let calendarView = CalendarView(
             timerVM: timerVM,
             taskVM: taskVM,
-            habitVM: habitVM,
             initialDate: august
         )
 
@@ -533,7 +426,6 @@ final class CalendarViewTests: XCTestCase {
     func testFormattersAndRelativeLabels() {
         let timerVM = FocusTimerViewModel()
         let taskVM = TaskListViewModel()
-        let habitVM = HabitViewModel()
 
         var components = DateComponents()
         components.year = 2026
@@ -544,7 +436,6 @@ final class CalendarViewTests: XCTestCase {
         let calendarView = CalendarView(
             timerVM: timerVM,
             taskVM: taskVM,
-            habitVM: habitVM,
             initialDate: date
         )
 
@@ -567,12 +458,10 @@ final class CalendarViewTests: XCTestCase {
     func testCalendarViewBodyRendering() {
         let timerVM = FocusTimerViewModel()
         let taskVM = TaskListViewModel()
-        let habitVM = HabitViewModel()
 
         let calendarView = CalendarView(
             timerVM: timerVM,
-            taskVM: taskVM,
-            habitVM: habitVM
+            taskVM: taskVM
         )
 
         let body = calendarView.body
@@ -594,12 +483,10 @@ final class CalendarViewTests: XCTestCase {
             isSelected: false,
             focusMinutes: 15,
             focusSessionsCount: 1,
-            habitsCompletedCount: 2,
             tasksCount: 3,
             dueTasksCount: 1,
             hasDueTasks: true,
-            hasReminders: false,
-            hasHabitStreak: true
+            hasReminders: false
         )
 
         XCTAssertEqual(day.id, "2026-08-26")
@@ -610,6 +497,5 @@ final class CalendarViewTests: XCTestCase {
         XCTAssertEqual(day.dueTasksCount, 1)
         XCTAssertTrue(day.hasDueTasks)
         XCTAssertFalse(day.hasReminders)
-        XCTAssertTrue(day.hasHabitStreak)
     }
 }

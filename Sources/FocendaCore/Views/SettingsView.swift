@@ -15,6 +15,9 @@ public struct SettingsView: View {
     public var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
+                // Appearance & Theme Picker
+                themePickerSection
+
                 // Focus Intervals
                 GroupBox(label: Label("Focus Intervals (Minutes)", systemImage: "timer").foregroundStyle(AppTheme.textPrimary)) {
                     VStack(spacing: 16) {
@@ -117,5 +120,116 @@ public struct SettingsView: View {
         }
         .background(AppTheme.background)
         .navigationTitle("Settings")
+    }
+
+    // MARK: - Theme Picker Section
+    private var themePickerSection: some View {
+        GroupBox(label: Label("Appearance & Theme", systemImage: "paintpalette").foregroundStyle(AppTheme.textPrimary)) {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Select your preferred workspace aesthetic. The chosen theme maintains consistent colors throughout the app without random mode switches.")
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.textSecondary)
+                    .padding(.horizontal, 4)
+                    .padding(.top, 2)
+
+                VStack(spacing: 8) {
+                    ForEach(AppThemeOption.allCases) { theme in
+                        ThemeOptionRow(
+                            theme: theme,
+                            isSelected: appState.selectedTheme == theme
+                        ) {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+                                appState.selectedTheme = theme
+                            }
+                        }
+                    }
+                }
+            }
+            .padding(12)
+        }
+    }
+}
+
+// MARK: - Theme Option Row with Live Preview Swatches
+
+private struct ThemeOptionRow: View {
+    let theme: AppThemeOption
+    let isSelected: Bool
+    let onSelect: () -> Void
+
+    @State private var isHovered: Bool = false
+
+    var body: some View {
+        Button(action: onSelect) {
+            HStack(spacing: 14) {
+                // Radio indicator
+                ZStack {
+                    Circle()
+                        .stroke(isSelected ? AppTheme.accent : AppTheme.subtleBorder, lineWidth: 2)
+                        .frame(width: 18, height: 18)
+
+                    if isSelected {
+                        Circle()
+                            .fill(AppTheme.accent)
+                            .frame(width: 10, height: 10)
+                    }
+                }
+
+                // Theme Title and Description
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(theme.displayName)
+                        .font(.subheadline.weight(isSelected ? .bold : .semibold))
+                        .foregroundStyle(AppTheme.textPrimary)
+
+                    Text(theme.subtitle)
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.textSecondary)
+                }
+
+                Spacer()
+
+                // Live Preview Color Swatches
+                HStack(spacing: 6) {
+                    ForEach(Array(theme.previewSwatches.enumerated()), id: \.offset) { _, swatchColor in
+                        Circle()
+                            .fill(swatchColor)
+                            .frame(width: 16, height: 16)
+                            .overlay(
+                                Circle()
+                                    .stroke(Color.black.opacity(0.12), lineWidth: 0.8)
+                            )
+                            .shadow(color: Color.black.opacity(0.06), radius: 1, x: 0, y: 0.5)
+                    }
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 5)
+                .background(
+                    Capsule()
+                        .fill(AppTheme.cardBackgroundSubtle.opacity(0.8))
+                )
+                .overlay(
+                    Capsule()
+                        .stroke(AppTheme.subtleBorder, lineWidth: 1)
+                )
+            }
+            .padding(12)
+            .background(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(isSelected ? AppTheme.accent.opacity(0.08) : (isHovered ? AppTheme.cardBackgroundSubtle : AppTheme.cardBackground))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .stroke(
+                        isSelected ? AppTheme.accent : (isHovered ? AppTheme.border : AppTheme.subtleBorder),
+                        lineWidth: isSelected ? 1.5 : 1.0
+                    )
+            )
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering in
+            withAnimation(.spring(response: 0.2, dampingFraction: 0.8)) {
+                isHovered = hovering
+            }
+        }
     }
 }

@@ -16,12 +16,10 @@ public struct CalendarDay: Identifiable, Equatable {
     public let isSelected: Bool
     public let focusMinutes: Int
     public let focusSessionsCount: Int
-    public let habitsCompletedCount: Int
     public let tasksCount: Int
     public let dueTasksCount: Int
     public let hasDueTasks: Bool
     public let hasReminders: Bool
-    public let hasHabitStreak: Bool
 
     public var focusHeatmapLevel: Int {
         if focusMinutes <= 0 { return 0 }
@@ -38,12 +36,10 @@ public struct CalendarDay: Identifiable, Equatable {
         isSelected: Bool,
         focusMinutes: Int,
         focusSessionsCount: Int,
-        habitsCompletedCount: Int,
         tasksCount: Int,
         dueTasksCount: Int = 0,
         hasDueTasks: Bool = false,
-        hasReminders: Bool = false,
-        hasHabitStreak: Bool = false
+        hasReminders: Bool = false
     ) {
         self.date = date
         self.dayNumber = dayNumber
@@ -52,12 +48,10 @@ public struct CalendarDay: Identifiable, Equatable {
         self.isSelected = isSelected
         self.focusMinutes = focusMinutes
         self.focusSessionsCount = focusSessionsCount
-        self.habitsCompletedCount = habitsCompletedCount
         self.tasksCount = tasksCount
         self.dueTasksCount = dueTasksCount
         self.hasDueTasks = hasDueTasks
         self.hasReminders = hasReminders
-        self.hasHabitStreak = hasHabitStreak
     }
 }
 
@@ -65,7 +59,6 @@ public struct CalendarDay: Identifiable, Equatable {
 public struct CalendarView: View {
     public var timerVM: FocusTimerViewModel
     public var taskVM: TaskListViewModel
-    public var habitVM: HabitViewModel
 
     @State public var selectedDate: Date
     @State public var displayedMonth: Date
@@ -78,12 +71,10 @@ public struct CalendarView: View {
     public init(
         timerVM: FocusTimerViewModel,
         taskVM: TaskListViewModel,
-        habitVM: HabitViewModel = HabitViewModel(),
         initialDate: Date = Date()
     ) {
         self.timerVM = timerVM
         self.taskVM = taskVM
-        self.habitVM = habitVM
         let startOfDay = Calendar.current.startOfDay(for: initialDate)
         _selectedDate = State(initialValue: startOfDay)
         let comp = Calendar.current.dateComponents([.year, .month], from: initialDate)
@@ -253,7 +244,7 @@ public struct CalendarView: View {
             }
         } label: {
             VStack(spacing: 3) {
-                // Day Number + Today / Streak / Reminder Indicator
+                // Day Number + Today / Reminder Indicator
                 HStack(spacing: 2) {
                     Text("\(day.dayNumber)")
                         .font(.system(size: 12, weight: day.isToday ? .heavy : (day.isSelected ? .bold : .medium), design: .rounded))
@@ -275,12 +266,6 @@ public struct CalendarView: View {
                         Image(systemName: "bell.fill")
                             .font(.system(size: 7))
                             .foregroundStyle(day.isSelected ? .white.opacity(0.9) : AppTheme.sandstone)
-                    }
-
-                    if day.hasHabitStreak {
-                        Image(systemName: "flame.fill")
-                            .font(.system(size: 8))
-                            .foregroundStyle(day.isSelected ? .white : AppTheme.sandstone)
                     }
                 }
 
@@ -343,7 +328,7 @@ public struct CalendarView: View {
         .onHover { hovering in
             hoveredDate = hovering ? day.date : nil
         }
-        .help("\(formattedFullDate(day.date)): \(day.focusMinutes)m focus, \(day.habitsCompletedCount) habits, \(day.tasksCount) tasks\(day.dueTasksCount > 0 ? ", \(day.dueTasksCount) due" : "")\(day.hasReminders ? ", has reminders" : "")")
+        .help("\(formattedFullDate(day.date)): \(day.focusMinutes)m focus, \(day.tasksCount) tasks\(day.dueTasksCount > 0 ? ", \(day.dueTasksCount) due" : "")\(day.hasReminders ? ", has reminders" : "")")
     }
 
     private func heatmapDotColor(level: Int, isSelected: Bool) -> Color {
@@ -407,10 +392,8 @@ public struct CalendarView: View {
             }
 
             HStack(spacing: 3) {
-                Image(systemName: "flame.fill")
-                    .font(.system(size: 8))
-                    .foregroundStyle(AppTheme.sandstone)
-                Text("Habit Done")
+                Circle().fill(AppTheme.riverSlate).frame(width: 5, height: 5)
+                Text("Task")
                     .font(.system(size: 9))
                     .foregroundStyle(AppTheme.textTertiary)
             }
@@ -441,10 +424,10 @@ public struct CalendarView: View {
             )
 
             monthlyStatCard(
-                title: "Habits Completed",
-                value: "\(stats.habitsCompleted)",
-                subtitle: "\(stats.activeDays) active days",
-                icon: "flame.fill",
+                title: "Active Days",
+                value: "\(stats.activeDays)",
+                subtitle: "with deep focus",
+                icon: "calendar.badge.clock",
                 color: AppTheme.sandstone
             )
 
@@ -510,9 +493,6 @@ public struct CalendarView: View {
             // Focus Sessions Log
             focusSessionsLogSection
 
-            // Daily Habits Consistency
-            dailyHabitsSection
-
             // Scheduled & Completed Tasks
             dailyTasksSection
         }
@@ -555,25 +535,18 @@ public struct CalendarView: View {
 
             // Summary Metric Chips
             let dayFocusMinutes = focusMinutes(for: selectedDate)
-            let dayHabits = habitsCompleted(for: selectedDate)
             let dayTasks = tasks(for: selectedDate)
 
             HStack(spacing: 6) {
                 agendaChip(
                     icon: "timer",
-                    label: "\(dayFocusMinutes)m",
+                    label: "\(dayFocusMinutes)m focus",
                     color: AppTheme.deepFocus
                 )
 
                 agendaChip(
-                    icon: "flame.fill",
-                    label: "\(dayHabits.count)/\(habitVM.habits.count)",
-                    color: AppTheme.sandstone
-                )
-
-                agendaChip(
                     icon: "checklist",
-                    label: "\(dayTasks.filter(\.isCompleted).count)/\(dayTasks.count)",
+                    label: "\(dayTasks.filter(\.isCompleted).count)/\(dayTasks.count) tasks",
                     color: AppTheme.success
                 )
             }
@@ -604,7 +577,7 @@ public struct CalendarView: View {
         .clipShape(Capsule())
     }
 
-    // MARK: - ⏱️ Focus Sessions Log Section
+    // MARK: - Focus Sessions Log Section
     private var focusSessionsLogSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
@@ -673,87 +646,7 @@ public struct CalendarView: View {
         }
     }
 
-    // MARK: - 🔥 Daily Habits Section
-    private var dailyHabitsSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Label("Habits", systemImage: "flame.fill")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(AppTheme.textPrimary)
-
-                Spacer()
-
-                let done = habitsCompleted(for: selectedDate).count
-                Text("\(done)/\(habitVM.habits.count) done")
-                    .font(.caption2.bold())
-                    .foregroundStyle(AppTheme.textSecondary)
-            }
-
-            if habitVM.habits.isEmpty {
-                emptyAgendaCard(
-                    icon: "flame",
-                    title: "No habits tracked",
-                    subtitle: "Create daily habits in the Habits tab."
-                )
-            } else {
-                VStack(spacing: 6) {
-                    ForEach(habitVM.habits) { habit in
-                        let isDone = habit.isCompleted(on: selectedDate, calendar: calendar)
-
-                        HStack(spacing: 8) {
-                            Button {
-                                withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
-                                    habitVM.toggleHabitCompletion(id: habit.id, on: selectedDate, calendar: calendar)
-                                }
-                            } label: {
-                                Image(systemName: isDone ? "checkmark.circle.fill" : "circle")
-                                    .font(.body)
-                                    .foregroundStyle(isDone ? AppTheme.success : AppTheme.textTertiary)
-                            }
-                            .buttonStyle(.plain)
-                            .help(isDone ? "Mark habit incomplete" : "Mark habit completed on this day")
-
-                            Image(systemName: habit.iconName)
-                                .font(.system(size: 10, weight: .bold))
-                                .foregroundStyle(habit.color)
-                                .frame(width: 22, height: 22)
-                                .background(habit.color.opacity(0.12))
-                                .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
-
-                            Text(habit.title)
-                                .font(.caption.weight(.medium))
-                                .foregroundStyle(AppTheme.textPrimary)
-                                .lineLimit(1)
-
-                            Spacer()
-
-                            if habit.streakCount > 0 {
-                                HStack(spacing: 2) {
-                                    Image(systemName: "flame.fill")
-                                        .font(.system(size: 7))
-                                        .foregroundStyle(AppTheme.sandstone)
-                                    Text("\(habit.streakCount)d")
-                                        .font(.system(size: 9, weight: .bold))
-                                        .foregroundStyle(AppTheme.textSecondary)
-                                }
-                            }
-                        }
-                        .padding(8)
-                        .background(
-                            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                .fill(AppTheme.cardBackground)
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                .stroke(isDone ? AppTheme.success.opacity(0.3) : AppTheme.subtleBorder, lineWidth: 1)
-                        )
-                    }
-                }
-            }
-        }
-    }
-
-    // MARK: - ✅ Scheduled & Daily Tasks Section
+    // MARK: - Scheduled & Daily Tasks Section
     private var dailyTasksSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
@@ -955,7 +848,6 @@ public struct CalendarView: View {
 
             let focusMin = focusMinutes(for: currentDate)
             let sessions = sessions(for: currentDate)
-            let habits = habitsCompleted(for: currentDate)
             let tasksList = tasks(for: currentDate)
 
             let dueTasks = tasksList.filter { task in
@@ -979,12 +871,10 @@ public struct CalendarView: View {
                 isSelected: isSelected,
                 focusMinutes: focusMin,
                 focusSessionsCount: sessions.count,
-                habitsCompletedCount: habits.count,
                 tasksCount: tasksList.count,
                 dueTasksCount: dueTasks.count,
                 hasDueTasks: !dueTasks.isEmpty,
-                hasReminders: hasReminders,
-                hasHabitStreak: !habits.isEmpty
+                hasReminders: hasReminders
             )
             days.append(day)
 
@@ -1006,12 +896,6 @@ public struct CalendarView: View {
     public func sessions(for date: Date) -> [FocusSession] {
         timerVM.completedSessions.filter {
             calendar.isDate($0.completedAt, inSameDayAs: date)
-        }
-    }
-
-    public func habitsCompleted(for date: Date) -> [HabitItem] {
-        habitVM.habits.filter {
-            $0.isCompleted(on: date, calendar: calendar)
         }
     }
 
@@ -1072,7 +956,7 @@ public struct CalendarView: View {
         return "🔔 \(formatter.string(from: reminderDate))"
     }
 
-    public func calculateMonthlyStats(for month: Date) -> (totalFocusMinutes: Int, sessionsCount: Int, habitsCompleted: Int, tasksCompleted: Int, activeDays: Int) {
+    public func calculateMonthlyStats(for month: Date) -> (totalFocusMinutes: Int, sessionsCount: Int, tasksCompleted: Int, activeDays: Int) {
         let sessionsInMonth = timerVM.completedSessions.filter {
             calendar.isDate($0.completedAt, equalTo: month, toGranularity: .month)
         }
@@ -1087,16 +971,6 @@ public struct CalendarView: View {
             activeDateSet.insert(formatter.string(from: session.completedAt))
         }
 
-        var habitsDoneCount = 0
-        for habit in habitVM.habits {
-            for completedDate in habit.completedDates {
-                if calendar.isDate(completedDate, equalTo: month, toGranularity: .month) {
-                    habitsDoneCount += 1
-                    activeDateSet.insert(formatter.string(from: completedDate))
-                }
-            }
-        }
-
         let tasksCompleted = taskVM.tasks.filter { task in
             if let completedAt = task.completedAt {
                 return calendar.isDate(completedAt, equalTo: month, toGranularity: .month)
@@ -1107,7 +981,6 @@ public struct CalendarView: View {
         return (
             totalFocusMinutes: totalFocusMinutes,
             sessionsCount: sessionsCount,
-            habitsCompleted: habitsDoneCount,
             tasksCompleted: tasksCompleted,
             activeDays: activeDateSet.count
         )

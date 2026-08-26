@@ -19,7 +19,7 @@ public struct StatsView: View {
                     Text("Productivity & Analytics")
                         .font(.system(size: 28, weight: .bold, design: .rounded))
                         .foregroundStyle(AppTheme.textPrimary)
-                    Text("Track your historical focus output and habit consistency.")
+                    Text("Track your historical focus output and task momentum.")
                         .font(.body)
                         .foregroundStyle(AppTheme.textSecondary)
                 }

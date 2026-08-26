@@ -25,7 +25,6 @@ public struct MenuBarCardView: View {
     public var timerVM: FocusTimerViewModel
     public var taskVM: TaskListViewModel
     public var scratchpadVM: ScratchpadViewModel
-    public var habitVM: HabitViewModel
     public var appState: AppState?
 
     @State public var selectedSection: MenuBarSection = .focus
@@ -53,14 +52,12 @@ public struct MenuBarCardView: View {
         timerVM: FocusTimerViewModel,
         taskVM: TaskListViewModel = TaskListViewModel(),
         scratchpadVM: ScratchpadViewModel = ScratchpadViewModel(),
-        habitVM: HabitViewModel = HabitViewModel(),
         appState: AppState? = nil,
         initialSection: MenuBarSection = .focus
     ) {
         self.timerVM = timerVM
         self.taskVM = taskVM
         self.scratchpadVM = scratchpadVM
-        self.habitVM = habitVM
         self.appState = appState
         self._selectedSection = State(initialValue: initialSection)
     }

@@ -7,7 +7,6 @@ struct FocendaApp: App {
     @State private var appState = AppState()
     @State private var timerVM = FocusTimerViewModel()
     @State private var taskVM = TaskListViewModel()
-    @State private var habitVM = HabitViewModel()
     @State private var scratchpadVM = ScratchpadViewModel()
     @State private var bookmarkVM = BookmarkViewModel()
 
@@ -21,7 +20,6 @@ struct FocendaApp: App {
                 appState: appState,
                 timerVM: timerVM,
                 taskVM: taskVM,
-                habitVM: habitVM,
                 scratchpadVM: scratchpadVM,
                 bookmarkVM: bookmarkVM
             )
@@ -59,7 +57,6 @@ struct FocendaApp: App {
                 timerVM: timerVM,
                 taskVM: taskVM,
                 scratchpadVM: scratchpadVM,
-                habitVM: habitVM,
                 appState: appState
             )
         } label: {

@@ -4,7 +4,6 @@ public struct SidebarView: View {
     @Bindable var appState: AppState
     var timerVM: FocusTimerViewModel
     var taskVM: TaskListViewModel
-    var habitVM: HabitViewModel
     var bookmarkVM: BookmarkViewModel
 
     @State private var isPulsingDot = false
@@ -13,13 +12,11 @@ public struct SidebarView: View {
         appState: AppState,
         timerVM: FocusTimerViewModel,
         taskVM: TaskListViewModel,
-        habitVM: HabitViewModel = HabitViewModel(),
         bookmarkVM: BookmarkViewModel = BookmarkViewModel()
     ) {
         self.appState = appState
         self.timerVM = timerVM
         self.taskVM = taskVM
-        self.habitVM = habitVM
         self.bookmarkVM = bookmarkVM
     }
 
@@ -32,9 +29,6 @@ public struct SidebarView: View {
                     timerIsRunning: timerVM.status == .running,
                     pendingTasksCount: taskVM.pendingTasksCount,
                     inProgressTasksCount: taskVM.inProgressTasksCount,
-                    habitsCompletedToday: habitVM.totalCompletionsToday,
-                    totalHabitsCount: habitVM.habits.count,
-                    longestHabitStreak: habitVM.longestStreak,
                     totalBookmarksCount: bookmarkVM.bookmarks.count,
                     isPulsingDot: isPulsingDot
                 )
@@ -62,12 +56,12 @@ public struct SidebarView: View {
             HStack(spacing: 12) {
                 ZStack {
                     Circle()
-                        .fill(timerVM.currentMode.themeColor.opacity(0.12))
+                        .fill(AppTheme.accent.opacity(0.12))
                         .frame(width: 32, height: 32)
 
                     Image(systemName: timerVM.currentMode.iconName)
                         .font(.caption.bold())
-                        .foregroundStyle(timerVM.currentMode.themeColor)
+                        .foregroundStyle(AppTheme.accent)
                 }
 
                 VStack(alignment: .leading, spacing: 2) {
@@ -96,7 +90,7 @@ public struct SidebarView: View {
                         .frame(width: 26, height: 26)
                         .background(
                             Circle()
-                                .fill(timerVM.currentMode.themeColor)
+                                .fill(AppTheme.accent)
                                 .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
                         )
                 }
@@ -127,9 +121,6 @@ private struct SidebarRowItem: View {
     let timerIsRunning: Bool
     let pendingTasksCount: Int
     let inProgressTasksCount: Int
-    let habitsCompletedToday: Int
-    let totalHabitsCount: Int
-    let longestHabitStreak: Int
     let totalBookmarksCount: Int
     let isPulsingDot: Bool
 
@@ -198,39 +189,6 @@ private struct SidebarRowItem: View {
                 .contentTransition(.numericText())
                 .lineLimit(1)
                 .fixedSize(horizontal: true, vertical: false)
-            } else if tab == .habits && totalHabitsCount > 0 {
-                if habitsCompletedToday == totalHabitsCount {
-                    HStack(spacing: 3) {
-                        Image(systemName: "checkmark")
-                            .font(.system(size: 8, weight: .bold))
-                        Text("DONE")
-                            .font(.system(size: 9, weight: .bold))
-                            .lineLimit(1)
-                            .fixedSize(horizontal: true, vertical: false)
-                    }
-                    .foregroundStyle(AppTheme.success)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(AppTheme.success.opacity(0.12))
-                    .clipShape(Capsule())
-                    .fixedSize(horizontal: true, vertical: false)
-                } else if longestHabitStreak > 0 {
-                    HStack(spacing: 3) {
-                        Image(systemName: "flame.fill")
-                            .font(.system(size: 8))
-                            .foregroundStyle(AppTheme.sandstone)
-                        Text("\(longestHabitStreak)d")
-                            .font(.caption2.bold())
-                            .foregroundStyle(isSelected ? AppTheme.textPrimary : AppTheme.textSecondary)
-                            .lineLimit(1)
-                            .fixedSize(horizontal: true, vertical: false)
-                    }
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(AppTheme.sandstone.opacity(0.12))
-                    .clipShape(Capsule())
-                    .fixedSize(horizontal: true, vertical: false)
-                }
             } else if tab == .bookmarks && totalBookmarksCount > 0 {
                 Text("\(totalBookmarksCount)")
                     .font(.caption2.bold())
