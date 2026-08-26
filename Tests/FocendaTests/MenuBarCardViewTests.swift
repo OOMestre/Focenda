@@ -268,4 +268,50 @@ final class MenuBarCardViewTests: XCTestCase {
             userInfo: ["mode": FocusMode.work]
         )
     }
+
+    func testMenuBarCardViewRecurringRemindersFormRendering() {
+        let timerVM = FocusTimerViewModel()
+        let reminderVM = RecurringReminderViewModel()
+
+        let cardView = MenuBarCardView(
+            timerVM: timerVM,
+            recurringReminderVM: reminderVM,
+            initialSection: .reminders
+        )
+
+        XCTAssertNotNil(cardView.body)
+        XCTAssertEqual(cardView.selectedSection, .reminders)
+    }
+
+    func testMenuBarCardViewQuickLinksFormRendering() {
+        let timerVM = FocusTimerViewModel()
+        let cardView = MenuBarCardView(
+            timerVM: timerVM,
+            initialSection: .quickLinks
+        )
+
+        XCTAssertNotNil(cardView.body)
+        XCTAssertEqual(cardView.selectedSection, .quickLinks)
+    }
+
+    func testMenuBarCardViewFormInputsWithLightThemes() {
+        for theme in [AppThemeOption.zenCalm, AppThemeOption.warmSandstone] {
+            AppTheme.current = theme
+
+            let timerVM = FocusTimerViewModel()
+            let taskVM = TaskListViewModel()
+            let scratchpadVM = ScratchpadViewModel()
+            let reminderVM = RecurringReminderViewModel()
+
+            let cardView = MenuBarCardView(
+                timerVM: timerVM,
+                taskVM: taskVM,
+                scratchpadVM: scratchpadVM,
+                recurringReminderVM: reminderVM,
+                initialSection: .reminders
+            )
+
+            XCTAssertNotNil(cardView.body)
+        }
+    }
 }

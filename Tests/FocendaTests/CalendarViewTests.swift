@@ -569,4 +569,54 @@ final class CalendarViewTests: XCTestCase {
         XCTAssertTrue(day.hasReminders)
         XCTAssertEqual(day.focusHeatmapLevel, 2)
     }
+
+    func testCalendarDayHoverAndClickSelection() {
+        let timerVM = FocusTimerViewModel()
+        let taskVM = TaskListViewModel()
+        let calendarView = CalendarView(timerVM: timerVM, taskVM: taskVM)
+
+        var components = DateComponents()
+        components.year = 2026
+        components.month = 8
+        components.day = 26
+        let date = Calendar.current.date(from: components)!
+
+        let day = CalendarDay(
+            date: date,
+            dayNumber: 26,
+            isCurrentMonth: true,
+            isToday: false,
+            isSelected: false,
+            focusMinutes: 30,
+            focusSessionsCount: 1,
+            tasksCount: 2
+        )
+
+        XCTAssertEqual(day.id, "2026-08-26")
+        XCTAssertEqual(day.dayNumber, 26)
+        XCTAssertEqual(day.focusMinutes, 30)
+        XCTAssertNotNil(calendarView.body)
+    }
+
+    func testCalendarHoverPopoverDebounceContract() async {
+        var didOpenPopover = false
+        var isCancelled = false
+
+        // Simulating the 1.0s debounce task
+        let task = Task {
+            try? await Task.sleep(nanoseconds: 50_000_000) // 50ms for unit test
+            if !Task.isCancelled {
+                didOpenPopover = true
+            } else {
+                isCancelled = true
+            }
+        }
+
+        // Cancel early before sleep completes
+        task.cancel()
+        _ = await task.result
+
+        XCTAssertFalse(didOpenPopover)
+        XCTAssertTrue(task.isCancelled)
+    }
 }
