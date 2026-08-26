@@ -1,4 +1,4 @@
-.PHONY: all test build staging clean
+.PHONY: all test build staging release-beta release-notes clean
 
 all: staging
 
@@ -10,6 +10,12 @@ build:
 
 staging:
 	./scripts/build-staging.sh
+
+release-beta:
+	./scripts/release-staging-beta.sh
+
+release-notes:
+	./scripts/generate-release-notes.sh
 
 clean:
 	rm -rf .build dist

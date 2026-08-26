@@ -18,14 +18,16 @@ fail() {
 }
 
 command -v swift >/dev/null 2>&1 || fail "Swift is not installed or is not on PATH."
-command -v open >/dev/null 2>&1 || fail "The macOS open command is not available."
+if [ "${FOCENDA_NO_OPEN:-0}" != "1" ]; then
+  command -v open >/dev/null 2>&1 || fail "The macOS open command is not available."
+fi
 
 [ "$(uname -s)" = "Darwin" ] || fail "staging builds require macOS (Darwin)."
 [ -f "$REPOSITORY_ROOT/Package.swift" ] || fail "Package.swift was not found at $REPOSITORY_ROOT."
 [ -f "$VERSION_FILE" ] || fail "VERSION was not found at $VERSION_FILE."
 
-VERSION=$(sed -n '1p' "$VERSION_FILE")
-if ! printf '%s\n' "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+VERSION=$(sed -n "1p" "$VERSION_FILE")
+if ! printf "%s\n" "$VERSION" | grep -Eq "^[0-9]+\.[0-9]+\.[0-9]+$"; then
   fail "VERSION must contain MAJOR.MINOR.PATCH."
 fi
 
@@ -59,7 +61,7 @@ trap cleanup EXIT INT TERM
 mkdir -p "$TEMP_APP/Contents/MacOS" "$TEMP_APP/Contents/Resources"
 install -m 755 "$APP_EXECUTABLE" "$TEMP_APP/Contents/MacOS/$PRODUCT_NAME"
 
-cat > "$TEMP_APP/Contents/Info.plist" <<EOF
+cat > "$TEMP_APP/Contents/Info.plist" <<PLIST_EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "https://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -90,7 +92,7 @@ cat > "$TEMP_APP/Contents/Info.plist" <<EOF
   <string>public.app-category.productivity</string>
 </dict>
 </plist>
-EOF
+PLIST_EOF
 
 # Codesign locally
 codesign --force --sign - "$TEMP_APP" 2>/dev/null || true
@@ -99,6 +101,10 @@ mv "$TEMP_APP" "$APP_BUNDLE"
 
 echo "========================================"
 echo "✅ Created $APP_BUNDLE"
-echo "🚀 Launching $APP_NAME..."
-echo "========================================"
-open "$APP_BUNDLE"
+if [ "${FOCENDA_NO_OPEN:-0}" != "1" ]; then
+  echo "🚀 Launching $APP_NAME..."
+  echo "========================================"
+  open "$APP_BUNDLE"
+else
+  echo "========================================"
+fi
