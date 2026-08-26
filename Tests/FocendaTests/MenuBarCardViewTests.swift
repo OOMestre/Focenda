@@ -81,4 +81,34 @@ final class MenuBarCardViewTests: XCTestCase {
         timerVM.timeRemainingSeconds = 12 * 60 + 30 // Halfway through 25 min
         XCTAssertEqual(timerVM.progress, 0.5, accuracy: 0.01)
     }
+
+    func testShortModeTitles() {
+        let timerVM = FocusTimerViewModel()
+        let cardView = MenuBarCardView(timerVM: timerVM)
+
+        XCTAssertEqual(cardView.shortModeTitle(for: .work), "Focus")
+        XCTAssertEqual(cardView.shortModeTitle(for: .shortBreak), "Short")
+        XCTAssertEqual(cardView.shortModeTitle(for: .longBreak), "Long")
+    }
+
+    func testStatusText() {
+        let timerVM = FocusTimerViewModel()
+        let cardView = MenuBarCardView(timerVM: timerVM)
+
+        XCTAssertEqual(cardView.statusText, "READY")
+
+        timerVM.start()
+        XCTAssertEqual(cardView.statusText, "RUNNING")
+
+        timerVM.pause()
+        XCTAssertEqual(cardView.statusText, "PAUSED")
+    }
+
+    func testCardBodyRendering() {
+        let timerVM = FocusTimerViewModel()
+        let cardView = MenuBarCardView(timerVM: timerVM)
+
+        let body = cardView.body
+        XCTAssertNotNil(body)
+    }
 }

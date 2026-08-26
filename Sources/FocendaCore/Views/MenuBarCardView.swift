@@ -8,6 +8,8 @@ public struct MenuBarCardView: View {
 
     @State private var isPresented: Bool = false
     @State private var isHovered: Bool = false
+    @State private var dragOffset: CGSize = .zero
+    @State private var accumulatedOffset: CGSize = .zero
 
     public init(
         timerVM: FocusTimerViewModel,
@@ -30,25 +32,28 @@ public struct MenuBarCardView: View {
                     .strokeBorder(
                         LinearGradient(
                             colors: [
-                                timerVM.currentMode.themeColor.opacity(isHovered ? 0.75 : 0.22),
-                                timerVM.currentMode.themeColor.opacity(isHovered ? 0.4 : 0.08)
+                                timerVM.currentMode.themeColor.opacity(isHovered ? 0.65 : 0.2),
+                                timerVM.currentMode.themeColor.opacity(isHovered ? 0.35 : 0.06)
                             ],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         ),
-                        lineWidth: isHovered ? 1.8 : 1.0
+                        lineWidth: isHovered ? 1.5 : 1.0
                     )
             )
             .shadow(
-                color: isHovered ? timerVM.currentMode.themeColor.opacity(0.35) : Color.black.opacity(0.08),
-                radius: isHovered ? 14 : 6,
+                color: isHovered ? timerVM.currentMode.themeColor.opacity(0.25) : Color.black.opacity(0.08),
+                radius: isHovered ? 12 : 6,
                 x: 0,
                 y: isHovered ? 4 : 2
             )
+            .offset(dragOffset)
             .scaleEffect(y: isPresented ? 1.0 : 0.88, anchor: .top)
             .opacity(isPresented ? 1.0 : 0.0)
             .animation(.spring(response: 0.28, dampingFraction: 0.75), value: isHovered)
             .animation(.spring(response: 0.32, dampingFraction: 0.76), value: isPresented)
+            .animation(.spring(response: 0.35, dampingFraction: 0.75), value: dragOffset)
+            .gesture(dragGesture)
             .onHover { hovering in
                 isHovered = hovering
             }
@@ -65,8 +70,28 @@ public struct MenuBarCardView: View {
             }
     }
 
+    private var dragGesture: some Gesture {
+        DragGesture()
+            .onChanged { value in
+                dragOffset = CGSize(
+                    width: accumulatedOffset.width + value.translation.width,
+                    height: accumulatedOffset.height + value.translation.height
+                )
+            }
+            .onEnded { value in
+                dragOffset = CGSize(
+                    width: accumulatedOffset.width + value.translation.width,
+                    height: accumulatedOffset.height + value.translation.height
+                )
+                accumulatedOffset = dragOffset
+            }
+    }
+
     private var cardBody: some View {
         VStack(spacing: 14) {
+            // Drag handle pill at the top of the card
+            dragHandleSection
+
             // Header: Title & Active Mode Tag
             headerSection
 
@@ -90,6 +115,24 @@ public struct MenuBarCardView: View {
         }
     }
 
+    // MARK: - Drag Handle
+    private var dragHandleSection: some View {
+        HStack {
+            Spacer()
+            Capsule()
+                .fill(Color.secondary.opacity(0.3))
+                .frame(width: 36, height: 4)
+                .help("Drag to move")
+            Spacer()
+        }
+        .padding(.top, -4)
+        .padding(.bottom, 2)
+        .contentShape(Rectangle())
+        .onTapGesture(count: 2) {
+            snapToDefaultPosition()
+        }
+    }
+
     // MARK: - Header
     private var headerSection: some View {
         HStack(alignment: .center) {
@@ -110,11 +153,22 @@ public struct MenuBarCardView: View {
                 Text(timerVM.currentMode.rawValue)
                     .font(.caption.weight(.semibold))
             }
-            .padding(.horizontal, 7)
+            .padding(.horizontal, 8)
             .padding(.vertical, 3)
             .background(timerVM.currentMode.themeColor.opacity(0.15))
             .foregroundStyle(timerVM.currentMode.themeColor)
             .clipShape(Capsule())
+        }
+        .contentShape(Rectangle())
+        .onTapGesture(count: 2) {
+            snapToDefaultPosition()
+        }
+    }
+
+    private func snapToDefaultPosition() {
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+            dragOffset = .zero
+            accumulatedOffset = .zero
         }
     }
 
@@ -130,7 +184,7 @@ public struct MenuBarCardView: View {
                     Text(shortModeTitle(for: mode))
                         .font(.caption2.weight(.medium))
                         .padding(.horizontal, 10)
-                        .padding(.vertical, 4)
+                        .padding(.vertical, 5)
                         .frame(maxWidth: .infinity)
                         .background(
                             timerVM.currentMode == mode
@@ -149,7 +203,7 @@ public struct MenuBarCardView: View {
         }
     }
 
-    private func shortModeTitle(for mode: FocusMode) -> String {
+    func shortModeTitle(for mode: FocusMode) -> String {
         switch mode {
         case .work: return "Focus"
         case .shortBreak: return "Short"
@@ -201,7 +255,7 @@ public struct MenuBarCardView: View {
         .padding(.vertical, 2)
     }
 
-    private var statusText: String {
+    var statusText: String {
         switch timerVM.status {
         case .running:
             return "RUNNING"
