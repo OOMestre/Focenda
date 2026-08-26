@@ -11,11 +11,13 @@ final class ScratchpadViewModelTests: XCTestCase {
         testDefaults = UserDefaults.standard
         testDefaults.removeObject(forKey: testKey)
         testDefaults.removeObject(forKey: ScratchpadViewModel.userDefaultsKey)
+        testDefaults.removeObject(forKey: ScratchpadViewModel.foldersUserDefaultsKey)
     }
 
     override func tearDown() {
         testDefaults.removeObject(forKey: testKey)
         testDefaults.removeObject(forKey: ScratchpadViewModel.userDefaultsKey)
+        testDefaults.removeObject(forKey: ScratchpadViewModel.foldersUserDefaultsKey)
         testDefaults = nil
         super.tearDown()
     }
