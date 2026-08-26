@@ -355,4 +355,32 @@ final class CalendarViewTests: XCTestCase {
         let body = calendarView.body
         XCTAssertNotNil(body)
     }
+
+    func testDayIdentifierFormat() {
+        var components = DateComponents()
+        components.year = 2026
+        components.month = 8
+        components.day = 26
+        let date = Calendar.current.date(from: components)!
+
+        let day = CalendarDay(
+            date: date,
+            dayNumber: 26,
+            isCurrentMonth: true,
+            isToday: true,
+            isSelected: false,
+            focusMinutes: 15,
+            focusSessionsCount: 1,
+            habitsCompletedCount: 2,
+            tasksCount: 3,
+            hasHabitStreak: true
+        )
+
+        XCTAssertEqual(day.id, "2026-08-26")
+        XCTAssertEqual(day.dayNumber, 26)
+        XCTAssertTrue(day.isCurrentMonth)
+        XCTAssertTrue(day.isToday)
+        XCTAssertFalse(day.isSelected)
+        XCTAssertTrue(day.hasHabitStreak)
+    }
 }

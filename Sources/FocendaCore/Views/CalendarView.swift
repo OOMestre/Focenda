@@ -28,7 +28,7 @@ public struct CalendarDay: Identifiable, Equatable {
     }
 }
 
-/// Interactive monthly calendar and timebox agenda view
+/// Interactive monthly calendar and timebox agenda view with responsive split layout
 public struct CalendarView: View {
     public var timerVM: FocusTimerViewModel
     public var taskVM: TaskListViewModel
@@ -58,15 +58,46 @@ public struct CalendarView: View {
     }
 
     public var body: some View {
-        HSplitView {
-            // Left Column: Monthly Calendar & Navigation
-            calendarMonthSection
-                .frame(minWidth: 420, idealWidth: 480)
-                .layoutPriority(1)
+        GeometryReader { geometry in
+            let isCompact = geometry.size.width < 760
 
-            // Right Column: Selected Day Agenda & Timebox Pane
-            selectedDayAgendaSection
-                .frame(minWidth: 360, idealWidth: 400)
+            if isCompact {
+                ScrollView {
+                    VStack(spacing: 20) {
+                        calendarMonthSection
+                            .padding(.horizontal, 16)
+                            .padding(.top, 16)
+
+                        Divider()
+                            .background(AppTheme.border)
+                            .padding(.horizontal, 16)
+
+                        selectedDayAgendaSection
+                            .padding(.horizontal, 16)
+                            .padding(.bottom, 24)
+                    }
+                }
+            } else {
+                HStack(spacing: 0) {
+                    // Left Column: Monthly Calendar & Navigation
+                    ScrollView {
+                        calendarMonthSection
+                            .padding(20)
+                    }
+                    .frame(minWidth: 320, maxWidth: .infinity)
+
+                    Divider()
+                        .background(AppTheme.border)
+
+                    // Right Column: Selected Day Agenda & Timebox Pane
+                    ScrollView {
+                        selectedDayAgendaSection
+                            .padding(20)
+                    }
+                    .frame(minWidth: 300, idealWidth: 360, maxWidth: 420)
+                    .background(AppTheme.cardBackgroundSubtle.opacity(0.35))
+                }
+            }
         }
         .background(AppTheme.background)
         .navigationTitle("Calendar & Agenda")
@@ -74,24 +105,21 @@ public struct CalendarView: View {
 
     // MARK: - Left Pane: Calendar Month View
     private var calendarMonthSection: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                // Header with navigation
-                monthHeaderBar
+        VStack(alignment: .leading, spacing: 18) {
+            // Header with navigation
+            monthHeaderBar
 
-                // Weekday Headers
-                weekdayHeadersGrid
+            // Weekday Headers
+            weekdayHeadersGrid
 
-                // Monthly Grid of Days
-                monthlyDaysGrid
+            // Monthly Grid of Days
+            monthlyDaysGrid
 
-                // Heatmap Legend
-                heatmapLegendBar
+            // Heatmap Legend
+            heatmapLegendBar
 
-                // Monthly Performance Highlights
-                monthlySummaryCards
-            }
-            .padding(24)
+            // Monthly Performance Highlights
+            monthlySummaryCards
         }
     }
 
@@ -100,7 +128,7 @@ public struct CalendarView: View {
         HStack(alignment: .center) {
             VStack(alignment: .leading, spacing: 3) {
                 Text(formattedMonthTitle(from: displayedMonth))
-                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                    .font(.system(size: 22, weight: .bold, design: .rounded))
                     .foregroundStyle(AppTheme.textPrimary)
 
                 Text("Focus consistency & daily timebox breakdown")
@@ -108,9 +136,9 @@ public struct CalendarView: View {
                     .foregroundStyle(AppTheme.textSecondary)
             }
 
-            Spacer()
+            Spacer(minLength: 12)
 
-            HStack(spacing: 8) {
+            HStack(spacing: 6) {
                 // Previous Month Button
                 Button {
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
@@ -118,7 +146,7 @@ public struct CalendarView: View {
                     }
                 } label: {
                     Image(systemName: "chevron.left")
-                        .font(.caption.bold())
+                        .font(.system(size: 11, weight: .bold))
                         .foregroundStyle(AppTheme.textPrimary)
                         .frame(width: 28, height: 28)
                         .background(AppTheme.cardBackgroundSubtle)
@@ -144,7 +172,7 @@ public struct CalendarView: View {
                     }
                 } label: {
                     Image(systemName: "chevron.right")
-                        .font(.caption.bold())
+                        .font(.system(size: 11, weight: .bold))
                         .foregroundStyle(AppTheme.textPrimary)
                         .frame(width: 28, height: 28)
                         .background(AppTheme.cardBackgroundSubtle)
@@ -159,7 +187,7 @@ public struct CalendarView: View {
     // MARK: - Weekday Headers
     private var weekdayHeadersGrid: some View {
         let symbols = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
-        return LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 7), spacing: 8) {
+        return LazyVGrid(columns: Array(repeating: GridItem(.flexible(minimum: 28), spacing: 6), count: 7), spacing: 6) {
             ForEach(symbols, id: \.self) { symbol in
                 Text(symbol)
                     .font(.caption2.weight(.bold))
@@ -173,7 +201,7 @@ public struct CalendarView: View {
     private var monthlyDaysGrid: some View {
         let days = calculateDaysInMonth(for: displayedMonth)
 
-        return LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 7), spacing: 8) {
+        return LazyVGrid(columns: Array(repeating: GridItem(.flexible(minimum: 28), spacing: 6), count: 7), spacing: 6) {
             ForEach(days) { day in
                 calendarDayCell(day: day)
             }
@@ -191,15 +219,15 @@ public struct CalendarView: View {
                 }
             }
         } label: {
-            VStack(spacing: 4) {
-                // Day Number + Today Badge
+            VStack(spacing: 3) {
+                // Day Number + Today / Streak Indicator
                 HStack(spacing: 2) {
                     Text("\(day.dayNumber)")
-                        .font(.system(size: 13, weight: day.isToday ? .heavy : (day.isSelected ? .bold : .medium), design: .rounded))
+                        .font(.system(size: 12, weight: day.isToday ? .heavy : (day.isSelected ? .bold : .medium), design: .rounded))
                         .foregroundStyle(
                             day.isSelected
                                 ? .white
-                                : (day.isCurrentMonth ? AppTheme.textPrimary : AppTheme.textTertiary.opacity(0.6))
+                                : (day.isCurrentMonth ? AppTheme.textPrimary : AppTheme.textTertiary.opacity(0.5))
                         )
 
                     if day.isToday && !day.isSelected {
@@ -217,30 +245,30 @@ public struct CalendarView: View {
                     }
                 }
 
-                Spacer(minLength: 2)
+                Spacer(minLength: 1)
 
-                // Heatmap dots & indicators
+                // Heatmap dots & task indicators
                 HStack(spacing: 3) {
                     // Focus Heatmap indicator
                     if day.focusHeatmapLevel > 0 {
                         Circle()
                             .fill(heatmapDotColor(level: day.focusHeatmapLevel, isSelected: day.isSelected))
-                            .frame(width: 6, height: 6)
+                            .frame(width: 5, height: 5)
                     }
 
                     // Tasks indicator
                     if day.tasksCount > 0 {
                         Circle()
-                            .fill(day.isSelected ? Color.white.opacity(0.8) : AppTheme.riverSlate)
+                            .fill(day.isSelected ? Color.white.opacity(0.85) : AppTheme.riverSlate)
                             .frame(width: 4, height: 4)
                     }
                 }
             }
-            .padding(7)
-            .frame(height: 52)
+            .padding(6)
+            .frame(minHeight: 44, idealHeight: 48)
             .frame(maxWidth: .infinity)
             .background(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
                     .fill(
                         day.isSelected
                             ? AppTheme.accent
@@ -250,17 +278,17 @@ public struct CalendarView: View {
                     )
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
                     .stroke(
                         day.isSelected
                             ? AppTheme.accent
-                            : (day.isToday ? AppTheme.accent.opacity(0.45) : AppTheme.subtleBorder),
+                            : (day.isToday ? AppTheme.accent.opacity(0.4) : AppTheme.subtleBorder),
                         lineWidth: day.isToday ? 1.5 : 1.0
                     )
             )
             .shadow(
-                color: Color.black.opacity(day.isSelected ? 0.12 : (isHovered ? 0.05 : 0.0)),
-                radius: day.isSelected ? 4 : 2,
+                color: Color.black.opacity(day.isSelected ? 0.10 : (isHovered ? 0.04 : 0.0)),
+                radius: day.isSelected ? 3 : 1,
                 x: 0,
                 y: 1
             )
@@ -290,51 +318,52 @@ public struct CalendarView: View {
 
     // MARK: - Heatmap Legend
     private var heatmapLegendBar: some View {
-        HStack(spacing: 12) {
-            Text("Focus Intensity:")
-                .font(.caption2.weight(.medium))
+        HStack(spacing: 10) {
+            Text("Focus:")
+                .font(.system(size: 10, weight: .semibold))
                 .foregroundStyle(AppTheme.textSecondary)
 
-            HStack(spacing: 5) {
-                Circle().fill(AppTheme.border).frame(width: 7, height: 7)
+            HStack(spacing: 4) {
+                Circle().fill(AppTheme.border).frame(width: 6, height: 6)
                 Text("0m")
-                    .font(.system(size: 10))
+                    .font(.system(size: 9))
                     .foregroundStyle(AppTheme.textTertiary)
             }
-
-            HStack(spacing: 5) {
-                Circle().fill(AppTheme.shortBreak).frame(width: 7, height: 7)
-                Text("1-25m")
-                    .font(.system(size: 10))
-                    .foregroundStyle(AppTheme.textTertiary)
-            }
-
-            HStack(spacing: 5) {
-                Circle().fill(AppTheme.deepFocus).frame(width: 7, height: 7)
-                Text("26-60m")
-                    .font(.system(size: 10))
-                    .foregroundStyle(AppTheme.textTertiary)
-            }
-
-            HStack(spacing: 5) {
-                Circle().fill(AppTheme.success).frame(width: 7, height: 7)
-                Text("60m+")
-                    .font(.system(size: 10))
-                    .foregroundStyle(AppTheme.textTertiary)
-            }
-
-            Spacer()
 
             HStack(spacing: 4) {
+                Circle().fill(AppTheme.shortBreak).frame(width: 6, height: 6)
+                Text("1-25m")
+                    .font(.system(size: 9))
+                    .foregroundStyle(AppTheme.textTertiary)
+            }
+
+            HStack(spacing: 4) {
+                Circle().fill(AppTheme.deepFocus).frame(width: 6, height: 6)
+                Text("26-60m")
+                    .font(.system(size: 9))
+                    .foregroundStyle(AppTheme.textTertiary)
+            }
+
+            HStack(spacing: 4) {
+                Circle().fill(AppTheme.success).frame(width: 6, height: 6)
+                Text("60m+")
+                    .font(.system(size: 9))
+                    .foregroundStyle(AppTheme.textTertiary)
+            }
+
+            Spacer(minLength: 4)
+
+            HStack(spacing: 3) {
                 Image(systemName: "flame.fill")
                     .font(.system(size: 8))
                     .foregroundStyle(AppTheme.sandstone)
                 Text("Habit Done")
-                    .font(.system(size: 10))
+                    .font(.system(size: 9))
                     .foregroundStyle(AppTheme.textTertiary)
             }
         }
-        .padding(10)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
         .background(
             RoundedRectangle(cornerRadius: 8, style: .continuous)
                 .fill(AppTheme.cardBackgroundSubtle.opacity(0.5))
@@ -345,11 +374,15 @@ public struct CalendarView: View {
     private var monthlySummaryCards: some View {
         let stats = calculateMonthlyStats(for: displayedMonth)
 
-        return HStack(spacing: 12) {
+        return LazyVGrid(columns: [
+            GridItem(.flexible(minimum: 90), spacing: 8),
+            GridItem(.flexible(minimum: 90), spacing: 8),
+            GridItem(.flexible(minimum: 90), spacing: 8)
+        ], spacing: 8) {
             monthlyStatCard(
                 title: "Month Focus",
                 value: "\(stats.totalFocusMinutes) min",
-                subtitle: "\(stats.sessionsCount) sessions logged",
+                subtitle: "\(stats.sessionsCount) sessions",
                 icon: "timer",
                 color: AppTheme.deepFocus
             )
@@ -379,55 +412,57 @@ public struct CalendarView: View {
         icon: String,
         color: Color
     ) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(spacing: 6) {
+        VStack(alignment: .leading, spacing: 3) {
+            HStack(spacing: 5) {
                 Image(systemName: icon)
-                    .font(.caption.bold())
+                    .font(.system(size: 10, weight: .bold))
                     .foregroundStyle(color)
                 Text(title)
-                    .font(.caption2.bold())
+                    .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(AppTheme.textSecondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
             }
 
             Text(value)
-                .font(.system(size: 16, weight: .bold, design: .rounded))
+                .font(.system(size: 14, weight: .bold, design: .rounded))
                 .foregroundStyle(AppTheme.textPrimary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
 
             Text(subtitle)
-                .font(.system(size: 10))
+                .font(.system(size: 9))
                 .foregroundStyle(AppTheme.textTertiary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
         }
-        .padding(12)
+        .padding(10)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
                 .fill(AppTheme.cardBackground)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
                 .stroke(AppTheme.subtleBorder, lineWidth: 1)
         )
     }
 
     // MARK: - Right Pane: Selected Day Agenda & Timebox
     private var selectedDayAgendaSection: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                // Selected Day Header Banner
-                selectedDayHeaderBanner
+        VStack(alignment: .leading, spacing: 18) {
+            // Selected Day Header Banner
+            selectedDayHeaderBanner
 
-                // Focus Sessions Log
-                focusSessionsLogSection
+            // Focus Sessions Log
+            focusSessionsLogSection
 
-                // Daily Habits Consistency
-                dailyHabitsSection
+            // Daily Habits Consistency
+            dailyHabitsSection
 
-                // Scheduled & Completed Tasks
-                dailyTasksSection
-            }
-            .padding(24)
+            // Scheduled & Completed Tasks
+            dailyTasksSection
         }
-        .background(AppTheme.cardBackgroundSubtle.opacity(0.25))
     }
 
     // MARK: - Selected Day Header Banner
@@ -437,11 +472,11 @@ public struct CalendarView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 6) {
                         Text(formattedDayHeader(selectedDate))
-                            .font(.system(size: 20, weight: .bold, design: .rounded))
+                            .font(.system(size: 18, weight: .bold, design: .rounded))
                             .foregroundStyle(AppTheme.textPrimary)
 
                         Text(relativeDayLabel(selectedDate))
-                            .font(.system(size: 10, weight: .bold))
+                            .font(.system(size: 9, weight: .bold))
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
                             .background(
@@ -462,7 +497,7 @@ public struct CalendarView: View {
                         .foregroundStyle(AppTheme.textSecondary)
                 }
 
-                Spacer()
+                Spacer(minLength: 8)
             }
 
             // Summary Metric Chips
@@ -470,64 +505,64 @@ public struct CalendarView: View {
             let dayHabits = habitsCompleted(for: selectedDate)
             let dayTasks = tasks(for: selectedDate)
 
-            HStack(spacing: 8) {
+            HStack(spacing: 6) {
                 agendaChip(
                     icon: "timer",
-                    label: "\(dayFocusMinutes)m focus",
+                    label: "\(dayFocusMinutes)m",
                     color: AppTheme.deepFocus
                 )
 
                 agendaChip(
                     icon: "flame.fill",
-                    label: "\(dayHabits.count)/\(habitVM.habits.count) habits",
+                    label: "\(dayHabits.count)/\(habitVM.habits.count)",
                     color: AppTheme.sandstone
                 )
 
                 agendaChip(
                     icon: "checklist",
-                    label: "\(dayTasks.filter(\.isCompleted).count)/\(dayTasks.count) tasks",
+                    label: "\(dayTasks.filter(\.isCompleted).count)/\(dayTasks.count)",
                     color: AppTheme.success
                 )
             }
         }
-        .padding(16)
+        .padding(14)
         .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .fill(AppTheme.cardBackground)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .stroke(AppTheme.subtleBorder, lineWidth: 1)
         )
     }
 
     private func agendaChip(icon: String, label: String, color: Color) -> some View {
-        HStack(spacing: 4) {
+        HStack(spacing: 3) {
             Image(systemName: icon)
-                .font(.system(size: 10, weight: .bold))
+                .font(.system(size: 9, weight: .bold))
                 .foregroundStyle(color)
             Text(label)
-                .font(.caption2.bold())
+                .font(.system(size: 10, weight: .bold))
                 .foregroundStyle(AppTheme.textPrimary)
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
+        .padding(.horizontal, 7)
+        .padding(.vertical, 3)
         .background(color.opacity(0.12))
         .clipShape(Capsule())
     }
 
     // MARK: - ⏱️ Focus Sessions Log Section
     private var focusSessionsLogSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Label("Focus Sessions Log", systemImage: "timer")
-                    .font(.headline)
+                Label("Focus Sessions", systemImage: "timer")
+                    .font(.subheadline.weight(.semibold))
                     .foregroundStyle(AppTheme.textPrimary)
 
                 Spacer()
 
                 let sessions = sessions(for: selectedDate)
-                Text("\(sessions.count) completed")
+                Text("\(sessions.count) logged")
                     .font(.caption2.bold())
                     .foregroundStyle(AppTheme.textSecondary)
             }
@@ -542,35 +577,35 @@ public struct CalendarView: View {
                         : "No recorded timer cycles for this date."
                 )
             } else {
-                VStack(spacing: 8) {
+                VStack(spacing: 6) {
                     ForEach(daySessions) { session in
-                        HStack(spacing: 10) {
+                        HStack(spacing: 8) {
                             Circle()
                                 .fill(session.mode.themeColor)
-                                .frame(width: 8, height: 8)
+                                .frame(width: 7, height: 7)
 
                             VStack(alignment: .leading, spacing: 1) {
                                 Text(session.mode.rawValue)
-                                    .font(.subheadline.weight(.semibold))
+                                    .font(.caption.weight(.semibold))
                                     .foregroundStyle(AppTheme.textPrimary)
 
                                 Text(formattedSessionTime(session.completedAt))
-                                    .font(.caption2)
+                                    .font(.system(size: 9))
                                     .foregroundStyle(AppTheme.textTertiary)
                             }
 
                             Spacer()
 
                             Text("\(session.durationSeconds / 60) min")
-                                .font(.caption.bold())
+                                .font(.system(size: 10, weight: .bold))
                                 .monospacedDigit()
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 3)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
                                 .background(session.mode.themeColor.opacity(0.12))
                                 .foregroundStyle(session.mode.themeColor)
                                 .clipShape(Capsule())
                         }
-                        .padding(10)
+                        .padding(8)
                         .background(
                             RoundedRectangle(cornerRadius: 8, style: .continuous)
                                 .fill(AppTheme.cardBackground)
@@ -587,10 +622,10 @@ public struct CalendarView: View {
 
     // MARK: - 🔥 Daily Habits Section
     private var dailyHabitsSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Label("Habits Consistency", systemImage: "flame.fill")
-                    .font(.headline)
+                Label("Habits", systemImage: "flame.fill")
+                    .font(.subheadline.weight(.semibold))
                     .foregroundStyle(AppTheme.textPrimary)
 
                 Spacer()
@@ -612,44 +647,45 @@ public struct CalendarView: View {
                     ForEach(habitVM.habits) { habit in
                         let isDone = habit.isCompleted(on: selectedDate, calendar: calendar)
 
-                        HStack(spacing: 10) {
+                        HStack(spacing: 8) {
                             Button {
                                 withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
                                     habitVM.toggleHabitCompletion(id: habit.id, on: selectedDate, calendar: calendar)
                                 }
                             } label: {
                                 Image(systemName: isDone ? "checkmark.circle.fill" : "circle")
-                                    .font(.title3)
+                                    .font(.body)
                                     .foregroundStyle(isDone ? AppTheme.success : AppTheme.textTertiary)
                             }
                             .buttonStyle(.plain)
                             .help(isDone ? "Mark habit incomplete" : "Mark habit completed on this day")
 
                             Image(systemName: habit.iconName)
-                                .font(.caption.bold())
+                                .font(.system(size: 10, weight: .bold))
                                 .foregroundStyle(habit.color)
-                                .frame(width: 24, height: 24)
+                                .frame(width: 22, height: 22)
                                 .background(habit.color.opacity(0.12))
-                                .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                                .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
 
                             Text(habit.title)
                                 .font(.caption.weight(.medium))
                                 .foregroundStyle(AppTheme.textPrimary)
+                                .lineLimit(1)
 
                             Spacer()
 
                             if habit.streakCount > 0 {
                                 HStack(spacing: 2) {
                                     Image(systemName: "flame.fill")
-                                        .font(.system(size: 8))
+                                        .font(.system(size: 7))
                                         .foregroundStyle(AppTheme.sandstone)
                                     Text("\(habit.streakCount)d")
-                                        .font(.caption2.bold())
+                                        .font(.system(size: 9, weight: .bold))
                                         .foregroundStyle(AppTheme.textSecondary)
                                 }
                             }
                         }
-                        .padding(10)
+                        .padding(8)
                         .background(
                             RoundedRectangle(cornerRadius: 8, style: .continuous)
                                 .fill(AppTheme.cardBackground)
@@ -666,10 +702,10 @@ public struct CalendarView: View {
 
     // MARK: - ✅ Scheduled & Daily Tasks Section
     private var dailyTasksSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Label("Tasks & Milestones", systemImage: "checklist")
-                    .font(.headline)
+                    .font(.subheadline.weight(.semibold))
                     .foregroundStyle(AppTheme.textPrimary)
 
                 Spacer()
@@ -681,15 +717,15 @@ public struct CalendarView: View {
             }
 
             // Quick Add Task for this Day
-            HStack(spacing: 8) {
+            HStack(spacing: 6) {
                 TextField("Add task for \(formattedDayHeader(selectedDate))...", text: $quickTaskTitle)
                     .textFieldStyle(.plain)
-                    .font(.callout)
-                    .padding(8)
+                    .font(.caption)
+                    .padding(6)
                     .background(AppTheme.cardBackground)
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 8)
+                        RoundedRectangle(cornerRadius: 6)
                             .stroke(AppTheme.subtleBorder, lineWidth: 1)
                     )
                     .onSubmit {
@@ -703,15 +739,15 @@ public struct CalendarView: View {
                     }
                 }
                 .labelsHidden()
-                .frame(width: 88)
+                .frame(width: 80)
 
                 Button {
                     addQuickTaskForSelectedDay()
                 } label: {
                     Image(systemName: "plus")
-                        .font(.caption.bold())
+                        .font(.system(size: 10, weight: .bold))
                         .foregroundStyle(.white)
-                        .frame(width: 28, height: 28)
+                        .frame(width: 24, height: 24)
                         .background(AppTheme.accent)
                         .clipShape(Circle())
                 }
@@ -729,42 +765,44 @@ public struct CalendarView: View {
             } else {
                 VStack(spacing: 6) {
                     ForEach(dayTasks) { task in
-                        HStack(spacing: 10) {
+                        HStack(spacing: 8) {
                             Button {
                                 withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
                                     taskVM.toggleTaskCompletion(task)
                                 }
                             } label: {
                                 Image(systemName: task.isCompleted ? "checkmark.circle.fill" : "circle")
-                                    .font(.title3)
+                                    .font(.body)
                                     .foregroundStyle(task.isCompleted ? AppTheme.success : AppTheme.textTertiary)
                             }
                             .buttonStyle(.plain)
 
-                            VStack(alignment: .leading, spacing: 2) {
+                            VStack(alignment: .leading, spacing: 1) {
                                 Text(task.title)
                                     .font(.caption.weight(.medium))
                                     .strikethrough(task.isCompleted, color: AppTheme.textSecondary)
                                     .foregroundStyle(task.isCompleted ? AppTheme.textSecondary : AppTheme.textPrimary)
+                                    .lineLimit(1)
 
                                 if !task.notes.isEmpty {
                                     Text(task.notes)
-                                        .font(.system(size: 10))
+                                        .font(.system(size: 9))
                                         .foregroundStyle(AppTheme.textTertiary)
+                                        .lineLimit(1)
                                 }
                             }
 
                             Spacer()
 
                             Text(task.priority.rawValue)
-                                .font(.system(size: 9, weight: .bold))
-                                .padding(.horizontal, 6)
+                                .font(.system(size: 8, weight: .bold))
+                                .padding(.horizontal, 5)
                                 .padding(.vertical, 2)
                                 .background(task.priority.color.opacity(0.12))
                                 .foregroundStyle(task.priority.color)
                                 .clipShape(Capsule())
                         }
-                        .padding(10)
+                        .padding(8)
                         .background(
                             RoundedRectangle(cornerRadius: 8, style: .continuous)
                                 .fill(AppTheme.cardBackground)
@@ -791,22 +829,22 @@ public struct CalendarView: View {
     }
 
     private func emptyAgendaCard(icon: String, title: String, subtitle: String) -> some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 10) {
             Image(systemName: icon)
-                .font(.title3)
+                .font(.callout)
                 .foregroundStyle(AppTheme.textTertiary)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(.caption.bold())
+                    .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(AppTheme.textPrimary)
                 Text(subtitle)
-                    .font(.system(size: 10))
+                    .font(.system(size: 9))
                     .foregroundStyle(AppTheme.textSecondary)
             }
             Spacer()
         }
-        .padding(12)
+        .padding(10)
         .background(
             RoundedRectangle(cornerRadius: 8, style: .continuous)
                 .fill(AppTheme.cardBackground.opacity(0.6))

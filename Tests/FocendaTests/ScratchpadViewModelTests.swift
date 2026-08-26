@@ -7,20 +7,18 @@ final class ScratchpadViewModelTests: XCTestCase {
     private let testKey = "test_focenda_scratchpads_isolated"
     private let testFoldersKey = "test_focenda_folders_isolated"
 
+    private var suiteName: String!
+
     override func setUp() {
         super.setUp()
-        testDefaults = UserDefaults.standard
-        testDefaults.removeObject(forKey: testKey)
-        testDefaults.removeObject(forKey: testFoldersKey)
-        testDefaults.removeObject(forKey: ScratchpadViewModel.userDefaultsKey)
-        testDefaults.removeObject(forKey: ScratchpadViewModel.foldersUserDefaultsKey)
+        suiteName = "ScratchpadTests_\(UUID().uuidString)"
+        testDefaults = UserDefaults(suiteName: suiteName)!
     }
 
     override func tearDown() {
-        testDefaults.removeObject(forKey: testKey)
-        testDefaults.removeObject(forKey: testFoldersKey)
-        testDefaults.removeObject(forKey: ScratchpadViewModel.userDefaultsKey)
-        testDefaults.removeObject(forKey: ScratchpadViewModel.foldersUserDefaultsKey)
+        if let suiteName = suiteName {
+            testDefaults?.removePersistentDomain(forName: suiteName)
+        }
         testDefaults = nil
         super.tearDown()
     }

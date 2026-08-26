@@ -1,5 +1,8 @@
 import Foundation
 import UserNotifications
+#if canImport(AppKit)
+import AppKit
+#endif
 
 /// Protocol defining notification operations for focus sessions and timed task reminders
 public protocol NotificationManagerProtocol: AnyObject {
@@ -9,13 +12,22 @@ public protocol NotificationManagerProtocol: AnyObject {
     func cancelTaskReminder(task: TaskItem)
 }
 
-/// Service managing native macOS system notifications for Focenda focus sessions and task reminders
-public final class NotificationManager: NotificationManagerProtocol {
+/// Service managing native macOS system notifications and in-app fallback alerts for Focenda
+public final class NotificationManager: NSObject, UNUserNotificationCenterDelegate, NotificationManagerProtocol {
     public static let shared = NotificationManager()
+
+    public static let taskReminderFiredNotification = Notification.Name("FocendaTaskReminderFired")
 
     private let center: UNUserNotificationCenter?
     public private(set) var lastNotifiedMode: FocusMode?
     public private(set) var lastScheduledTask: TaskItem?
+    public private(set) var lastFiredTask: TaskItem?
+
+    /// Active in-app fallback timers for scheduled reminders
+    private var inAppTimers: [UUID: Timer] = [:]
+
+    /// Optional callback invoked when a task reminder fires (in-app fallback or notification presentation)
+    public var onTaskReminderFired: ((TaskItem) -> Void)?
 
     public init(center: UNUserNotificationCenter? = nil) {
         if let center = center {
@@ -25,6 +37,8 @@ public final class NotificationManager: NotificationManagerProtocol {
         } else {
             self.center = nil
         }
+        super.init()
+        self.center?.delegate = self
     }
 
     private static var isNotificationAvailable: Bool {
@@ -86,9 +100,27 @@ public final class NotificationManager: NotificationManagerProtocol {
         }
     }
 
+    /// Friendly reminder title copy for a given task
+    public static func taskReminderTitle(for task: TaskItem) -> String {
+        "⏰ Task Reminder: \(task.title)"
+    }
+
+    /// Friendly reminder body copy for a given task
+    public static func taskReminderBody(for task: TaskItem) -> String {
+        if !task.notes.isEmpty {
+            return task.notes
+        } else {
+            return "Time to focus on '\(task.title)'."
+        }
+    }
+
     /// Posts a native macOS banner alert and sound when a focus session or break completes
     public func notifySessionCompleted(mode: FocusMode) {
         self.lastNotifiedMode = mode
+
+        #if canImport(AppKit)
+        NSSound.beep()
+        #endif
 
         guard let center = center else {
             return
@@ -112,7 +144,7 @@ public final class NotificationManager: NotificationManagerProtocol {
         }
     }
 
-    /// Schedules a timed calendar notification reminder for a task
+    /// Schedules a timed calendar notification reminder for a task with fallback in-app alert timer
     public func scheduleTaskReminder(task: TaskItem) {
         self.lastScheduledTask = task
 
@@ -120,21 +152,31 @@ public final class NotificationManager: NotificationManagerProtocol {
             return
         }
 
+        // Cancel any previous fallback timer for this task
+        inAppTimers[task.id]?.invalidate()
+        inAppTimers.removeValue(forKey: task.id)
+
+        // Set up in-app timer fallback
+        let timeInterval = reminderDate.timeIntervalSinceNow
+        if timeInterval > 0 {
+            let timer = Timer(timeInterval: timeInterval, repeats: false) { [weak self] _ in
+                self?.triggerInAppReminderFallback(for: task)
+            }
+            RunLoop.main.add(timer, forMode: .common)
+            inAppTimers[task.id] = timer
+        }
+
         guard let center = center else {
             return
         }
 
         let content = UNMutableNotificationContent()
-        content.title = "Task Reminder: \(task.title)"
-        if !task.notes.isEmpty {
-            content.body = task.notes
-        } else {
-            content.body = "Time to focus on '\(task.title)'."
-        }
+        content.title = Self.taskReminderTitle(for: task)
+        content.body = Self.taskReminderBody(for: task)
         content.sound = .default
 
         let components = Calendar.current.dateComponents(
-            [.year, .month, .day, .hour, .minute, .second],
+            [.year, .month, .day, .hour, .minute],
             from: reminderDate
         )
         let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
@@ -152,9 +194,44 @@ public final class NotificationManager: NotificationManagerProtocol {
         }
     }
 
-    /// Cancels a pending task reminder notification
+    /// Cancels a pending task reminder notification and its in-app fallback timer
     public func cancelTaskReminder(task: TaskItem) {
+        inAppTimers[task.id]?.invalidate()
+        inAppTimers.removeValue(forKey: task.id)
+
         guard let center = center else { return }
         center.removePendingNotificationRequests(withIdentifiers: ["task-reminder-\(task.id.uuidString)"])
+    }
+
+    /// Triggers the in-app alert and sound fallback when reminder time is reached
+    public func triggerInAppReminderFallback(for task: TaskItem) {
+        self.lastFiredTask = task
+        self.inAppTimers.removeValue(forKey: task.id)
+
+        #if canImport(AppKit)
+        NSSound.beep()
+        #endif
+
+        NotificationCenter.default.post(
+            name: Self.taskReminderFiredNotification,
+            object: task,
+            userInfo: [
+                "taskTitle": task.title,
+                "formattedTitle": Self.taskReminderTitle(for: task)
+            ]
+        )
+
+        onTaskReminderFired?(task)
+    }
+
+    // MARK: - UNUserNotificationCenterDelegate
+
+    /// Ensures notification banners and sounds are delivered even when Focenda is in the active foreground
+    public func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        willPresent notification: UNNotification,
+        withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
+    ) {
+        completionHandler([.banner, .sound, .badge, .list])
     }
 }
