@@ -220,55 +220,142 @@ public struct KanbanBoardView: View {
             let minContentWidth: CGFloat = (columnWidth * 3) + (spacing * 2) + padding
             let totalWidth = max(minContentWidth, geometry.size.width)
 
-            ScrollView(.horizontal, showsIndicators: true) {
-                HStack(alignment: .top, spacing: spacing) {
-                    ForEach(TaskStatus.allCases) { status in
-                        KanbanColumnView(
-                            status: status,
-                            tasks: taskVM.tasks(for: status),
-                            onAddTask: {
-                                targetColumnStatus = status
-                                showingAddTaskSheet = true
-                            },
-                            onQuickAdd: { title, priority in
-                                taskVM.addTask(
-                                    title: title,
-                                    priority: priority,
-                                    status: status
+            ScrollViewReader { proxy in
+                VStack(spacing: 0) {
+                    ScrollView(.horizontal, showsIndicators: true) {
+                        HStack(alignment: .top, spacing: spacing) {
+                            ForEach(TaskStatus.allCases) { status in
+                                KanbanColumnView(
+                                    status: status,
+                                    tasks: taskVM.tasks(for: status),
+                                    onAddTask: {
+                                        targetColumnStatus = status
+                                        showingAddTaskSheet = true
+                                    },
+                                    onQuickAdd: { title, priority in
+                                        taskVM.addTask(
+                                            title: title,
+                                            priority: priority,
+                                            status: status
+                                        )
+                                    },
+                                    onMoveTask: { taskId, newStatus in
+                                        withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
+                                            taskVM.moveTask(id: taskId, to: newStatus)
+                                        }
+                                    },
+                                    onToggleTask: { task in
+                                        withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
+                                            taskVM.toggleTaskCompletion(task)
+                                        }
+                                    },
+                                    onDeleteTask: { taskId in
+                                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                            taskVM.deleteTask(withId: taskId)
+                                        }
+                                    },
+                                    onEditTask: { task in
+                                        editingTask = task
+                                    },
+                                    onIncrementPomodoro: { taskId in
+                                        withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                                            taskVM.incrementTaskPomodoro(taskId: taskId)
+                                        }
+                                    }
                                 )
-                            },
-                            onMoveTask: { taskId, newStatus in
-                                withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
-                                    taskVM.moveTask(id: taskId, to: newStatus)
-                                }
-                            },
-                            onToggleTask: { task in
-                                withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
-                                    taskVM.toggleTaskCompletion(task)
-                                }
-                            },
-                            onDeleteTask: { taskId in
-                                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                    taskVM.deleteTask(withId: taskId)
-                                }
-                            },
-                            onEditTask: { task in
-                                editingTask = task
-                            },
-                            onIncrementPomodoro: { taskId in
-                                withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
-                                    taskVM.incrementTaskPomodoro(taskId: taskId)
-                                }
+                                .frame(width: columnWidth)
+                                .frame(maxHeight: .infinity)
+                                .id(status)
                             }
-                        )
-                        .frame(width: columnWidth)
-                        .frame(maxHeight: .infinity)
+                        }
+                        .padding(20)
+                        .frame(minWidth: totalWidth, minHeight: max(0, geometry.size.height - 40), alignment: .topLeading)
                     }
+                    .forceVisibleScrollers(horizontal: true, vertical: false)
+
+                    // Bottom Column Quick Navigation Bar (for 1-click jump for mouse users)
+                    HStack(spacing: 12) {
+                        Text("Jump to:")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(AppTheme.textTertiary)
+
+                        ForEach(TaskStatus.allCases) { status in
+                            Button {
+                                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                                    proxy.scrollTo(status, anchor: .center)
+                                }
+                            } label: {
+                                HStack(spacing: 5) {
+                                    Circle()
+                                        .fill(statusColor(status))
+                                        .frame(width: 6, height: 6)
+                                    Text(status.rawValue)
+                                        .font(.system(size: 11, weight: .medium))
+                                        .foregroundStyle(AppTheme.textPrimary)
+                                    Text("(\(taskVM.tasks(for: status).count))")
+                                        .font(.system(size: 10, weight: .bold).monospacedDigit())
+                                        .foregroundStyle(AppTheme.textSecondary)
+                                }
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(AppTheme.cardBackground)
+                                .clipShape(Capsule())
+                                .overlay(
+                                    Capsule()
+                                        .stroke(AppTheme.subtleBorder, lineWidth: 1)
+                                )
+                            }
+                            .buttonStyle(.plain)
+                        }
+
+                        Spacer()
+
+                        Button {
+                            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                                proxy.scrollTo(TaskStatus.todo, anchor: .leading)
+                            }
+                        } label: {
+                            Image(systemName: "chevron.left")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundStyle(AppTheme.textPrimary)
+                                .padding(6)
+                                .background(AppTheme.cardBackground)
+                                .clipShape(Circle())
+                        }
+                        .buttonStyle(.plain)
+                        .help("Scroll left to To Do")
+
+                        Button {
+                            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                                proxy.scrollTo(TaskStatus.done, anchor: .trailing)
+                            }
+                        } label: {
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundStyle(AppTheme.textPrimary)
+                                .padding(6)
+                                .background(AppTheme.cardBackground)
+                                .clipShape(Circle())
+                        }
+                        .buttonStyle(.plain)
+                        .help("Scroll right to Done")
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 6)
+                    .background(AppTheme.cardBackgroundSubtle.opacity(0.6))
+                    .overlay(
+                        Divider(), alignment: .top
+                    )
                 }
-                .padding(20)
-                .frame(minWidth: totalWidth, minHeight: geometry.size.height, alignment: .topLeading)
             }
-            .forceVisibleScrollers(horizontal: true, vertical: false)
+        }
+    }
+
+    private func statusColor(_ status: TaskStatus) -> Color {
+        switch status {
+        case .todo: return AppTheme.riverSlate
+        case .inProgress: return AppTheme.sandstone
+        case .done: return AppTheme.success
         }
     }
 

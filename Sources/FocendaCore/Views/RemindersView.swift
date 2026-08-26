@@ -505,7 +505,7 @@ public struct RemindersView: View {
     private func recurringReminderRow(_ reminder: RecurringReminder) -> some View {
         let isPlaying = playingChimeId == reminder.id
 
-        return HStack(spacing: 14) {
+        return HStack(spacing: 12) {
             // Enable / Disable Toggle Switch
             Toggle("", isOn: Binding(
                 get: { reminder.isEnabled },
@@ -527,10 +527,10 @@ public struct RemindersView: View {
                     .foregroundStyle(reminder.isEnabled ? AppTheme.accent : AppTheme.textTertiary)
 
                 Text(reminder.formattedTime)
-                    .font(.system(size: 13, weight: .bold, design: .monospaced))
+                    .font(.system(size: 12, weight: .bold, design: .monospaced))
                     .foregroundStyle(reminder.isEnabled ? AppTheme.textPrimary : AppTheme.textTertiary)
             }
-            .padding(.horizontal, 8)
+            .padding(.horizontal, 7)
             .padding(.vertical, 4)
             .background(
                 RoundedRectangle(cornerRadius: 6, style: .continuous)
@@ -540,8 +540,9 @@ public struct RemindersView: View {
                 RoundedRectangle(cornerRadius: 6, style: .continuous)
                     .stroke(reminder.isEnabled ? AppTheme.accent.opacity(0.25) : AppTheme.subtleBorder, lineWidth: 1)
             )
+            .fixedSize(horizontal: true, vertical: false)
 
-            // Title & Notes
+            // Title, Recurrence & Next Fire
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
                     Text(reminder.title)
@@ -552,46 +553,47 @@ public struct RemindersView: View {
                     // Recurrence Badge
                     HStack(spacing: 3) {
                         Image(systemName: reminder.repeatFrequency.iconName)
-                            .font(.system(size: 9))
+                            .font(.system(size: 8))
 
                         Text(reminder.repeatFrequency.rawValue)
-                            .font(.system(size: 10, weight: .medium))
+                            .font(.system(size: 9, weight: .medium))
                     }
-                    .padding(.horizontal, 6)
+                    .padding(.horizontal, 5)
                     .padding(.vertical, 2)
                     .background(AppTheme.cardBackgroundSubtle)
                     .foregroundStyle(AppTheme.textSecondary)
                     .clipShape(Capsule())
+                    .fixedSize(horizontal: true, vertical: false)
                 }
 
-                if !reminder.notes.isEmpty {
-                    Text(reminder.notes)
-                        .font(.system(size: 11))
-                        .foregroundStyle(AppTheme.textTertiary)
-                        .lineLimit(1)
+                HStack(spacing: 6) {
+                    if !reminder.notes.isEmpty {
+                        Text(reminder.notes)
+                            .font(.system(size: 11))
+                            .foregroundStyle(AppTheme.textTertiary)
+                            .lineLimit(1)
+                    }
+
+                    if reminder.isEnabled, let nextFire = reminder.nextFireDate() {
+                        Text("• Next: \(formattedRelativeTime(nextFire))")
+                            .font(.system(size: 10).monospacedDigit())
+                            .foregroundStyle(AppTheme.accent)
+                            .lineLimit(1)
+                    }
                 }
             }
-
-            Spacer(minLength: 8)
-
-            // Next fire preview
-            if reminder.isEnabled, let nextFire = reminder.nextFireDate() {
-                Text("Next: \(formattedRelativeTime(nextFire))")
-                    .font(.system(size: 10).monospacedDigit())
-                    .foregroundStyle(AppTheme.textTertiary)
-                    .lineLimit(1)
-            }
+            .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
 
             // Action Buttons: Sound Test, Edit, Delete
-            HStack(spacing: 6) {
+            HStack(spacing: 4) {
                 // Sound Test Button
                 Button {
                     triggerChimeFeedback(for: reminder.id)
                 } label: {
                     Image(systemName: isPlaying ? "speaker.wave.3.fill" : "speaker.wave.2")
-                        .font(.system(size: 12))
+                        .font(.system(size: 11))
                         .foregroundStyle(isPlaying ? AppTheme.accent : AppTheme.textSecondary)
-                        .padding(6)
+                        .padding(5)
                         .background(isPlaying ? AppTheme.accent.opacity(0.15) : AppTheme.cardBackgroundSubtle)
                         .clipShape(RoundedRectangle(cornerRadius: 6))
                 }
@@ -603,9 +605,9 @@ public struct RemindersView: View {
                     startEditing(reminder)
                 } label: {
                     Image(systemName: "pencil")
-                        .font(.system(size: 12))
+                        .font(.system(size: 11))
                         .foregroundStyle(AppTheme.textSecondary)
-                        .padding(6)
+                        .padding(5)
                         .background(AppTheme.cardBackgroundSubtle)
                         .clipShape(RoundedRectangle(cornerRadius: 6))
                 }
@@ -619,17 +621,18 @@ public struct RemindersView: View {
                     }
                 } label: {
                     Image(systemName: "trash")
-                        .font(.system(size: 12))
+                        .font(.system(size: 11))
                         .foregroundStyle(AppTheme.terracotta)
-                        .padding(6)
+                        .padding(5)
                         .background(AppTheme.terracotta.opacity(0.12))
                         .clipShape(RoundedRectangle(cornerRadius: 6))
                 }
                 .buttonStyle(.plain)
                 .help("Delete reminder")
             }
+            .fixedSize(horizontal: true, vertical: false)
         }
-        .padding(12)
+        .padding(10)
         .background(AppTheme.cardBackground)
         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
         .overlay(
@@ -726,17 +729,18 @@ public struct RemindersView: View {
             if let reminderDate = task.reminderDate {
                 HStack(spacing: 4) {
                     Image(systemName: "bell.fill")
-                        .font(.system(size: 10))
+                        .font(.system(size: 9))
                         .foregroundStyle(AppTheme.sandstone)
 
                     Text(formattedTaskReminderDate(reminderDate))
                         .font(.system(size: 11, weight: .bold, design: .monospaced))
                         .foregroundStyle(AppTheme.textPrimary)
                 }
-                .padding(.horizontal, 8)
+                .padding(.horizontal, 7)
                 .padding(.vertical, 4)
                 .background(AppTheme.sandstone.opacity(0.14))
                 .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                .fixedSize(horizontal: true, vertical: false)
             }
 
             // Task Details
@@ -754,28 +758,24 @@ public struct RemindersView: View {
                         .lineLimit(1)
                 }
             }
-
-            Spacer(minLength: 8)
+            .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
 
             // Priority Badge
-            Text(task.priority.rawValue)
-                .font(.system(size: 10, weight: .bold))
-                .padding(.horizontal, 6)
-                .padding(.vertical, 2)
-                .background(task.priority.color.opacity(0.14))
-                .foregroundStyle(task.priority.color)
-                .clipShape(Capsule())
+            HStack(spacing: 3) {
+                Circle()
+                    .fill(task.priority.color)
+                    .frame(width: 5, height: 5)
+                Text(task.priority.rawValue)
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(AppTheme.textSecondary)
+            }
+            .padding(.horizontal, 6)
+            .padding(.vertical, 3)
+            .background(AppTheme.cardBackgroundSubtle)
+            .clipShape(Capsule())
+            .fixedSize(horizontal: true, vertical: false)
 
-            // Status Badge
-            Text(task.status.rawValue)
-                .font(.system(size: 10, weight: .medium))
-                .padding(.horizontal, 6)
-                .padding(.vertical, 2)
-                .background(AppTheme.cardBackgroundSubtle)
-                .foregroundStyle(AppTheme.textSecondary)
-                .clipShape(Capsule())
-
-            // Clear Task Reminder Button
+            // Clear Reminder Action
             Button {
                 withAnimation(.spring(response: 0.25)) {
                     taskVM.removeReminder(for: task.id)
@@ -786,16 +786,16 @@ public struct RemindersView: View {
                     .foregroundStyle(AppTheme.textTertiary)
                     .padding(5)
                     .background(AppTheme.cardBackgroundSubtle)
-                    .clipShape(RoundedRectangle(cornerRadius: 5))
+                    .clipShape(Circle())
             }
             .buttonStyle(.plain)
-            .help("Clear task reminder")
+            .help("Remove reminder from this task")
         }
         .padding(10)
         .background(AppTheme.cardBackground)
-        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .stroke(AppTheme.subtleBorder, lineWidth: 1)
         )
     }
