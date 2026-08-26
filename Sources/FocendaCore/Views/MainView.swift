@@ -33,7 +33,7 @@ public struct MainView: View {
                 habitVM: habitVM,
                 bookmarkVM: bookmarkVM
             )
-            .navigationSplitViewColumnWidth(min: 210, ideal: 230, max: 280)
+            .navigationSplitViewColumnWidth(min: 220, ideal: 240, max: 280)
             .background(AppTheme.sidebarBackground)
         } detail: {
             Group {

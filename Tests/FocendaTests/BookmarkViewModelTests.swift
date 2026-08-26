@@ -56,6 +56,27 @@ final class BookmarkViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel2.bookmarks.first?.title, "PostgreSQL Docs")
     }
 
+    func testAddBookmarkWithBlankTitleAndCategory() {
+        let viewModel = BookmarkViewModel(userDefaults: testDefaults)
+
+        let item1 = viewModel.addBookmark(
+            title: "   ",
+            url: "https://example.com/api",
+            category: "  "
+        )
+        XCTAssertEqual(item1.title, "https://example.com/api")
+        XCTAssertEqual(item1.category, "General")
+        XCTAssertEqual(item1.iconName, "globe")
+
+        let item2 = viewModel.addBookmark(
+            title: "",
+            url: "   ",
+            category: ""
+        )
+        XCTAssertEqual(item2.title, "Quick Link")
+        XCTAssertEqual(item2.category, "General")
+    }
+
     func testUpdateBookmark() {
         let viewModel = BookmarkViewModel(userDefaults: testDefaults)
         guard var firstBookmark = viewModel.bookmarks.first else {
@@ -84,12 +105,26 @@ final class BookmarkViewModelTests: XCTestCase {
             return
         }
 
+        viewModel.selectedBookmarkId = first.id
         viewModel.deleteBookmark(id: first.id)
         XCTAssertEqual(viewModel.bookmarks.count, initialCount - 1)
         XCTAssertNil(viewModel.bookmarks.first(where: { $0.id == first.id }))
+        XCTAssertNil(viewModel.selectedBookmarkId)
 
         let viewModel2 = BookmarkViewModel(userDefaults: testDefaults)
         XCTAssertEqual(viewModel2.bookmarks.count, initialCount - 1)
+    }
+
+    func testDeleteBookmarkItemInstance() {
+        let viewModel = BookmarkViewModel(userDefaults: testDefaults)
+        let initialCount = viewModel.bookmarks.count
+        guard let first = viewModel.bookmarks.first else {
+            XCTFail("Expected bookmark")
+            return
+        }
+
+        viewModel.deleteBookmark(first)
+        XCTAssertEqual(viewModel.bookmarks.count, initialCount - 1)
     }
 
     func testTogglePin() {
@@ -155,6 +190,40 @@ final class BookmarkViewModelTests: XCTestCase {
         XCTAssertTrue(viewModel.filteredBookmarks.isEmpty)
     }
 
+    func testSearchByUrlAndHostAndCategory() {
+        let viewModel = BookmarkViewModel(userDefaults: testDefaults)
+
+        viewModel.searchQuery = "developer.apple.com"
+        XCTAssertEqual(viewModel.filteredBookmarks.count, 2)
+
+        viewModel.searchQuery = "lofi.cafe"
+        XCTAssertEqual(viewModel.filteredBookmarks.count, 1)
+        XCTAssertEqual(viewModel.filteredBookmarks.first?.title, "Lofi Cafe Stream")
+
+        viewModel.searchQuery = "Utilities"
+        XCTAssertEqual(viewModel.filteredBookmarks.count, 1)
+        XCTAssertEqual(viewModel.filteredBookmarks.first?.title, "Raycast Store & Script Commands")
+    }
+
+    func testSortingPinnedAndClicks() {
+        let viewModel = BookmarkViewModel(userDefaults: testDefaults)
+        viewModel.selectedCategory = "All"
+        viewModel.searchQuery = ""
+
+        let filtered = viewModel.filteredBookmarks
+        XCTAssertFalse(filtered.isEmpty)
+
+        // All pinned items must come before any unpinned items
+        var seenUnpinned = false
+        for bookmark in filtered {
+            if bookmark.isPinned {
+                XCTAssertFalse(seenUnpinned, "Pinned bookmark appeared after an unpinned bookmark")
+            } else {
+                seenUnpinned = true
+            }
+        }
+    }
+
     func testValidURLAndDisplayHost() {
         let item1 = BookmarkItem(title: "Test", url: "https://swift.org/blog/")
         XCTAssertEqual(item1.validURL?.absoluteString, "https://swift.org/blog/")
@@ -187,5 +256,23 @@ final class BookmarkViewModelTests: XCTestCase {
         viewModel.addBookmark(title: "Custom Link", url: "https://custom.xyz", category: "DevOps")
         XCTAssertTrue(viewModel.allCategories.contains("DevOps"))
         XCTAssertEqual(viewModel.categoryCount(for: "DevOps"), 1)
+    }
+
+    func testBookmarkPresetCategoryEnumeration() {
+        let categories = BookmarkPresetCategory.allCases
+        XCTAssertEqual(categories.count, 7)
+
+        for category in categories {
+            XCTAssertEqual(category.id, category.rawValue)
+            XCTAssertFalse(category.iconName.isEmpty)
+        }
+
+        XCTAssertEqual(BookmarkPresetCategory.all.iconName, "square.grid.2x2")
+        XCTAssertEqual(BookmarkPresetCategory.focus.iconName, "brain.head.profile")
+        XCTAssertEqual(BookmarkPresetCategory.dev.iconName, "chevron.left.forwardslash.chevron.right")
+        XCTAssertEqual(BookmarkPresetCategory.docs.iconName, "book.closed.fill")
+        XCTAssertEqual(BookmarkPresetCategory.design.iconName, "paintpalette.fill")
+        XCTAssertEqual(BookmarkPresetCategory.reference.iconName, "bookmark.fill")
+        XCTAssertEqual(BookmarkPresetCategory.utilities.iconName, "wrench.and.screwdriver.fill")
     }
 }

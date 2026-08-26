@@ -195,8 +195,10 @@ public struct BookmarksView: View {
                     .buttonStyle(.plain)
                 }
             }
+            .padding(.horizontal, 2)
             .padding(.vertical, 2)
         }
+        .scrollClipDisabled()
     }
 
     // MARK: - Stats Banner
@@ -205,7 +207,14 @@ public struct BookmarksView: View {
         let pinnedCount = viewModel.bookmarks.filter { $0.isPinned }.count
         let totalClicks = viewModel.bookmarks.reduce(0) { $0 + $1.clickCount }
 
-        return HStack(spacing: 14) {
+        return LazyVGrid(
+            columns: [
+                GridItem(.flexible(minimum: 140)),
+                GridItem(.flexible(minimum: 140)),
+                GridItem(.flexible(minimum: 140))
+            ],
+            spacing: 12
+        ) {
             statCard(
                 title: "Total Bookmarks",
                 value: "\(totalCount)",
@@ -270,9 +279,9 @@ public struct BookmarksView: View {
     private var bookmarksGridSection: some View {
         LazyVGrid(
             columns: [
-                GridItem(.adaptive(minimum: 280, maximum: 360), spacing: 16)
+                GridItem(.adaptive(minimum: 260, maximum: .infinity), spacing: 14)
             ],
-            spacing: 16
+            spacing: 14
         ) {
             ForEach(viewModel.filteredBookmarks) { bookmark in
                 bookmarkCard(bookmark)

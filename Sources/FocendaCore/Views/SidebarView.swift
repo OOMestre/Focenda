@@ -134,114 +134,114 @@ private struct SidebarRowItem: View {
     let isPulsingDot: Bool
 
     var body: some View {
-        Label {
-            HStack {
-                Text(tab.rawValue)
-                    .font(.body.weight(isSelected ? .semibold : .regular))
+        HStack(spacing: 9) {
+            Image(systemName: tab.iconName)
+                .font(.system(size: 14))
+                .foregroundStyle(isSelected ? AppTheme.accent : AppTheme.textTertiary)
+                .frame(width: 18, alignment: .center)
+
+            Text(tab.rawValue)
+                .font(.body.weight(isSelected ? .semibold : .regular))
+                .foregroundStyle(isSelected ? AppTheme.textPrimary : AppTheme.textSecondary)
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
+
+            Spacer()
+
+            // Status Badges
+            if tab == .timer && timerIsRunning {
+                HStack(spacing: 4) {
+                    Circle()
+                        .fill(AppTheme.success)
+                        .frame(width: 6, height: 6)
+                        .scaleEffect(isPulsingDot ? 1.15 : 0.85)
+                        .opacity(isPulsingDot ? 1.0 : 0.6)
+                        .animation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true), value: isPulsingDot)
+
+                    Text("RUNNING")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(AppTheme.success)
+                        .lineLimit(1)
+                        .fixedSize(horizontal: true, vertical: false)
+                }
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2)
+                .background(AppTheme.success.opacity(0.12))
+                .clipShape(Capsule())
+                .fixedSize(horizontal: true, vertical: false)
+            } else if tab == .tasks && pendingTasksCount > 0 {
+                Text("\(pendingTasksCount)")
+                    .font(.caption2.bold())
                     .foregroundStyle(isSelected ? AppTheme.textPrimary : AppTheme.textSecondary)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 2)
+                    .background(
+                        Capsule()
+                            .fill(isSelected ? AppTheme.accent.opacity(0.15) : AppTheme.cardBackgroundSubtle)
+                    )
+                    .contentTransition(.numericText())
                     .lineLimit(1)
                     .fixedSize(horizontal: true, vertical: false)
-
-                Spacer()
-
-                // Status Badges
-                if tab == .timer && timerIsRunning {
-                    HStack(spacing: 4) {
-                        Circle()
-                            .fill(AppTheme.success)
-                            .frame(width: 6, height: 6)
-                            .scaleEffect(isPulsingDot ? 1.15 : 0.85)
-                            .opacity(isPulsingDot ? 1.0 : 0.6)
-                            .animation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true), value: isPulsingDot)
-
-                        Text("RUNNING")
+            } else if tab == .kanban && inProgressTasksCount > 0 {
+                HStack(spacing: 3) {
+                    Circle()
+                        .fill(AppTheme.sandstone)
+                        .frame(width: 5, height: 5)
+                    Text("\(inProgressTasksCount)")
+                        .font(.caption2.bold())
+                        .foregroundStyle(isSelected ? AppTheme.textPrimary : AppTheme.textSecondary)
+                }
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2)
+                .background(AppTheme.sandstone.opacity(0.12))
+                .clipShape(Capsule())
+                .contentTransition(.numericText())
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
+            } else if tab == .habits && totalHabitsCount > 0 {
+                if habitsCompletedToday == totalHabitsCount {
+                    HStack(spacing: 3) {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 8, weight: .bold))
+                        Text("DONE")
                             .font(.system(size: 9, weight: .bold))
-                            .foregroundStyle(AppTheme.success)
                             .lineLimit(1)
                             .fixedSize(horizontal: true, vertical: false)
                     }
+                    .foregroundStyle(AppTheme.success)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
                     .background(AppTheme.success.opacity(0.12))
                     .clipShape(Capsule())
                     .fixedSize(horizontal: true, vertical: false)
-                } else if tab == .tasks && pendingTasksCount > 0 {
-                    Text("\(pendingTasksCount)")
-                        .font(.caption2.bold())
-                        .foregroundStyle(isSelected ? AppTheme.textPrimary : AppTheme.textSecondary)
-                        .padding(.horizontal, 7)
-                        .padding(.vertical, 2)
-                        .background(
-                            Capsule()
-                                .fill(isSelected ? AppTheme.accent.opacity(0.15) : AppTheme.cardBackgroundSubtle)
-                        )
-                        .contentTransition(.numericText())
-                        .lineLimit(1)
-                        .fixedSize(horizontal: true, vertical: false)
-                } else if tab == .kanban && inProgressTasksCount > 0 {
+                } else if longestHabitStreak > 0 {
                     HStack(spacing: 3) {
-                        Circle()
-                            .fill(AppTheme.sandstone)
-                            .frame(width: 5, height: 5)
-                        Text("\(inProgressTasksCount)")
+                        Image(systemName: "flame.fill")
+                            .font(.system(size: 8))
+                            .foregroundStyle(AppTheme.sandstone)
+                        Text("\(longestHabitStreak)d")
                             .font(.caption2.bold())
                             .foregroundStyle(isSelected ? AppTheme.textPrimary : AppTheme.textSecondary)
+                            .lineLimit(1)
+                            .fixedSize(horizontal: true, vertical: false)
                     }
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
                     .background(AppTheme.sandstone.opacity(0.12))
                     .clipShape(Capsule())
-                    .contentTransition(.numericText())
+                    .fixedSize(horizontal: true, vertical: false)
+                }
+            } else if tab == .bookmarks && totalBookmarksCount > 0 {
+                Text("\(totalBookmarksCount)")
+                    .font(.caption2.bold())
+                    .foregroundStyle(isSelected ? AppTheme.textPrimary : AppTheme.textSecondary)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(AppTheme.cardBackgroundSubtle)
+                    .clipShape(Capsule())
                     .lineLimit(1)
                     .fixedSize(horizontal: true, vertical: false)
-                } else if tab == .habits && totalHabitsCount > 0 {
-                    if habitsCompletedToday == totalHabitsCount {
-                        HStack(spacing: 3) {
-                            Image(systemName: "checkmark")
-                                .font(.system(size: 8, weight: .bold))
-                            Text("DONE")
-                                .font(.system(size: 9, weight: .bold))
-                                .lineLimit(1)
-                                .fixedSize(horizontal: true, vertical: false)
-                        }
-                        .foregroundStyle(AppTheme.success)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(AppTheme.success.opacity(0.12))
-                        .clipShape(Capsule())
-                        .fixedSize(horizontal: true, vertical: false)
-                    } else if longestHabitStreak > 0 {
-                        HStack(spacing: 3) {
-                            Image(systemName: "flame.fill")
-                                .font(.system(size: 8))
-                                .foregroundStyle(AppTheme.sandstone)
-                            Text("\(longestHabitStreak)d")
-                                .font(.caption2.bold())
-                                .foregroundStyle(isSelected ? AppTheme.textPrimary : AppTheme.textSecondary)
-                                .lineLimit(1)
-                                .fixedSize(horizontal: true, vertical: false)
-                        }
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(AppTheme.sandstone.opacity(0.12))
-                        .clipShape(Capsule())
-                        .fixedSize(horizontal: true, vertical: false)
-                    }
-                } else if tab == .bookmarks && totalBookmarksCount > 0 {
-                    Text("\(totalBookmarksCount)")
-                        .font(.caption2.bold())
-                        .foregroundStyle(isSelected ? AppTheme.textPrimary : AppTheme.textSecondary)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(AppTheme.cardBackgroundSubtle)
-                        .clipShape(Capsule())
-                        .lineLimit(1)
-                        .fixedSize(horizontal: true, vertical: false)
-                }
             }
-        } icon: {
-            Image(systemName: tab.iconName)
-                .foregroundStyle(isSelected ? AppTheme.accent : AppTheme.textTertiary)
         }
     }
 }
