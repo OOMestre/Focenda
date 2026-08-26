@@ -5,17 +5,22 @@ final class ScratchpadViewModelTests: XCTestCase {
 
     var testDefaults: UserDefaults!
     private let testKey = "test_focenda_scratchpads_isolated"
+    private let testFoldersKey = "test_focenda_folders_isolated"
 
     override func setUp() {
         super.setUp()
         testDefaults = UserDefaults.standard
         testDefaults.removeObject(forKey: testKey)
+        testDefaults.removeObject(forKey: testFoldersKey)
         testDefaults.removeObject(forKey: ScratchpadViewModel.userDefaultsKey)
+        testDefaults.removeObject(forKey: ScratchpadViewModel.foldersUserDefaultsKey)
     }
 
     override func tearDown() {
         testDefaults.removeObject(forKey: testKey)
+        testDefaults.removeObject(forKey: testFoldersKey)
         testDefaults.removeObject(forKey: ScratchpadViewModel.userDefaultsKey)
+        testDefaults.removeObject(forKey: ScratchpadViewModel.foldersUserDefaultsKey)
         testDefaults = nil
         super.tearDown()
     }
@@ -32,6 +37,7 @@ final class ScratchpadViewModelTests: XCTestCase {
             XCTAssertEqual(viewModel.notes[index].color, color)
             XCTAssertTrue(viewModel.notes[index].content.isEmpty)
             XCTAssertEqual(viewModel.notes[index].title, "\(color.rawValue) Scratchpad")
+            XCTAssertEqual(viewModel.notes[index].folder, "General")
         }
     }
 
@@ -99,17 +105,19 @@ final class ScratchpadViewModelTests: XCTestCase {
         let viewModel = ScratchpadViewModel(userDefaults: testDefaults)
         let initialCount = viewModel.notes.count
 
-        let newNote = viewModel.createNote(color: .rose, title: "Sprint Backlog", content: "Refactor engine")
+        let newNote = viewModel.createNote(color: .rose, title: "Sprint Backlog", content: "Refactor engine", folder: "Projects")
         XCTAssertEqual(viewModel.notes.count, initialCount + 1)
         XCTAssertEqual(viewModel.selectedNoteId, newNote.id)
         XCTAssertEqual(viewModel.selectedColor, .rose)
         XCTAssertEqual(viewModel.currentNote.title, "Sprint Backlog")
         XCTAssertEqual(viewModel.currentNote.content, "Refactor engine")
+        XCTAssertEqual(viewModel.currentNote.folder, "Projects")
 
         // Check persistence
         let viewModel2 = ScratchpadViewModel(userDefaults: testDefaults)
         XCTAssertEqual(viewModel2.notes.count, initialCount + 1)
         XCTAssertEqual(viewModel2.notes.first?.title, "Sprint Backlog")
+        XCTAssertEqual(viewModel2.notes.first?.folder, "Projects")
     }
 
     func testDeleteNote() {
@@ -226,7 +234,7 @@ final class ScratchpadViewModelTests: XCTestCase {
     }
 
     func testBackwardsCompatibilityDecoding() throws {
-        // Mock legacy JSON without UUID id or createdAt
+        // Mock legacy JSON without UUID id or folder
         let legacyJson = """
         [
             {"color": "Amber", "title": "Old Amber", "content": "Legacy content", "updatedAt": 1724630000},
@@ -241,6 +249,7 @@ final class ScratchpadViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.notes[0].color, .amber)
         XCTAssertEqual(viewModel.notes[0].title, "Old Amber")
         XCTAssertEqual(viewModel.notes[0].content, "Legacy content")
+        XCTAssertEqual(viewModel.notes[0].folder, "General")
     }
 
     func testTimerAdjustTime() {
@@ -256,5 +265,96 @@ final class ScratchpadViewModelTests: XCTestCase {
         // Test clamping to minimum 60 seconds
         timerVM.adjustTime(byMinutes: -100)
         XCTAssertEqual(timerVM.timeRemainingSeconds, 60)
+    }
+
+    // MARK: - Folder & Notebook Organization Tests
+
+    func testDefaultFoldersInitialization() {
+        let viewModel = ScratchpadViewModel(userDefaults: testDefaults)
+        XCTAssertEqual(viewModel.folders, ["General", "Projects", "Work", "Personal", "Ideas"])
+        XCTAssertEqual(viewModel.selectedFolder, ScratchpadViewModel.allNotesFolder)
+        XCTAssertEqual(viewModel.noteCount(for: "General"), 5)
+        XCTAssertEqual(viewModel.noteCount(for: "Projects"), 0)
+    }
+
+    func testCreateNewFolder() {
+        let viewModel = ScratchpadViewModel(userDefaults: testDefaults)
+        let created = viewModel.createFolder("Design System")
+        XCTAssertTrue(created)
+        XCTAssertTrue(viewModel.folders.contains("Design System"))
+        XCTAssertEqual(viewModel.selectedFolder, "Design System")
+
+        // Creating note now creates it directly in Design System
+        let note = viewModel.createNote(title: "Typography Scale")
+        XCTAssertEqual(note.folder, "Design System")
+        XCTAssertEqual(viewModel.noteCount(for: "Design System"), 1)
+
+        // Duplicate folder creation selects existing without adding duplicate
+        let countBefore = viewModel.folders.count
+        let createdDuplicate = viewModel.createFolder("design system")
+        XCTAssertTrue(createdDuplicate)
+        XCTAssertEqual(viewModel.folders.count, countBefore)
+    }
+
+    func testDeleteFolderReassignsNotes() {
+        let viewModel = ScratchpadViewModel(userDefaults: testDefaults)
+        viewModel.createFolder("Sprint 42")
+        let note = viewModel.createNote(title: "Sprint Tasks", folder: "Sprint 42")
+        XCTAssertEqual(viewModel.noteCount(for: "Sprint 42"), 1)
+
+        viewModel.deleteFolder("Sprint 42")
+        XCTAssertFalse(viewModel.folders.contains("Sprint 42"))
+        XCTAssertEqual(viewModel.selectedFolder, ScratchpadViewModel.allNotesFolder)
+
+        // The note should be reassigned to General
+        let reassignedNote = viewModel.notes.first(where: { $0.id == note.id })
+        XCTAssertEqual(reassignedNote?.folder, "General")
+        XCTAssertEqual(viewModel.noteCount(for: "General"), 6)
+    }
+
+    func testMoveNoteToFolder() {
+        let viewModel = ScratchpadViewModel(userDefaults: testDefaults)
+        let note = viewModel.notes[0]
+        XCTAssertEqual(note.folder, "General")
+
+        viewModel.moveNote(note, to: "Work")
+        let updatedNote = viewModel.notes.first(where: { $0.id == note.id })
+        XCTAssertEqual(updatedNote?.folder, "Work")
+        XCTAssertEqual(viewModel.noteCount(for: "Work"), 1)
+        XCTAssertEqual(viewModel.noteCount(for: "General"), 4)
+
+        // Verify persistence
+        let viewModel2 = ScratchpadViewModel(userDefaults: testDefaults)
+        XCTAssertEqual(viewModel2.notes.first(where: { $0.id == note.id })?.folder, "Work")
+    }
+
+    func testFilterNotesByActiveFolder() {
+        let viewModel = ScratchpadViewModel(userDefaults: testDefaults)
+        viewModel.createNote(title: "Work Doc", content: "Meeting", folder: "Work")
+        viewModel.createNote(title: "Personal Habit", content: "Gym", folder: "Personal")
+
+        // In All Notes, both are visible
+        viewModel.selectFolder(ScratchpadViewModel.allNotesFolder)
+        XCTAssertEqual(viewModel.filteredNotes.count, 7)
+
+        // In Work, only Work notes are visible
+        viewModel.selectFolder("Work")
+        XCTAssertEqual(viewModel.filteredNotes.count, 1)
+        XCTAssertEqual(viewModel.filteredNotes.first?.title, "Work Doc")
+
+        // In Personal, only Personal notes are visible
+        viewModel.selectFolder("Personal")
+        XCTAssertEqual(viewModel.filteredNotes.count, 1)
+        XCTAssertEqual(viewModel.filteredNotes.first?.title, "Personal Habit")
+    }
+
+    func testFolderIcons() {
+        XCTAssertEqual(ScratchpadViewModel.iconForFolder("All Notes"), "tray.full")
+        XCTAssertEqual(ScratchpadViewModel.iconForFolder("General"), "doc.text")
+        XCTAssertEqual(ScratchpadViewModel.iconForFolder("Projects"), "briefcase")
+        XCTAssertEqual(ScratchpadViewModel.iconForFolder("Work"), "building.2")
+        XCTAssertEqual(ScratchpadViewModel.iconForFolder("Personal"), "person")
+        XCTAssertEqual(ScratchpadViewModel.iconForFolder("Ideas"), "lightbulb")
+        XCTAssertEqual(ScratchpadViewModel.iconForFolder("CustomXYZ"), "folder")
     }
 }

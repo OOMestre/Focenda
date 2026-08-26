@@ -9,6 +9,7 @@ struct FocendaApp: App {
     @State private var taskVM = TaskListViewModel()
     @State private var habitVM = HabitViewModel()
     @State private var scratchpadVM = ScratchpadViewModel()
+    @State private var bookmarkVM = BookmarkViewModel()
 
     var body: some Scene {
         WindowGroup {
@@ -17,7 +18,8 @@ struct FocendaApp: App {
                 timerVM: timerVM,
                 taskVM: taskVM,
                 habitVM: habitVM,
-                scratchpadVM: scratchpadVM
+                scratchpadVM: scratchpadVM,
+                bookmarkVM: bookmarkVM
             )
         }
         .windowStyle(.titleBar)

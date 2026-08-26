@@ -5,6 +5,7 @@ public struct SidebarView: View {
     var timerVM: FocusTimerViewModel
     var taskVM: TaskListViewModel
     var habitVM: HabitViewModel
+    var bookmarkVM: BookmarkViewModel
 
     @State private var isPulsingDot = false
 
@@ -12,12 +13,14 @@ public struct SidebarView: View {
         appState: AppState,
         timerVM: FocusTimerViewModel,
         taskVM: TaskListViewModel,
-        habitVM: HabitViewModel = HabitViewModel()
+        habitVM: HabitViewModel = HabitViewModel(),
+        bookmarkVM: BookmarkViewModel = BookmarkViewModel()
     ) {
         self.appState = appState
         self.timerVM = timerVM
         self.taskVM = taskVM
         self.habitVM = habitVM
+        self.bookmarkVM = bookmarkVM
     }
 
     public var body: some View {
@@ -31,6 +34,7 @@ public struct SidebarView: View {
                     habitsCompletedToday: habitVM.totalCompletionsToday,
                     totalHabitsCount: habitVM.habits.count,
                     longestHabitStreak: habitVM.longestStreak,
+                    totalBookmarksCount: bookmarkVM.bookmarks.count,
                     isPulsingDot: isPulsingDot
                 )
             }
@@ -124,6 +128,7 @@ private struct SidebarRowItem: View {
     let habitsCompletedToday: Int
     let totalHabitsCount: Int
     let longestHabitStreak: Int
+    let totalBookmarksCount: Int
     let isPulsingDot: Bool
 
     var body: some View {
@@ -132,6 +137,8 @@ private struct SidebarRowItem: View {
                 Text(tab.rawValue)
                     .font(.body.weight(isSelected ? .semibold : .regular))
                     .foregroundStyle(isSelected ? AppTheme.textPrimary : AppTheme.textSecondary)
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
 
                 Spacer()
 
@@ -148,11 +155,14 @@ private struct SidebarRowItem: View {
                         Text("RUNNING")
                             .font(.system(size: 9, weight: .bold))
                             .foregroundStyle(AppTheme.success)
+                            .lineLimit(1)
+                            .fixedSize(horizontal: true, vertical: false)
                     }
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
                     .background(AppTheme.success.opacity(0.12))
                     .clipShape(Capsule())
+                    .fixedSize(horizontal: true, vertical: false)
                 } else if tab == .tasks && pendingTasksCount > 0 {
                     Text("\(pendingTasksCount)")
                         .font(.caption2.bold())
@@ -164,6 +174,8 @@ private struct SidebarRowItem: View {
                                 .fill(isSelected ? AppTheme.accent.opacity(0.15) : AppTheme.cardBackgroundSubtle)
                         )
                         .contentTransition(.numericText())
+                        .lineLimit(1)
+                        .fixedSize(horizontal: true, vertical: false)
                 } else if tab == .habits && totalHabitsCount > 0 {
                     if habitsCompletedToday == totalHabitsCount {
                         HStack(spacing: 3) {
@@ -171,12 +183,15 @@ private struct SidebarRowItem: View {
                                 .font(.system(size: 8, weight: .bold))
                             Text("DONE")
                                 .font(.system(size: 9, weight: .bold))
+                                .lineLimit(1)
+                                .fixedSize(horizontal: true, vertical: false)
                         }
                         .foregroundStyle(AppTheme.success)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
                         .background(AppTheme.success.opacity(0.12))
                         .clipShape(Capsule())
+                        .fixedSize(horizontal: true, vertical: false)
                     } else if longestHabitStreak > 0 {
                         HStack(spacing: 3) {
                             Image(systemName: "flame.fill")
@@ -185,11 +200,14 @@ private struct SidebarRowItem: View {
                             Text("\(longestHabitStreak)d")
                                 .font(.caption2.bold())
                                 .foregroundStyle(isSelected ? AppTheme.textPrimary : AppTheme.textSecondary)
+                                .lineLimit(1)
+                                .fixedSize(horizontal: true, vertical: false)
                         }
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
                         .background(AppTheme.sandstone.opacity(0.12))
                         .clipShape(Capsule())
+                        .fixedSize(horizontal: true, vertical: false)
                     }
                 }
             }

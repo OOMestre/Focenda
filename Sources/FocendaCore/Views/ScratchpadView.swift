@@ -5,6 +5,8 @@ public struct ScratchpadView: View {
     @Bindable var viewModel: ScratchpadViewModel
     @State private var showingDeleteConfirmation = false
     @State private var copiedFeedback = false
+    @State private var showingNewFolderSheet = false
+    @State private var newFolderName = ""
     @FocusState private var isEditorFocused: Bool
     @FocusState private var isTitleFocused: Bool
 
@@ -19,11 +21,19 @@ public struct ScratchpadView: View {
 
             Divider()
 
-            // Main Master-Detail Area
+            // Main 3-Pane Area (Folders Sidebar + Notes List + Editor)
             HStack(spacing: 0) {
-                // Notes List (Left Master Column)
+                // Folder / Notebook Sidebar (Leftmost Column)
+                if viewModel.showFoldersSidebar {
+                    foldersSidebarPane
+                        .frame(width: 190)
+
+                    Divider()
+                }
+
+                // Notes List (Middle Master Column)
                 notesListPane
-                    .frame(width: 280)
+                    .frame(width: 275)
 
                 Divider()
 
@@ -48,15 +58,40 @@ public struct ScratchpadView: View {
         } message: {
             Text("Are you sure you want to delete \"\(viewModel.currentNote.displayTitle)\"? This action cannot be undone.")
         }
+        .sheet(isPresented: $showingNewFolderSheet) {
+            newFolderSheet
+        }
     }
 
     // MARK: - Header Bar
     private var headerBar: some View {
-        HStack(spacing: 16) {
+        HStack(spacing: 14) {
+            // Folders Sidebar Toggle Button
+            Button {
+                withAnimation(.spring(response: 0.25)) {
+                    viewModel.showFoldersSidebar.toggle()
+                }
+            } label: {
+                Image(systemName: "sidebar.left")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(viewModel.showFoldersSidebar ? AppTheme.accent : AppTheme.textSecondary)
+                    .padding(6)
+                    .background(viewModel.showFoldersSidebar ? AppTheme.accent.opacity(0.12) : AppTheme.cardBackground)
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6)
+                            .stroke(viewModel.showFoldersSidebar ? AppTheme.accent.opacity(0.3) : AppTheme.border, lineWidth: 1)
+                    )
+            }
+            .buttonStyle(.plain)
+            .help(viewModel.showFoldersSidebar ? "Hide Folders Sidebar" : "Show Folders Sidebar")
+
             // Title
             Text("Scratchpad")
                 .font(.system(size: 20, weight: .bold, design: .rounded))
                 .foregroundStyle(AppTheme.textPrimary)
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
 
             // Search Bar
             HStack(spacing: 6) {
@@ -64,7 +99,7 @@ public struct ScratchpadView: View {
                     .font(.system(size: 12))
                     .foregroundStyle(AppTheme.textTertiary)
 
-                TextField("Search notes...", text: $viewModel.searchQuery)
+                TextField("Search notes, folders...", text: $viewModel.searchQuery)
                     .textFieldStyle(.plain)
                     .font(.system(size: 13))
                     .foregroundStyle(AppTheme.textPrimary)
@@ -82,7 +117,7 @@ public struct ScratchpadView: View {
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
-            .frame(minWidth: 160, idealWidth: 200, maxWidth: 240)
+            .frame(minWidth: 160, idealWidth: 190, maxWidth: 220)
             .background(AppTheme.cardBackground)
             .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
             .overlay(
@@ -113,13 +148,15 @@ public struct ScratchpadView: View {
             } label: {
                 Label("New Note", systemImage: "plus")
                     .font(.system(size: 13, weight: .medium))
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
             }
             .buttonStyle(.borderedProminent)
             .tint(AppTheme.deepFocus)
             .controlSize(.regular)
-            .help("Create a new note")
+            .help("Create a new note in active folder")
         }
-        .padding(.horizontal, 20)
+        .padding(.horizontal, 18)
         .padding(.vertical, 12)
         .background(AppTheme.background)
     }
@@ -142,6 +179,8 @@ public struct ScratchpadView: View {
                 Text(title)
                     .font(.system(size: 12, weight: isSelected ? .semibold : .regular))
                     .foregroundStyle(isSelected ? (color?.color ?? AppTheme.textPrimary) : AppTheme.textSecondary)
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 5)
@@ -161,9 +200,178 @@ public struct ScratchpadView: View {
         .help(color == nil ? "Show all notes" : "Filter by \(color!.rawValue)")
     }
 
-    // MARK: - Notes List (Left Pane)
+    // MARK: - Folders Sidebar Pane (Leftmost Column)
+    private var foldersSidebarPane: some View {
+        VStack(spacing: 0) {
+            // Folders Header
+            HStack {
+                Text("Folders")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(AppTheme.textTertiary)
+                    .textCase(.uppercase)
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
+
+                Spacer()
+
+                Button {
+                    newFolderName = ""
+                    showingNewFolderSheet = true
+                } label: {
+                    Image(systemName: "plus")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(AppTheme.textSecondary)
+                        .padding(4)
+                }
+                .buttonStyle(.plain)
+                .help("Add new folder")
+            }
+            .padding(.horizontal, 14)
+            .padding(.top, 12)
+            .padding(.bottom, 6)
+
+            // Folders List
+            ScrollView {
+                VStack(spacing: 3) {
+                    // All Notes item
+                    folderRowItem(
+                        name: ScratchpadViewModel.allNotesFolder,
+                        icon: "tray.full",
+                        count: viewModel.noteCount(for: ScratchpadViewModel.allNotesFolder),
+                        isDeletable: false
+                    )
+
+                    Divider()
+                        .padding(.vertical, 4)
+
+                    // Individual Folder items
+                    ForEach(viewModel.folders, id: \.self) { folder in
+                        folderRowItem(
+                            name: folder,
+                            icon: ScratchpadViewModel.iconForFolder(folder),
+                            count: viewModel.noteCount(for: folder),
+                            isDeletable: folder != "General"
+                        )
+                    }
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+            }
+
+            Divider()
+
+            // Bottom Add Folder Button
+            Button {
+                newFolderName = ""
+                showingNewFolderSheet = true
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "folder.badge.plus")
+                        .font(.system(size: 12))
+                    Text("New Folder")
+                        .font(.system(size: 12, weight: .medium))
+                        .lineLimit(1)
+                        .fixedSize(horizontal: true, vertical: false)
+                    Spacer()
+                }
+                .foregroundStyle(AppTheme.accent)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+            }
+            .buttonStyle(.plain)
+            .background(AppTheme.cardBackgroundSubtle)
+        }
+        .background(AppTheme.sidebarBackground)
+    }
+
+    private func folderRowItem(name: String, icon: String, count: Int, isDeletable: Bool) -> some View {
+        let isSelected = viewModel.selectedFolder.caseInsensitiveCompare(name) == .orderedSame
+
+        return Button {
+            withAnimation(.spring(response: 0.25)) {
+                viewModel.selectFolder(name)
+            }
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(isSelected ? AppTheme.accent : AppTheme.textSecondary)
+                    .frame(width: 16)
+
+                Text(name)
+                    .font(.system(size: 13, weight: isSelected ? .semibold : .regular))
+                    .foregroundStyle(isSelected ? AppTheme.textPrimary : AppTheme.textSecondary)
+                    .lineLimit(1)
+
+                Spacer(minLength: 4)
+
+                Text("\(count)")
+                    .font(.system(size: 11, weight: .medium).monospacedDigit())
+                    .foregroundStyle(isSelected ? AppTheme.accent : AppTheme.textTertiary)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(
+                        Capsule()
+                            .fill(isSelected ? AppTheme.accent.opacity(0.18) : AppTheme.cardBackground)
+                    )
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+            .background(
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .fill(isSelected ? AppTheme.accent.opacity(0.12) : Color.clear)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .stroke(isSelected ? AppTheme.accent.opacity(0.35) : Color.clear, lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+        .contextMenu {
+            if isDeletable {
+                Button(role: .destructive) {
+                    withAnimation(.spring(response: 0.25)) {
+                        viewModel.deleteFolder(name)
+                    }
+                } label: {
+                    Label("Delete Folder", systemImage: "trash")
+                }
+            }
+        }
+    }
+
+    // MARK: - Notes List (Middle Column)
     private var notesListPane: some View {
         VStack(spacing: 0) {
+            // Notes List Header info
+            HStack {
+                HStack(spacing: 5) {
+                    Image(systemName: ScratchpadViewModel.iconForFolder(viewModel.selectedFolder))
+                        .font(.system(size: 11))
+                        .foregroundStyle(AppTheme.accent)
+
+                    Text(viewModel.selectedFolder)
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(AppTheme.textPrimary)
+                        .lineLimit(1)
+                }
+
+                Spacer()
+
+                Text("\(viewModel.filteredNotes.count) \(viewModel.filteredNotes.count == 1 ? "note" : "notes")")
+                    .font(.system(size: 11).monospacedDigit())
+                    .foregroundStyle(AppTheme.textTertiary)
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(AppTheme.cardBackgroundSubtle)
+
+            Divider()
+
             if viewModel.filteredNotes.isEmpty {
                 VStack(spacing: 12) {
                     Spacer()
@@ -171,9 +379,11 @@ public struct ScratchpadView: View {
                         .font(.system(size: 32))
                         .foregroundStyle(AppTheme.textTertiary)
 
-                    Text(viewModel.searchQuery.isEmpty ? "No notes found" : "No matching notes")
+                    Text(viewModel.searchQuery.isEmpty ? "No notes in \(viewModel.selectedFolder)" : "No matching notes")
                         .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(AppTheme.textSecondary)
+                        .lineLimit(1)
+                        .fixedSize(horizontal: true, vertical: false)
 
                     if !viewModel.searchQuery.isEmpty {
                         Button("Clear Search") {
@@ -191,6 +401,8 @@ public struct ScratchpadView: View {
                         } label: {
                             Label("New Note", systemImage: "plus")
                                 .font(.caption.weight(.medium))
+                                .lineLimit(1)
+                                .fixedSize(horizontal: true, vertical: false)
                         }
                         .buttonStyle(.bordered)
                         .controlSize(.small)
@@ -206,23 +418,9 @@ public struct ScratchpadView: View {
                             noteCardRow(for: note)
                         }
                     }
-                    .padding(10)
+                    .padding(8)
                 }
             }
-
-            Divider()
-
-            // List Footer
-            HStack {
-                Text("\(viewModel.filteredNotes.count) \(viewModel.filteredNotes.count == 1 ? "note" : "notes")")
-                    .font(.caption2)
-                    .foregroundStyle(AppTheme.textSecondary)
-
-                Spacer()
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(AppTheme.cardBackgroundSubtle)
         }
         .background(AppTheme.background)
     }
@@ -236,9 +434,9 @@ public struct ScratchpadView: View {
                 viewModel.selectNote(note)
             }
         } label: {
-            VStack(alignment: .leading, spacing: 6) {
-                // Header: Color dot + Title + Pin
-                HStack(alignment: .center, spacing: 8) {
+            VStack(alignment: .leading, spacing: 5) {
+                // Header: Color dot + Title + Folder badge + Pin
+                HStack(alignment: .center, spacing: 6) {
                     Circle()
                         .fill(note.color.color)
                         .frame(width: 8, height: 8)
@@ -249,13 +447,31 @@ public struct ScratchpadView: View {
                         .foregroundStyle(isSelected ? AppTheme.textPrimary : AppTheme.textPrimary.opacity(0.85))
                         .lineLimit(1)
 
-                    Spacer(minLength: 4)
+                    Spacer(minLength: 2)
 
                     if note.isPinned {
                         Image(systemName: "pin.fill")
                             .font(.system(size: 10))
                             .foregroundStyle(note.color.color)
+                            .fixedSize(horizontal: true, vertical: false)
                     }
+                }
+
+                // Folder tag if viewing All Notes
+                if viewModel.selectedFolder == ScratchpadViewModel.allNotesFolder {
+                    HStack(spacing: 3) {
+                        Image(systemName: ScratchpadViewModel.iconForFolder(note.folder))
+                            .font(.system(size: 9))
+                        Text(note.folder)
+                            .font(.system(size: 10, weight: .medium))
+                            .lineLimit(1)
+                            .fixedSize(horizontal: true, vertical: false)
+                    }
+                    .foregroundStyle(AppTheme.textTertiary)
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 2)
+                    .background(AppTheme.cardBackground)
+                    .clipShape(Capsule())
                 }
 
                 // Snippet text preview
@@ -268,17 +484,21 @@ public struct ScratchpadView: View {
                 // Footer: relative timestamp + word count
                 HStack {
                     Text(note.relativeFormattedDate)
-                        .font(.system(size: 11))
+                        .font(.system(size: 10))
                         .foregroundStyle(AppTheme.textTertiary)
+                        .lineLimit(1)
+                        .fixedSize(horizontal: true, vertical: false)
 
                     Spacer()
 
                     Text("\(note.wordCount)w")
-                        .font(.system(size: 11).monospacedDigit())
+                        .font(.system(size: 10).monospacedDigit())
                         .foregroundStyle(AppTheme.textTertiary)
+                        .lineLimit(1)
+                        .fixedSize(horizontal: true, vertical: false)
                 }
             }
-            .padding(10)
+            .padding(9)
             .background(
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
                     .fill(isSelected ? note.color.color.opacity(0.12) : AppTheme.cardBackgroundSubtle)
@@ -293,6 +513,18 @@ public struct ScratchpadView: View {
         }
         .buttonStyle(.plain)
         .contextMenu {
+            Menu("Move to Folder") {
+                ForEach(viewModel.folders, id: \.self) { folder in
+                    Button {
+                        viewModel.moveNote(note, to: folder)
+                    } label: {
+                        Label(folder, systemImage: ScratchpadViewModel.iconForFolder(folder))
+                    }
+                }
+            }
+
+            Divider()
+
             Button {
                 let pasteboard = NSPasteboard.general
                 pasteboard.clearContents()
@@ -336,7 +568,45 @@ public struct ScratchpadView: View {
     private var editorPane: some View {
         VStack(spacing: 0) {
             // Note Meta / Action Toolbar Bar
-            HStack(spacing: 12) {
+            HStack(spacing: 10) {
+                // Move to Folder Menu
+                Menu {
+                    ForEach(viewModel.folders, id: \.self) { folder in
+                        Button {
+                            withAnimation(.spring(response: 0.25)) {
+                                viewModel.moveCurrentNote(to: folder)
+                            }
+                        } label: {
+                            Label(folder, systemImage: ScratchpadViewModel.iconForFolder(folder))
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 5) {
+                        Image(systemName: ScratchpadViewModel.iconForFolder(viewModel.currentNote.folder))
+                            .font(.system(size: 11))
+                            .foregroundStyle(AppTheme.accent)
+                        Text(viewModel.currentNote.folder)
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(AppTheme.textSecondary)
+                            .lineLimit(1)
+                            .fixedSize(horizontal: true, vertical: false)
+                        Image(systemName: "chevron.up.chevron.down")
+                            .font(.system(size: 9))
+                            .foregroundStyle(AppTheme.textTertiary)
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(AppTheme.cardBackground)
+                    .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                            .stroke(AppTheme.border, lineWidth: 1)
+                    )
+                }
+                .menuStyle(.borderlessButton)
+                .fixedSize(horizontal: true, vertical: false)
+                .help("Move note to another folder")
+
                 // Color Category Picker Menu
                 Menu {
                     ForEach(ScratchpadColor.allCases) { color in
@@ -352,10 +622,12 @@ public struct ScratchpadView: View {
                     HStack(spacing: 5) {
                         Circle()
                             .fill(viewModel.currentNote.color.color)
-                            .frame(width: 10, height: 10)
+                            .frame(width: 9, height: 9)
                         Text(viewModel.currentNote.color.rawValue)
                             .font(.system(size: 12, weight: .medium))
                             .foregroundStyle(AppTheme.textSecondary)
+                            .lineLimit(1)
+                            .fixedSize(horizontal: true, vertical: false)
                         Image(systemName: "chevron.up.chevron.down")
                             .font(.system(size: 9))
                             .foregroundStyle(AppTheme.textTertiary)
@@ -370,12 +642,12 @@ public struct ScratchpadView: View {
                     )
                 }
                 .menuStyle(.borderlessButton)
-                .fixedSize()
+                .fixedSize(horizontal: true, vertical: false)
                 .help("Change category color")
 
                 // Inline Editable Title
                 TextField("Untitled Note", text: $viewModel.currentTitle)
-                    .font(.system(size: 18, weight: .bold))
+                    .font(.system(size: 17, weight: .bold))
                     .textFieldStyle(.plain)
                     .foregroundStyle(AppTheme.textPrimary)
                     .focused($isTitleFocused)
@@ -403,6 +675,7 @@ public struct ScratchpadView: View {
                         )
                 }
                 .buttonStyle(.plain)
+                .fixedSize(horizontal: true, vertical: false)
                 .help(viewModel.currentNote.isPinned ? "Unpin Note" : "Pin Note")
 
                 // Copy Button
@@ -420,6 +693,8 @@ public struct ScratchpadView: View {
                     HStack(spacing: 4) {
                         Image(systemName: copiedFeedback ? "checkmark" : "doc.on.doc")
                         Text(copiedFeedback ? "Copied" : "Copy")
+                            .lineLimit(1)
+                            .fixedSize(horizontal: true, vertical: false)
                     }
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(copiedFeedback ? AppTheme.success : AppTheme.textSecondary)
@@ -433,6 +708,7 @@ public struct ScratchpadView: View {
                     )
                 }
                 .buttonStyle(.plain)
+                .fixedSize(horizontal: true, vertical: false)
                 .help("Copy note content")
 
                 // Delete Button
@@ -451,10 +727,11 @@ public struct ScratchpadView: View {
                         )
                 }
                 .buttonStyle(.plain)
+                .fixedSize(horizontal: true, vertical: false)
                 .help("Delete note")
             }
-            .padding(.horizontal, 20)
-            .padding(.top, 14)
+            .padding(.horizontal, 18)
+            .padding(.top, 12)
             .padding(.bottom, 10)
 
             Divider()
@@ -462,11 +739,11 @@ public struct ScratchpadView: View {
             // Main TextEditor Container
             ZStack(alignment: .topLeading) {
                 if viewModel.currentContent.isEmpty && !isEditorFocused {
-                    Text("Jot down quick thoughts, ideas, or snippets while staying in deep focus...")
+                    Text("Jot down quick thoughts, ideas, or code snippets while staying in deep focus...")
                         .font(.system(size: 14, weight: .regular))
                         .foregroundStyle(AppTheme.textTertiary)
-                        .padding(.horizontal, 24)
-                        .padding(.vertical, 20)
+                        .padding(.horizontal, 22)
+                        .padding(.vertical, 18)
                         .allowsHitTesting(false)
                 }
 
@@ -476,8 +753,8 @@ public struct ScratchpadView: View {
                     .focused($isEditorFocused)
                     .scrollContentBackground(.hidden)
                     .background(Color.clear)
-                    .padding(.horizontal, 18)
-                    .padding(.vertical, 16)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 14)
                     .onChange(of: viewModel.currentContent) { _, _ in
                         viewModel.saveToUserDefaults()
                     }
@@ -487,7 +764,7 @@ public struct ScratchpadView: View {
 
             Divider()
 
-            // Status Bar Footer
+            // Status Bar Footer (Protected against text-wrapping)
             footerStatusBar
         }
         .background(AppTheme.background)
@@ -495,9 +772,28 @@ public struct ScratchpadView: View {
 
     // MARK: - Footer Status Bar
     private var footerStatusBar: some View {
-        HStack(spacing: 16) {
+        HStack(spacing: 12) {
+            // Folder Tag
+            HStack(spacing: 4) {
+                Image(systemName: ScratchpadViewModel.iconForFolder(viewModel.currentNote.folder))
+                    .font(.system(size: 10))
+                    .foregroundStyle(AppTheme.accent)
+
+                Text(viewModel.currentNote.folder)
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(AppTheme.textSecondary)
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
+            }
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(AppTheme.cardBackground)
+            .clipShape(Capsule())
+            .lineLimit(1)
+            .fixedSize(horizontal: true, vertical: false)
+
             // Category tag
-            HStack(spacing: 5) {
+            HStack(spacing: 4) {
                 Circle()
                     .fill(viewModel.currentNote.color.color)
                     .frame(width: 7, height: 7)
@@ -505,37 +801,55 @@ public struct ScratchpadView: View {
                 Text(viewModel.currentNote.color.rawValue + " Note")
                     .font(.caption2.weight(.medium))
                     .foregroundStyle(AppTheme.textSecondary)
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
             }
+            .lineLimit(1)
+            .fixedSize(horizontal: true, vertical: false)
 
             // Edit time
             Text("Edited " + viewModel.currentNote.relativeFormattedDate)
                 .font(.caption2)
                 .foregroundStyle(AppTheme.textTertiary)
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
 
             Spacer()
 
-            // Metrics
-            HStack(spacing: 12) {
+            // Counters: words, characters, lines (All lineLimit 1 and fixedSize to NEVER wrap vertically!)
+            HStack(spacing: 8) {
                 Text("\(viewModel.wordCount) \(viewModel.wordCount == 1 ? "word" : "words")")
-                    .font(.caption2)
+                    .font(.caption2.monospacedDigit())
                     .foregroundStyle(AppTheme.textSecondary)
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
 
                 Text("•")
                     .font(.caption2)
                     .foregroundStyle(AppTheme.textTertiary)
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
 
                 Text("\(viewModel.characterCount) characters")
-                    .font(.caption2)
+                    .font(.caption2.monospacedDigit())
                     .foregroundStyle(AppTheme.textSecondary)
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
 
                 Text("•")
                     .font(.caption2)
                     .foregroundStyle(AppTheme.textTertiary)
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
 
                 Text("\(viewModel.lineCount) \(viewModel.lineCount == 1 ? "line" : "lines")")
-                    .font(.caption2)
+                    .font(.caption2.monospacedDigit())
                     .foregroundStyle(AppTheme.textSecondary)
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
             }
+            .lineLimit(1)
+            .fixedSize(horizontal: true, vertical: false)
 
             // Saved indicator
             HStack(spacing: 4) {
@@ -546,10 +860,55 @@ public struct ScratchpadView: View {
                 Text("Saved")
                     .font(.caption2.weight(.medium))
                     .foregroundStyle(AppTheme.textSecondary)
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
+            }
+            .lineLimit(1)
+            .fixedSize(horizontal: true, vertical: false)
+        }
+        .padding(.horizontal, 18)
+        .padding(.vertical, 7)
+        .background(AppTheme.cardBackgroundSubtle)
+    }
+
+    // MARK: - New Folder Sheet
+    private var newFolderSheet: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Create New Folder")
+                .font(.system(size: 16, weight: .bold, design: .rounded))
+                .foregroundStyle(AppTheme.textPrimary)
+
+            Text("Organize your scratchpad notes by project, client, or topic.")
+                .font(.caption)
+                .foregroundStyle(AppTheme.textSecondary)
+
+            TextField("Folder name (e.g. Design System, Research)", text: $newFolderName)
+                .textFieldStyle(.roundedBorder)
+
+            HStack {
+                Spacer()
+
+                Button("Cancel") {
+                    showingNewFolderSheet = false
+                }
+                .buttonStyle(.bordered)
+                .keyboardShortcut(.cancelAction)
+
+                Button("Create Folder") {
+                    let trimmed = newFolderName.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if !trimmed.isEmpty {
+                        viewModel.createFolder(trimmed)
+                    }
+                    showingNewFolderSheet = false
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(AppTheme.deepFocus)
+                .keyboardShortcut(.defaultAction)
+                .disabled(newFolderName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 8)
-        .background(AppTheme.cardBackgroundSubtle)
+        .padding(20)
+        .frame(width: 380)
+        .background(AppTheme.cardBackground)
     }
 }
