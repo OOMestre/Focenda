@@ -73,6 +73,7 @@ public struct CalendarView: View {
     @State private var quickTaskPriority: TaskPriority = .medium
     @State private var hoveredDate: Date? = nil
     @State private var hoveredPopoverDay: CalendarDay? = nil
+    @State private var hoverDebounceTask: Task<Void, Never>? = nil
 
     // Recurring reminder creation state
     @State private var isAddingRecurringReminder: Bool = false
@@ -170,6 +171,10 @@ public struct CalendarView: View {
                     activeAlertBanner = nil
                 }
             }
+        }
+        .onDisappear {
+            hoverDebounceTask?.cancel()
+            hoverDebounceTask = nil
         }
     }
 
@@ -337,7 +342,8 @@ public struct CalendarView: View {
         return Button {
             withAnimation(.spring(response: 0.28, dampingFraction: 0.75)) {
                 selectedDate = day.date
-                hoveredPopoverDay = nil
+                hoverDebounceTask?.cancel()
+                hoveredPopoverDay = day
                 if !day.isCurrentMonth {
                     displayedMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: day.date)) ?? displayedMonth
                 }
@@ -438,16 +444,33 @@ public struct CalendarView: View {
         .buttonStyle(.plain)
         .onHover { hovering in
             hoveredDate = hovering ? day.date : nil
-            withAnimation(.spring(response: 0.25, dampingFraction: 0.75)) {
-                hoveredPopoverDay = hovering ? day : nil
+            if hovering {
+                hoverDebounceTask?.cancel()
+                hoverDebounceTask = Task { @MainActor in
+                    try? await Task.sleep(nanoseconds: 1_000_000_000)
+                    if !Task.isCancelled {
+                        withAnimation(.spring(response: 0.25, dampingFraction: 0.75)) {
+                            hoveredPopoverDay = day
+                        }
+                    }
+                }
+            } else {
+                hoverDebounceTask?.cancel()
+                hoverDebounceTask = nil
+                withAnimation(.spring(response: 0.25, dampingFraction: 0.75)) {
+                    hoveredPopoverDay = nil
+                }
             }
         }
         .popover(
             isPresented: Binding(
                 get: { isPopoverPresented },
                 set: { presenting in
-                    if !presenting && hoveredPopoverDay?.id == day.id {
-                        hoveredPopoverDay = nil
+                    if !presenting {
+                        hoverDebounceTask?.cancel()
+                        if hoveredPopoverDay?.id == day.id {
+                            hoveredPopoverDay = nil
+                        }
                     }
                 }
             ),
@@ -988,21 +1011,30 @@ public struct CalendarView: View {
             TextField("Reminder title (e.g. Daily Standup)", text: $newReminderTitle)
                 .textFieldStyle(.plain)
                 .font(.caption)
+                .foregroundStyle(AppTheme.textPrimary)
                 .padding(6)
-                .background(AppTheme.cardBackgroundSubtle)
+                .background(AppTheme.inputBackground)
                 .clipShape(RoundedRectangle(cornerRadius: 6))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 6)
+                        .stroke(AppTheme.subtleBorder, lineWidth: 1)
+                )
 
             HStack(spacing: 8) {
                 DatePicker("Time:", selection: $newReminderTime, displayedComponents: [.hourAndMinute])
                     .font(.caption)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .labelsHidden()
 
                 Picker("Frequency", selection: $newReminderFrequency) {
                     ForEach(RepeatFrequency.allCases) { freq in
-                        Text(freq.rawValue).tag(freq)
+                        Text(freq.rawValue)
+                            .foregroundStyle(AppTheme.textPrimary)
+                            .tag(freq)
                     }
                 }
                 .font(.caption)
+                .foregroundStyle(AppTheme.textPrimary)
                 .labelsHidden()
 
                 Spacer()
@@ -1012,6 +1044,7 @@ public struct CalendarView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(AppTheme.accent)
+                .foregroundStyle(Color.white)
                 .controlSize(.small)
                 .disabled(newReminderTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
@@ -1133,8 +1166,9 @@ public struct CalendarView: View {
                 TextField("Add task for \(formattedDayHeader(selectedDate))...", text: $quickTaskTitle)
                     .textFieldStyle(.plain)
                     .font(.caption)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .padding(6)
-                    .background(AppTheme.cardBackground)
+                    .background(AppTheme.inputBackground)
                     .clipShape(RoundedRectangle(cornerRadius: 6))
                     .overlay(
                         RoundedRectangle(cornerRadius: 6)
@@ -1147,9 +1181,13 @@ public struct CalendarView: View {
                 // Priority Picker
                 Picker("", selection: $quickTaskPriority) {
                     ForEach(TaskPriority.allCases) { priority in
-                        Text(priority.rawValue).tag(priority)
+                        Text(priority.rawValue)
+                            .foregroundStyle(AppTheme.textPrimary)
+                            .tag(priority)
                     }
                 }
+                .font(.caption)
+                .foregroundStyle(AppTheme.textPrimary)
                 .labelsHidden()
                 .frame(width: 80)
 

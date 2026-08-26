@@ -568,21 +568,32 @@ public struct MenuBarCardView: View {
                     TextField("Reminder title (e.g. Standup)", text: $newReminderTitle)
                         .textFieldStyle(.plain)
                         .font(.caption)
+                        .foregroundStyle(AppTheme.textPrimary)
                         .padding(6)
-                        .background(AppTheme.cardBackgroundSubtle)
+                        .background(AppTheme.inputBackground)
                         .clipShape(RoundedRectangle(cornerRadius: 6))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 6)
+                                .stroke(AppTheme.subtleBorder, lineWidth: 1)
+                        )
 
                     HStack(spacing: 6) {
                         DatePicker("", selection: $newReminderTime, displayedComponents: [.hourAndMinute])
                             .font(.caption)
+                            .foregroundStyle(AppTheme.textPrimary)
+                            .tint(AppTheme.accent)
                             .labelsHidden()
 
                         Picker("", selection: $newReminderFrequency) {
                             ForEach(RepeatFrequency.allCases) { freq in
-                                Text(freq.rawValue).tag(freq)
+                                Text(freq.rawValue)
+                                    .foregroundStyle(AppTheme.textPrimary)
+                                    .tag(freq)
                             }
                         }
                         .font(.caption)
+                        .foregroundStyle(AppTheme.textPrimary)
+                        .tint(AppTheme.accent)
                         .labelsHidden()
 
                         Spacer()
@@ -592,6 +603,7 @@ public struct MenuBarCardView: View {
                         }
                         .buttonStyle(.borderedProminent)
                         .tint(AppTheme.accent)
+                        .foregroundStyle(Color.white)
                         .controlSize(.small)
                         .disabled(newReminderTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                     }
@@ -724,7 +736,7 @@ public struct MenuBarCardView: View {
 
             ZStack(alignment: .topLeading) {
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(AppTheme.cardBackgroundSubtle.opacity(0.5))
+                    .fill(AppTheme.inputBackground)
                     .overlay(
                         RoundedRectangle(cornerRadius: 10, style: .continuous)
                             .stroke(AppTheme.accent.opacity(0.3), lineWidth: 1)
@@ -739,6 +751,7 @@ public struct MenuBarCardView: View {
 
                 TextEditor(text: $quickNoteText)
                     .font(.callout)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .scrollContentBackground(.hidden)
                     .padding(6)
                     .onChange(of: quickNoteText) { _, newText in
@@ -773,6 +786,7 @@ public struct MenuBarCardView: View {
                 } label: {
                     Label("Save Note", systemImage: "plus.circle")
                         .font(.caption2.weight(.medium))
+                        .foregroundStyle(Color.white)
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(AppTheme.deepFocus)
@@ -832,10 +846,11 @@ public struct MenuBarCardView: View {
                 TextField("Add task to checklist...", text: $newTaskTitle)
                     .textFieldStyle(.plain)
                     .font(.callout)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .padding(8)
                     .background(
                         RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .fill(AppTheme.cardBackgroundSubtle)
+                            .fill(AppTheme.inputBackground)
                     )
                     .overlay(
                         RoundedRectangle(cornerRadius: 8, style: .continuous)
@@ -995,22 +1010,33 @@ public struct MenuBarCardView: View {
                     TextField("Title (e.g. Jira)", text: $newLinkTitle)
                         .textFieldStyle(.plain)
                         .font(.caption)
+                        .foregroundStyle(AppTheme.textPrimary)
                         .padding(6)
-                        .background(AppTheme.cardBackgroundSubtle)
+                        .background(AppTheme.inputBackground)
                         .clipShape(RoundedRectangle(cornerRadius: 6))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 6)
+                                .stroke(AppTheme.subtleBorder, lineWidth: 1)
+                        )
 
                     TextField("URL (e.g. https://...)", text: $newLinkUrl)
                         .textFieldStyle(.plain)
                         .font(.caption)
+                        .foregroundStyle(AppTheme.textPrimary)
                         .padding(6)
-                        .background(AppTheme.cardBackgroundSubtle)
+                        .background(AppTheme.inputBackground)
                         .clipShape(RoundedRectangle(cornerRadius: 6))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 6)
+                                .stroke(AppTheme.subtleBorder, lineWidth: 1)
+                        )
 
                     Button("Save Bookmark") {
                         saveNewBookmark()
                     }
                     .buttonStyle(.borderedProminent)
                     .tint(AppTheme.accent)
+                    .foregroundStyle(Color.white)
                     .controlSize(.small)
                     .disabled(newLinkTitle.isEmpty || newLinkUrl.isEmpty)
                 }

@@ -270,6 +270,20 @@ public enum AppTheme {
         )
     }
 
+    /// Input Field Background with high-contrast clean tint
+    public static var inputBackground: Color {
+        dynamicThemeColor(
+            zenLight: (0.957, 0.945, 0.918, 1.0), // Clean contrasting light tint (#F4F1EA)
+            obsidianDark: (0.165, 0.165, 0.188, 1.0), // Soft Dark (#2A2A30)
+            sandstoneLight: (0.957, 0.945, 0.918, 1.0), // Warm Sand Tint (#F4F1EA)
+            sandstoneDark: (0.180, 0.165, 0.149, 1.0),
+            nordicLight: (0.894, 0.894, 0.906, 1.0), // Clean Cool Tint (#E4E4E7)
+            nordicDark: (0.141, 0.173, 0.212, 1.0),
+            matchaLight: (0.910, 0.933, 0.910, 1.0),
+            matchaDark: (0.137, 0.180, 0.153, 1.0)
+        )
+    }
+
     /// Sidebar Background
     public static var sidebarBackground: Color {
         dynamicThemeColor(
@@ -319,13 +333,13 @@ public enum AppTheme {
     /// Primary Text
     public static var textPrimary: Color {
         dynamicThemeColor(
-            zenLight: (0.110, 0.118, 0.129, 1.0), // Deep Charcoal (#1C1E21)
+            zenLight: (0.110, 0.098, 0.090, 1.0), // Dark Charcoal (#1C1917)
             obsidianDark: (0.957, 0.957, 0.965, 1.0), // Calm Off-White (#F4F4F6)
-            sandstoneLight: (0.157, 0.137, 0.114, 1.0),
+            sandstoneLight: (0.110, 0.098, 0.090, 1.0), // Dark Charcoal (#1C1917)
             sandstoneDark: (0.961, 0.937, 0.922, 1.0),
-            nordicLight: (0.094, 0.133, 0.176, 1.0),
+            nordicLight: (0.094, 0.094, 0.106, 1.0), // Dark Charcoal (#18181B)
             nordicDark: (0.933, 0.953, 0.973, 1.0),
-            matchaLight: (0.078, 0.133, 0.094, 1.0),
+            matchaLight: (0.094, 0.094, 0.106, 1.0), // Dark Charcoal (#18181B)
             matchaDark: (0.937, 0.961, 0.937, 1.0)
         )
     }
@@ -333,13 +347,13 @@ public enum AppTheme {
     /// Secondary Text
     public static var textSecondary: Color {
         dynamicThemeColor(
-            zenLight: (0.353, 0.365, 0.392, 1.0),
+            zenLight: (0.267, 0.251, 0.235, 1.0), // Medium Dark Slate (#44403C)
             obsidianDark: (0.631, 0.631, 0.667, 1.0),
-            sandstoneLight: (0.431, 0.384, 0.333, 1.0),
+            sandstoneLight: (0.267, 0.251, 0.235, 1.0), // Medium Dark Slate (#44403C)
             sandstoneDark: (0.722, 0.675, 0.627, 1.0),
-            nordicLight: (0.306, 0.380, 0.451, 1.0),
+            nordicLight: (0.322, 0.322, 0.357, 1.0), // Medium Slate (#52525B)
             nordicDark: (0.592, 0.667, 0.749, 1.0),
-            matchaLight: (0.275, 0.380, 0.302, 1.0),
+            matchaLight: (0.267, 0.251, 0.235, 1.0), // Medium Dark Slate (#44403C)
             matchaDark: (0.584, 0.690, 0.608, 1.0)
         )
     }
@@ -347,13 +361,13 @@ public enum AppTheme {
     /// Tertiary Text
     public static var textTertiary: Color {
         dynamicThemeColor(
-            zenLight: (0.541, 0.553, 0.580, 1.0),
+            zenLight: (0.471, 0.443, 0.424, 1.0), // Legible Muted Slate (#78716C)
             obsidianDark: (0.443, 0.443, 0.478, 1.0),
-            sandstoneLight: (0.612, 0.557, 0.502, 1.0),
+            sandstoneLight: (0.471, 0.443, 0.424, 1.0), // Legible Muted Slate (#78716C)
             sandstoneDark: (0.522, 0.478, 0.439, 1.0),
-            nordicLight: (0.490, 0.565, 0.639, 1.0),
+            nordicLight: (0.443, 0.443, 0.478, 1.0), // Legible Slate (#71717A)
             nordicDark: (0.420, 0.494, 0.569, 1.0),
-            matchaLight: (0.455, 0.561, 0.482, 1.0),
+            matchaLight: (0.443, 0.443, 0.478, 1.0), // Legible Slate (#71717A)
             matchaDark: (0.392, 0.494, 0.416, 1.0)
         )
     }
@@ -465,5 +479,33 @@ extension View {
     /// Applies a calm, organic card background, subtle border, and soft natural shadow.
     public func calmCard(isHovered: Bool = false, cornerRadius: CGFloat = 12) -> some View {
         self.modifier(CalmCardModifier(isHovered: isHovered, cornerRadius: cornerRadius))
+    }
+}
+
+
+// MARK: - Color Hex Initializer
+extension Color {
+    public init(hex: String) {
+        let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
+        var int: UInt64 = 0
+        Scanner(string: hex).scanHexInt64(&int)
+        let a, r, g, b: UInt64
+        switch hex.count {
+        case 3: // RGB (12-bit)
+            (a, r, g, b) = (255, (int >> 8) * 17, (int >> 4 & 0xF) * 17, (int & 0xF) * 17)
+        case 6: // RGB (24-bit)
+            (a, r, g, b) = (255, int >> 16, int >> 8 & 0xFF, int & 0xFF)
+        case 8: // ARGB (32-bit)
+            (a, r, g, b) = (int >> 24, int >> 16 & 0xFF, int >> 8 & 0xFF, int & 0xFF)
+        default:
+            (a, r, g, b) = (255, 0, 0, 0)
+        }
+        self.init(
+            .sRGB,
+            red: Double(r) / 255.0,
+            green: Double(g) / 255.0,
+            blue: Double(b) / 255.0,
+            opacity: Double(a) / 255.0
+        )
     }
 }

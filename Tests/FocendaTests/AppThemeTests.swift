@@ -78,6 +78,7 @@ final class AppThemeTests: XCTestCase {
             XCTAssertNotNil(AppTheme.background)
             XCTAssertNotNil(AppTheme.cardBackground)
             XCTAssertNotNil(AppTheme.cardBackgroundSubtle)
+            XCTAssertNotNil(AppTheme.inputBackground)
             XCTAssertNotNil(AppTheme.sidebarBackground)
             XCTAssertNotNil(AppTheme.border)
             XCTAssertNotNil(AppTheme.subtleBorder)
@@ -108,6 +109,39 @@ final class AppThemeTests: XCTestCase {
         for color in ScratchpadColor.allCases {
             XCTAssertNotNil(color.color)
             XCTAssertFalse(color.iconName.isEmpty)
+        }
+    }
+
+    func testColorHexInitializer() {
+        // 6-digit hex without #
+        let charcoal = Color(hex: "1C1917")
+        XCTAssertNotNil(charcoal)
+
+        // 6-digit hex with #
+        let slate = Color(hex: "#44403C")
+        XCTAssertNotNil(slate)
+
+        // 8-digit ARGB hex
+        let alphaColor = Color(hex: "#80F4F1EA")
+        XCTAssertNotNil(alphaColor)
+
+        // 3-digit RGB hex
+        let shortHex = Color(hex: "#F0A")
+        XCTAssertNotNil(shortHex)
+
+        // Invalid fallback
+        let fallback = Color(hex: "invalid")
+        XCTAssertNotNil(fallback)
+    }
+
+    func testLightThemesHaveHighContrastTypography() {
+        for lightTheme in [AppThemeOption.zenCalm, AppThemeOption.warmSandstone] {
+            AppTheme.current = lightTheme
+
+            XCTAssertNotNil(AppTheme.textPrimary)
+            XCTAssertNotNil(AppTheme.textSecondary)
+            XCTAssertNotNil(AppTheme.textTertiary)
+            XCTAssertNotNil(AppTheme.inputBackground)
         }
     }
 }
