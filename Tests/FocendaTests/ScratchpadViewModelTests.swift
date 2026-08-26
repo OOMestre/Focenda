@@ -345,6 +345,17 @@ final class ScratchpadViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.filteredNotes.first?.title, "Personal Routine")
     }
 
+    func testCreateNoteInSpecificFolderDirectly() {
+        let viewModel = ScratchpadViewModel(userDefaults: testDefaults)
+        viewModel.createFolder("Research")
+
+        let note = viewModel.createNote(color: .emerald, title: "AI Survey", content: "Transformer analysis", folder: "Research")
+        XCTAssertEqual(note.folder, "Research")
+        XCTAssertEqual(note.color, .emerald)
+        XCTAssertEqual(viewModel.noteCount(for: "Research"), 1)
+        XCTAssertEqual(viewModel.notes.first?.id, note.id)
+    }
+
     func testFolderIcons() {
         XCTAssertEqual(ScratchpadViewModel.iconForFolder("All Notes"), "tray.full")
         XCTAssertEqual(ScratchpadViewModel.iconForFolder("General"), "doc.text")

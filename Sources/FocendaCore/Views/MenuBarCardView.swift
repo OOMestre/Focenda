@@ -28,7 +28,7 @@ public struct MenuBarCardView: View {
     public var appState: AppState?
 
     @State public var selectedSection: MenuBarSection = .focus
-    @State private var isPresented: Bool = false
+    @State public var isPresented: Bool = false
     @State private var isHovered: Bool = false
     @State private var completionAlertMessage: String? = nil
 
@@ -37,6 +37,7 @@ public struct MenuBarCardView: View {
     @State private var newTaskPriority: TaskPriority = .medium
 
     // Quick Note state
+    @State public var selectedNoteFolder: String = "General"
     @State private var quickNoteText: String = ""
     @State private var noteSavedFeedback: Bool = false
 
@@ -83,7 +84,7 @@ public struct MenuBarCardView: View {
                 x: 0,
                 y: isHovered ? 3 : 1
             )
-            .scaleEffect(y: isPresented ? 1.0 : 0.88, anchor: .top)
+            .scaleEffect(x: 1.0, y: isPresented ? 1.0 : 0.88, anchor: .top)
             .opacity(isPresented ? 1.0 : 0.0)
             .animation(.spring(response: 0.28, dampingFraction: 0.75), value: isHovered)
             .animation(.spring(response: 0.32, dampingFraction: 0.76), value: isPresented)
@@ -92,6 +93,9 @@ public struct MenuBarCardView: View {
             }
             .onAppear {
                 isPresented = false
+                if selectedNoteFolder.isEmpty || !scratchpadVM.folders.contains(where: { $0.caseInsensitiveCompare(selectedNoteFolder) == .orderedSame }) {
+                    selectedNoteFolder = scratchpadVM.folders.first ?? "General"
+                }
                 quickNoteText = scratchpadVM.currentContent
                 loadCustomLinks()
                 DispatchQueue.main.async {
@@ -206,6 +210,9 @@ public struct MenuBarCardView: View {
                     withAnimation(.spring(response: 0.25, dampingFraction: 0.72)) {
                         selectedSection = section
                         if section == .quickNote {
+                            if !scratchpadVM.folders.contains(where: { $0.caseInsensitiveCompare(selectedNoteFolder) == .orderedSame }) {
+                                selectedNoteFolder = scratchpadVM.folders.first ?? "General"
+                            }
                             quickNoteText = scratchpadVM.currentContent
                         }
                     }
@@ -478,34 +485,35 @@ public struct MenuBarCardView: View {
     // MARK: - 📝 Quick Note Section
     private var quickNoteSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            // Scratchpad Category Selector
+            // Folder Selector Pills
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 6) {
-                    ForEach(ScratchpadColor.allCases) { color in
+                    ForEach(scratchpadVM.folders, id: \.self) { folder in
+                        let isSelected = selectedNoteFolder.caseInsensitiveCompare(folder) == .orderedSame
                         Button {
                             withAnimation(.spring(response: 0.25, dampingFraction: 0.7)) {
-                                scratchpadVM.selectColor(color)
+                                selectedNoteFolder = folder
+                                scratchpadVM.selectFolder(folder)
                                 quickNoteText = scratchpadVM.currentContent
                             }
                         } label: {
                             HStack(spacing: 4) {
-                                Circle()
-                                    .fill(color.color)
-                                    .frame(width: 7, height: 7)
-                                Text(color.rawValue)
-                                    .font(.system(size: 10, weight: .medium))
+                                Image(systemName: ScratchpadViewModel.iconForFolder(folder))
+                                    .font(.system(size: 9))
+                                Text(folder)
+                                    .font(.system(size: 10, weight: isSelected ? .semibold : .medium))
                                     .fixedSize(horizontal: true, vertical: false)
                             }
                             .padding(.horizontal, 8)
                             .padding(.vertical, 4)
                             .background(
-                                scratchpadVM.selectedColor == color
-                                    ? color.color.opacity(0.2)
+                                isSelected
+                                    ? AppTheme.accent
                                     : AppTheme.cardBackgroundSubtle
                             )
                             .foregroundStyle(
-                                scratchpadVM.selectedColor == color
-                                    ? color.color
+                                isSelected
+                                    ? .white
                                     : AppTheme.textSecondary
                             )
                             .clipShape(Capsule())
@@ -522,11 +530,11 @@ public struct MenuBarCardView: View {
                     .fill(AppTheme.cardBackgroundSubtle.opacity(0.5))
                     .overlay(
                         RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .stroke(scratchpadVM.selectedColor.color.opacity(0.3), lineWidth: 1)
+                            .stroke(AppTheme.accent.opacity(0.3), lineWidth: 1)
                     )
 
                 if quickNoteText.isEmpty {
-                    Text("Capture a quick thought directly into \(scratchpadVM.selectedColor.rawValue) Scratchpad...")
+                    Text("Capture a quick thought directly into \(selectedNoteFolder)...")
                         .font(.callout)
                         .foregroundStyle(AppTheme.textTertiary)
                         .padding(10)
@@ -549,18 +557,31 @@ public struct MenuBarCardView: View {
                         Image(systemName: "checkmark.circle.fill")
                             .font(.caption2)
                             .foregroundStyle(AppTheme.success)
-                        Text("Saved")
+                        Text("Saved to \(selectedNoteFolder)")
                             .font(.caption2.bold())
                             .foregroundStyle(AppTheme.success)
+                            .lineLimit(1)
                     }
                     .transition(.opacity)
                 } else {
-                    Text("\(quickNoteText.count) chars • \(scratchpadVM.selectedColor.rawValue)")
+                    Text("\(quickNoteText.count) chars • \(selectedNoteFolder)")
                         .font(.caption2)
                         .foregroundStyle(AppTheme.textTertiary)
+                        .lineLimit(1)
                 }
 
                 Spacer()
+
+                Button {
+                    saveQuickNote()
+                } label: {
+                    Label("Save Note", systemImage: "plus.circle")
+                        .font(.caption2.weight(.medium))
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(AppTheme.deepFocus)
+                .controlSize(.small)
+                .disabled(quickNoteText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
 
                 Button {
                     scratchpadVM.updateContent(quickNoteText)
@@ -590,6 +611,22 @@ public struct MenuBarCardView: View {
             }
         }
         .padding(.vertical, 2)
+    }
+
+    public func saveQuickNote() {
+        let trimmed = quickNoteText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        _ = scratchpadVM.createNote(
+            title: "",
+            content: trimmed,
+            folder: selectedNoteFolder
+        )
+        withAnimation {
+            noteSavedFeedback = true
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            withAnimation { noteSavedFeedback = false }
+        }
     }
 
     // MARK: - ✅ Quick Task Section
