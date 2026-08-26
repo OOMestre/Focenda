@@ -612,4 +612,79 @@ final class CalendarViewTests: XCTestCase {
         XCTAssertFalse(day.hasReminders)
         XCTAssertTrue(day.hasHabitStreak)
     }
+
+    func testCalendarViewWithRecurringReminders() {
+        let timerVM = FocusTimerViewModel()
+        let taskVM = TaskListViewModel()
+        let habitVM = HabitViewModel()
+        let reminderVM = RecurringReminderViewModel()
+        reminderVM.reminders = []
+
+        var components = DateComponents()
+        components.year = 2026
+        components.month = 8
+        components.day = 26 // Wednesday
+        components.hour = 9
+        let august26 = Calendar.current.date(from: components)!
+
+        reminderVM.addReminder(
+            title: "Daily Standup",
+            time: august26,
+            repeatFrequency: .weekdays,
+            notes: "Sync with team"
+        )
+
+        let calendarView = CalendarView(
+            timerVM: timerVM,
+            taskVM: taskVM,
+            habitVM: habitVM,
+            recurringReminderVM: reminderVM,
+            initialDate: august26
+        )
+
+        let days = calendarView.calculateDaysInMonth(for: august26)
+        let wednesdayDay = days.first(where: { Calendar.current.isDate($0.date, inSameDayAs: august26) })
+        XCTAssertNotNil(wednesdayDay)
+        XCTAssertTrue(wednesdayDay?.hasRecurringReminders == true)
+        XCTAssertTrue(wednesdayDay?.hasReminders == true)
+        XCTAssertEqual(wednesdayDay?.recurringRemindersCount, 1)
+
+        // Saturday August 29 should NOT have weekday reminder
+        components.day = 29
+        let august29 = Calendar.current.date(from: components)!
+        let saturdayDay = days.first(where: { Calendar.current.isDate($0.date, inSameDayAs: august29) })
+        XCTAssertNotNil(saturdayDay)
+        XCTAssertFalse(saturdayDay?.hasRecurringReminders == true)
+    }
+
+    func testCalendarDayWithRecurringRemindersInitialization() {
+        var components = DateComponents()
+        components.year = 2026
+        components.month = 8
+        components.day = 26
+        let date = Calendar.current.date(from: components)!
+
+        let day = CalendarDay(
+            date: date,
+            dayNumber: 26,
+            isCurrentMonth: true,
+            isToday: true,
+            isSelected: true,
+            focusMinutes: 45,
+            focusSessionsCount: 2,
+            habitsCompletedCount: 1,
+            tasksCount: 2,
+            dueTasksCount: 0,
+            hasDueTasks: false,
+            hasReminders: true,
+            hasHabitStreak: true,
+            recurringRemindersCount: 2,
+            hasRecurringReminders: true
+        )
+
+        XCTAssertEqual(day.recurringRemindersCount, 2)
+        XCTAssertTrue(day.hasRecurringReminders)
+        XCTAssertTrue(day.hasReminders)
+        XCTAssertEqual(day.focusHeatmapLevel, 2)
+    }
 }

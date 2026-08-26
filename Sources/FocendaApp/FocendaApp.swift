@@ -10,6 +10,7 @@ struct FocendaApp: App {
     @State private var habitVM = HabitViewModel()
     @State private var scratchpadVM = ScratchpadViewModel()
     @State private var bookmarkVM = BookmarkViewModel()
+    @State private var recurringReminderVM = RecurringReminderViewModel()
 
     init() {
         NotificationManager.shared.requestAuthorization()
@@ -23,7 +24,8 @@ struct FocendaApp: App {
                 taskVM: taskVM,
                 habitVM: habitVM,
                 scratchpadVM: scratchpadVM,
-                bookmarkVM: bookmarkVM
+                bookmarkVM: bookmarkVM,
+                recurringReminderVM: recurringReminderVM
             )
             .task {
                 _ = try? await NotificationManager.shared.requestAuthorization()
@@ -34,7 +36,13 @@ struct FocendaApp: App {
                     window.makeKeyAndOrderFront(nil)
                 }
             }
-            .onReceive(NotificationCenter.default.publisher(for: Notification.Name("FocendaTaskReminderFired"))) { _ in
+            .onReceive(NotificationCenter.default.publisher(for: NotificationManager.taskReminderFiredNotification)) { _ in
+                NSApp.activate(ignoringOtherApps: true)
+                if let window = NSApp.windows.first(where: { $0.canBecomeKey && $0.isVisible }) ?? NSApp.windows.first {
+                    window.makeKeyAndOrderFront(nil)
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: NotificationManager.recurringReminderFiredNotification)) { _ in
                 NSApp.activate(ignoringOtherApps: true)
                 if let window = NSApp.windows.first(where: { $0.canBecomeKey && $0.isVisible }) ?? NSApp.windows.first {
                     window.makeKeyAndOrderFront(nil)
@@ -60,6 +68,7 @@ struct FocendaApp: App {
                 taskVM: taskVM,
                 scratchpadVM: scratchpadVM,
                 habitVM: habitVM,
+                recurringReminderVM: recurringReminderVM,
                 appState: appState
             )
         } label: {

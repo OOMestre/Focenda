@@ -7,6 +7,7 @@ public struct MainView: View {
     @State private var habitVM: HabitViewModel
     @State private var scratchpadVM: ScratchpadViewModel
     @State private var bookmarkVM: BookmarkViewModel
+    @State private var recurringReminderVM: RecurringReminderViewModel
 
     public init(
         appState: AppState = AppState(),
@@ -14,7 +15,8 @@ public struct MainView: View {
         taskVM: TaskListViewModel = TaskListViewModel(),
         habitVM: HabitViewModel = HabitViewModel(),
         scratchpadVM: ScratchpadViewModel = ScratchpadViewModel(),
-        bookmarkVM: BookmarkViewModel = BookmarkViewModel()
+        bookmarkVM: BookmarkViewModel = BookmarkViewModel(),
+        recurringReminderVM: RecurringReminderViewModel = RecurringReminderViewModel()
     ) {
         _appState = State(initialValue: appState)
         _timerVM = State(initialValue: timerVM)
@@ -22,6 +24,7 @@ public struct MainView: View {
         _habitVM = State(initialValue: habitVM)
         _scratchpadVM = State(initialValue: scratchpadVM)
         _bookmarkVM = State(initialValue: bookmarkVM)
+        _recurringReminderVM = State(initialValue: recurringReminderVM)
     }
 
     public var body: some View {
@@ -57,7 +60,8 @@ public struct MainView: View {
                     CalendarView(
                         timerVM: timerVM,
                         taskVM: taskVM,
-                        habitVM: habitVM
+                        habitVM: habitVM,
+                        recurringReminderVM: recurringReminderVM
                     )
                 case .scratchpad:
                     ScratchpadView(viewModel: scratchpadVM)
