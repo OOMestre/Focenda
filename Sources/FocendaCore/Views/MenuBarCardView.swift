@@ -31,6 +31,7 @@ public struct MenuBarCardView: View {
     @State public var selectedSection: MenuBarSection = .focus
     @State private var isPresented: Bool = false
     @State private var isHovered: Bool = false
+    @State private var completionAlertMessage: String? = nil
 
     // Quick Task state
     @State private var newTaskTitle: String = ""
@@ -53,13 +54,15 @@ public struct MenuBarCardView: View {
         taskVM: TaskListViewModel = TaskListViewModel(),
         scratchpadVM: ScratchpadViewModel = ScratchpadViewModel(),
         habitVM: HabitViewModel = HabitViewModel(),
-        appState: AppState? = nil
+        appState: AppState? = nil,
+        initialSection: MenuBarSection = .focus
     ) {
         self.timerVM = timerVM
         self.taskVM = taskVM
         self.scratchpadVM = scratchpadVM
         self.habitVM = habitVM
         self.appState = appState
+        self._selectedSection = State(initialValue: initialSection)
     }
 
     public var body: some View {
@@ -103,12 +106,47 @@ public struct MenuBarCardView: View {
             .onDisappear {
                 isPresented = false
             }
+            .onReceive(NotificationCenter.default.publisher(for: .focusSessionCompleted)) { notification in
+                let mode = notification.userInfo?["mode"] as? FocusMode ?? timerVM.currentMode
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.72)) {
+                    completionAlertMessage = NotificationManager.notificationTitle(for: mode)
+                    selectedSection = .focus
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 4.0) {
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.72)) {
+                        completionAlertMessage = nil
+                    }
+                }
+            }
     }
 
     private var cardBody: some View {
         VStack(spacing: 12) {
             // Header: App Title & Active Mode Tag
             headerSection
+
+            if let alertMsg = completionAlertMessage {
+                HStack(spacing: 6) {
+                    Image(systemName: "bell.badge.fill")
+                        .font(.caption)
+                        .foregroundStyle(timerVM.currentMode.themeColor)
+                    Text(alertMsg)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(AppTheme.textPrimary)
+                        .lineLimit(1)
+                    Spacer()
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(timerVM.currentMode.themeColor.opacity(0.15))
+                )
+                .transition(.asymmetric(
+                    insertion: .scale(scale: 0.95).combined(with: .opacity),
+                    removal: .opacity
+                ))
+            }
 
             // Top Multi-Action Segmented Bar
             segmentedControlSection
@@ -444,37 +482,41 @@ public struct MenuBarCardView: View {
     private var quickNoteSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             // Scratchpad Category Selector
-            HStack(spacing: 6) {
-                ForEach(ScratchpadColor.allCases) { color in
-                    Button {
-                        withAnimation(.spring(response: 0.25, dampingFraction: 0.7)) {
-                            scratchpadVM.selectColor(color)
-                            quickNoteText = scratchpadVM.currentContent
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 6) {
+                    ForEach(ScratchpadColor.allCases) { color in
+                        Button {
+                            withAnimation(.spring(response: 0.25, dampingFraction: 0.7)) {
+                                scratchpadVM.selectColor(color)
+                                quickNoteText = scratchpadVM.currentContent
+                            }
+                        } label: {
+                            HStack(spacing: 4) {
+                                Circle()
+                                    .fill(color.color)
+                                    .frame(width: 7, height: 7)
+                                Text(color.rawValue)
+                                    .font(.system(size: 10, weight: .medium))
+                                    .fixedSize(horizontal: true, vertical: false)
+                            }
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(
+                                scratchpadVM.selectedColor == color
+                                    ? color.color.opacity(0.2)
+                                    : AppTheme.cardBackgroundSubtle
+                            )
+                            .foregroundStyle(
+                                scratchpadVM.selectedColor == color
+                                    ? color.color
+                                    : AppTheme.textSecondary
+                            )
+                            .clipShape(Capsule())
                         }
-                    } label: {
-                        HStack(spacing: 4) {
-                            Circle()
-                                .fill(color.color)
-                                .frame(width: 8, height: 8)
-                            Text(color.rawValue)
-                                .font(.system(size: 10, weight: .medium))
-                        }
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 4)
-                        .background(
-                            scratchpadVM.selectedColor == color
-                                ? color.color.opacity(0.2)
-                                : AppTheme.cardBackgroundSubtle
-                        )
-                        .foregroundStyle(
-                            scratchpadVM.selectedColor == color
-                                ? color.color
-                                : AppTheme.textSecondary
-                        )
-                        .clipShape(Capsule())
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
                 }
+                .padding(.vertical, 2)
             }
 
             // Quick Note Text Editor
@@ -606,6 +648,7 @@ public struct MenuBarCardView: View {
                                 .font(.system(size: 8))
                             Text(priority.rawValue)
                                 .font(.system(size: 10, weight: .medium))
+                                .fixedSize(horizontal: true, vertical: false)
                         }
                         .padding(.horizontal, 7)
                         .padding(.vertical, 3)

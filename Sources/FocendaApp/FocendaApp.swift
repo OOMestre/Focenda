@@ -21,6 +21,12 @@ struct FocendaApp: App {
                 scratchpadVM: scratchpadVM,
                 bookmarkVM: bookmarkVM
             )
+            .onReceive(NotificationCenter.default.publisher(for: .focusSessionCompleted)) { _ in
+                NSApp.activate(ignoringOtherApps: true)
+                if let window = NSApp.windows.first(where: { $0.canBecomeKey && $0.isVisible }) ?? NSApp.windows.first {
+                    window.makeKeyAndOrderFront(nil)
+                }
+            }
         }
         .windowStyle(.titleBar)
         .windowToolbarStyle(.unified)

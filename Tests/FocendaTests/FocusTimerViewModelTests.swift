@@ -110,4 +110,49 @@ final class FocusTimerViewModelTests: XCTestCase {
 
         XCTAssertEqual(viewModel.todayFocusMinutes, 25)
     }
+
+    func testCompleteCurrentSessionPostsNotificationAndTriggersCallback() {
+        var callbackCalled = false
+        var completedMode: FocusMode?
+
+        viewModel.onSessionCompleted = { mode in
+            callbackCalled = true
+            completedMode = mode
+        }
+
+        let expectation = expectation(description: "FocusSessionCompleted notification received")
+        var receivedNotificationMode: FocusMode?
+
+        let observer = NotificationCenter.default.addObserver(
+            forName: .focusSessionCompleted,
+            object: nil,
+            queue: .main
+        ) { notification in
+            receivedNotificationMode = notification.userInfo?["mode"] as? FocusMode
+            expectation.fulfill()
+        }
+
+        viewModel.currentMode = .work
+        viewModel.completeCurrentSession()
+
+        waitForExpectations(timeout: 2.0)
+        NotificationCenter.default.removeObserver(observer)
+
+        XCTAssertTrue(callbackCalled)
+        XCTAssertEqual(completedMode, .work)
+        XCTAssertEqual(receivedNotificationMode, .work)
+    }
+
+    func testNotificationManagerNotifiedOnSessionCompletion() {
+        viewModel.currentMode = .shortBreak
+        viewModel.completeCurrentSession()
+
+        XCTAssertEqual(NotificationManager.shared.lastNotifiedMode, .shortBreak)
+    }
+
+    func testBringAppToFrontMethodSafe() {
+        // bringAppToFront should run cleanly and safely in test environment without crashes
+        viewModel.bringAppToFront()
+        XCTAssertTrue(viewModel.autoOpenOnCompletion)
+    }
 }

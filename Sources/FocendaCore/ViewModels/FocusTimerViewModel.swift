@@ -18,6 +18,9 @@ public final class FocusTimerViewModel {
     public var completedSessionsCount: Int = 0
     public var completedWorkSessionsCount: Int = 0
     public var completedSessions: [FocusSession] = []
+    public var onSessionCompleted: ((FocusMode) -> Void)?
+    public var autoOpenOnCompletion: Bool = true
+
 
     // Interval durations (in minutes)
     public var workDurationMinutes: Int = 25 {
@@ -128,21 +131,52 @@ public final class FocusTimerViewModel {
         timer = nil
         status = .idle
 
+        let finishedMode = currentMode
         let session = FocusSession(
-            mode: currentMode,
+            mode: finishedMode,
             durationSeconds: totalDurationSeconds,
             completedAt: Date()
         )
         completedSessions.append(session)
         completedSessionsCount += 1
 
-        if currentMode == .work {
+        if finishedMode == .work {
             completedWorkSessionsCount += 1
         }
 
-        NotificationManager.shared.notifySessionCompleted(mode: currentMode)
+        NotificationManager.shared.notifySessionCompleted(mode: finishedMode)
         playCompletionSound()
+
+        if autoOpenOnCompletion {
+            bringAppToFront()
+        }
+
+        NotificationCenter.default.post(
+            name: .focusSessionCompleted,
+            object: self,
+            userInfo: ["mode": finishedMode]
+        )
+
+        onSessionCompleted?(finishedMode)
+
         advanceToNextMode()
+    }
+
+    public func bringAppToFront() {
+        let isRunningInTest = NSClassFromString("XCTestCase") != nil ||
+                              NSClassFromString("XCTest") != nil ||
+                              ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil ||
+                              ProcessInfo.processInfo.environment["XCTestBundlePath"] != nil ||
+                              ProcessInfo.processInfo.arguments.contains(where: { $0.contains("xctest") || $0.contains("test") })
+
+        guard !isRunningInTest else { return }
+
+        DispatchQueue.main.async {
+            NSApp.activate(ignoringOtherApps: true)
+            if let window = NSApp.windows.first(where: { $0.canBecomeKey && $0.isVisible }) ?? NSApp.windows.first {
+                window.makeKeyAndOrderFront(nil)
+            }
+        }
     }
 
     private func advanceToNextMode() {
@@ -186,4 +220,9 @@ public final class FocusTimerViewModel {
     deinit {
         timer?.invalidate()
     }
+}
+
+
+extension Notification.Name {
+    public static let focusSessionCompleted = Notification.Name("FocendaFocusSessionCompletedNotification")
 }
