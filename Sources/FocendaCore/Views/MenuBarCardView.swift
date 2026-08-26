@@ -1,28 +1,73 @@
 import SwiftUI
 import AppKit
 
-/// An interactive card view designed for MenuBarExtra popover style
+/// Top navigation tabs in Menu Bar Multi-Action Control Center
+public enum MenuBarSection: String, CaseIterable, Identifiable {
+    case focus = "Focus"
+    case quickNote = "Note"
+    case quickTask = "Task"
+    case quickLinks = "Links"
+
+    public var id: String { rawValue }
+
+    public var iconName: String {
+        switch self {
+        case .focus: return "timer"
+        case .quickNote: return "square.and.pencil"
+        case .quickTask: return "checklist"
+        case .quickLinks: return "link"
+        }
+    }
+}
+
+/// An interactive multi-action control center designed for MenuBarExtra popover style
 public struct MenuBarCardView: View {
     public var timerVM: FocusTimerViewModel
+    public var taskVM: TaskListViewModel
+    public var scratchpadVM: ScratchpadViewModel
+    public var habitVM: HabitViewModel
     public var appState: AppState?
 
+    @State public var selectedSection: MenuBarSection = .focus
     @State private var isPresented: Bool = false
     @State private var isHovered: Bool = false
     @State private var dragOffset: CGSize = .zero
     @State private var accumulatedOffset: CGSize = .zero
 
+    // Quick Task state
+    @State private var newTaskTitle: String = ""
+    @State private var newTaskPriority: TaskPriority = .medium
+
+    // Quick Note state
+    @State private var quickNoteText: String = ""
+    @State private var noteSavedFeedback: Bool = false
+
+    // Quick Links state
+    @State private var customLinks: [QuickLink] = []
+    @State private var newLinkTitle: String = ""
+    @State private var newLinkUrl: String = ""
+    @State private var isAddingLink: Bool = false
+
+    private let customLinksStorageKey = "focenda_custom_quick_links"
+
     public init(
         timerVM: FocusTimerViewModel,
+        taskVM: TaskListViewModel = TaskListViewModel(),
+        scratchpadVM: ScratchpadViewModel = ScratchpadViewModel(),
+        habitVM: HabitViewModel = HabitViewModel(),
         appState: AppState? = nil
     ) {
         self.timerVM = timerVM
+        self.taskVM = taskVM
+        self.scratchpadVM = scratchpadVM
+        self.habitVM = habitVM
         self.appState = appState
     }
 
     public var body: some View {
         cardBody
             .padding(18)
-            .frame(width: 320)
+            .frame(width: 340)
             .background(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .fill(AppTheme.cardBackground)
@@ -52,6 +97,8 @@ public struct MenuBarCardView: View {
             }
             .onAppear {
                 isPresented = false
+                quickNoteText = scratchpadVM.currentContent
+                loadCustomLinks()
                 DispatchQueue.main.async {
                     withAnimation(.spring(response: 0.32, dampingFraction: 0.76)) {
                         isPresented = true
@@ -85,25 +132,26 @@ public struct MenuBarCardView: View {
             // Drag handle pill at the top of the card
             dragHandleSection
 
-            // Header: Title & Active Mode Tag
-            headerSection
+            // Top Multi-Action Segmented Bar
+            segmentedControlSection
 
-            // Mode Selector Pills
-            modeSelectorSection
+            // Section Content
+            Group {
+                switch selectedSection {
+                case .focus:
+                    focusSection
+                case .quickNote:
+                    quickNoteSection
+                case .quickTask:
+                    quickTaskSection
+                case .quickLinks:
+                    quickLinksSection
+                }
+            }
+            .transition(.opacity.combined(with: .scale(scale: 0.98)))
+            .animation(.spring(response: 0.28, dampingFraction: 0.75), value: selectedSection)
 
-            // Mini Circular Progress & Countdown
-            miniProgressRingSection
-
-            // Quick Preset Buttons (-5m, +5m)
-            quickPresetSection
-
-            // Cycle progress dots
-            cycleDotsSection
-
-            // Control buttons
-            controlsSection
-
-            // Footer actions
+            // Footer actions (Floating Widget, Open Main App, Quit)
             footerSection
         }
     }
@@ -126,39 +174,6 @@ public struct MenuBarCardView: View {
         }
     }
 
-    // MARK: - Header
-    private var headerSection: some View {
-        HStack(alignment: .center) {
-            HStack(spacing: 6) {
-                Image(systemName: "timer")
-                    .foregroundStyle(timerVM.currentMode.themeColor)
-                    .font(.headline)
-                Text("Focenda")
-                    .font(.headline.bold())
-                    .foregroundStyle(AppTheme.textPrimary)
-            }
-
-            Spacer()
-
-            // Active Mode Tag
-            HStack(spacing: 4) {
-                Image(systemName: timerVM.currentMode.iconName)
-                    .font(.caption2)
-                Text(timerVM.currentMode.rawValue)
-                    .font(.caption.weight(.semibold))
-            }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 3)
-            .background(timerVM.currentMode.themeColor.opacity(0.12))
-            .foregroundStyle(timerVM.currentMode.themeColor)
-            .clipShape(Capsule())
-        }
-        .contentShape(Rectangle())
-        .onTapGesture(count: 2) {
-            snapToDefaultPosition()
-        }
-    }
-
     private func snapToDefaultPosition() {
         withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
             dragOffset = .zero
@@ -166,7 +181,68 @@ public struct MenuBarCardView: View {
         }
     }
 
-    // MARK: - Mode Selectors
+    // MARK: - Segmented Control Bar
+    private var segmentedControlSection: some View {
+        HStack(spacing: 4) {
+            ForEach(MenuBarSection.allCases) { section in
+                Button {
+                    withAnimation(.spring(response: 0.25, dampingFraction: 0.72)) {
+                        selectedSection = section
+                        if section == .quickNote {
+                            quickNoteText = scratchpadVM.currentContent
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 5) {
+                        Image(systemName: section.iconName)
+                            .font(.system(size: 11, weight: .bold))
+                        Text(section.rawValue)
+                            .font(.caption2.weight(.bold))
+                    }
+                    .padding(.vertical, 6)
+                    .frame(maxWidth: .infinity)
+                    .background(
+                        selectedSection == section
+                            ? AppTheme.accent
+                            : AppTheme.cardBackgroundSubtle
+                    )
+                    .foregroundStyle(
+                        selectedSection == section
+                            ? .white
+                            : AppTheme.textSecondary
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                }
+                .buttonStyle(SpringScaleButtonStyle())
+            }
+        }
+        .padding(3)
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(AppTheme.cardBackgroundSubtle.opacity(0.6))
+        )
+    }
+
+    // MARK: - ⏱️ Focus Section
+    private var focusSection: some View {
+        VStack(spacing: 12) {
+            // Mode Selector Pills
+            modeSelectorSection
+
+            // Mini Circular Progress & Countdown
+            miniProgressRingSection
+
+            // Quick Preset Buttons (-5m, +5m)
+            quickPresetSection
+
+            // Cycle progress dots
+            cycleDotsSection
+
+            // Control buttons
+            controlsSection
+        }
+    }
+
     private var modeSelectorSection: some View {
         HStack(spacing: 6) {
             ForEach(FocusMode.allCases) { mode in
@@ -205,7 +281,6 @@ public struct MenuBarCardView: View {
         }
     }
 
-    // MARK: - Mini Circular Progress Ring
     private var miniProgressRingSection: some View {
         ZStack {
             // Background track
@@ -237,7 +312,7 @@ public struct MenuBarCardView: View {
                     .foregroundStyle(timerVM.currentMode.themeColor)
             }
         }
-        .frame(width: 130, height: 130)
+        .frame(width: 124, height: 124)
         .padding(.vertical, 2)
     }
 
@@ -252,10 +327,8 @@ public struct MenuBarCardView: View {
         }
     }
 
-    // MARK: - Quick Presets
     private var quickPresetSection: some View {
         HStack(spacing: 12) {
-            // -5m Preset Button
             Button {
                 withAnimation(.spring(response: 0.3, dampingFraction: 0.65)) {
                     timerVM.adjustTime(byMinutes: -5)
@@ -284,14 +357,12 @@ public struct MenuBarCardView: View {
 
             Spacer()
 
-            // Mode Label
             Text(timerVM.currentMode.rawValue)
                 .font(.caption2.weight(.medium))
                 .foregroundStyle(AppTheme.textSecondary)
 
             Spacer()
 
-            // +5m Preset Button
             Button {
                 withAnimation(.spring(response: 0.3, dampingFraction: 0.65)) {
                     timerVM.adjustTime(byMinutes: 5)
@@ -321,7 +392,6 @@ public struct MenuBarCardView: View {
         .padding(.horizontal, 8)
     }
 
-    // MARK: - Cycle Dots
     private var cycleDotsSection: some View {
         HStack(spacing: 6) {
             Text("Cycle:")
@@ -340,10 +410,8 @@ public struct MenuBarCardView: View {
         }
     }
 
-    // MARK: - Interactive Controls
     private var controlsSection: some View {
         HStack(spacing: 16) {
-            // Reset Button
             Button {
                 timerVM.reset()
             } label: {
@@ -356,7 +424,6 @@ public struct MenuBarCardView: View {
             .clipShape(Circle())
             .help("Reset session")
 
-            // Play / Pause Button
             Button {
                 withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
                     if timerVM.status == .running {
@@ -377,7 +444,6 @@ public struct MenuBarCardView: View {
             .shadow(color: Color.black.opacity(0.12), radius: 4, x: 0, y: 2)
             .help(timerVM.status == .running ? "Pause timer" : "Start timer")
 
-            // Skip Button
             Button {
                 timerVM.skip()
             } label: {
@@ -392,10 +458,417 @@ public struct MenuBarCardView: View {
         }
     }
 
+    // MARK: - 📝 Quick Note Section
+    private var quickNoteSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            // Scratchpad Category Selector
+            HStack(spacing: 6) {
+                ForEach(ScratchpadColor.allCases) { color in
+                    Button {
+                        withAnimation(.spring(response: 0.25, dampingFraction: 0.7)) {
+                            scratchpadVM.selectColor(color)
+                            quickNoteText = scratchpadVM.currentContent
+                        }
+                    } label: {
+                        HStack(spacing: 4) {
+                            Circle()
+                                .fill(color.color)
+                                .frame(width: 8, height: 8)
+                            Text(color.rawValue)
+                                .font(.system(size: 10, weight: .medium))
+                        }
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 4)
+                        .background(
+                            scratchpadVM.selectedColor == color
+                                ? color.color.opacity(0.2)
+                                : AppTheme.cardBackgroundSubtle
+                        )
+                        .foregroundStyle(
+                            scratchpadVM.selectedColor == color
+                                ? color.color
+                                : AppTheme.textSecondary
+                        )
+                        .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+
+            // Quick Note Text Editor
+            ZStack(alignment: .topLeading) {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(AppTheme.cardBackgroundSubtle.opacity(0.5))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .stroke(scratchpadVM.selectedColor.color.opacity(0.3), lineWidth: 1)
+                    )
+
+                if quickNoteText.isEmpty {
+                    Text("Capture a quick thought directly into \(scratchpadVM.selectedColor.rawValue) Scratchpad...")
+                        .font(.callout)
+                        .foregroundStyle(AppTheme.textTertiary)
+                        .padding(10)
+                }
+
+                TextEditor(text: $quickNoteText)
+                    .font(.callout)
+                    .scrollContentBackground(.hidden)
+                    .padding(6)
+                    .onChange(of: quickNoteText) { _, newText in
+                        scratchpadVM.updateContent(newText)
+                    }
+            }
+            .frame(height: 120)
+
+            // Note Actions & Feedback
+            HStack {
+                if noteSavedFeedback {
+                    HStack(spacing: 4) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.caption2)
+                            .foregroundStyle(AppTheme.success)
+                        Text("Saved")
+                            .font(.caption2.bold())
+                            .foregroundStyle(AppTheme.success)
+                    }
+                    .transition(.opacity)
+                } else {
+                    Text("\(quickNoteText.count) chars • \(scratchpadVM.selectedColor.rawValue)")
+                        .font(.caption2)
+                        .foregroundStyle(AppTheme.textTertiary)
+                }
+
+                Spacer()
+
+                Button {
+                    scratchpadVM.updateContent(quickNoteText)
+                    scratchpadVM.copyCurrentNoteToClipboard()
+                    withAnimation {
+                        noteSavedFeedback = true
+                    }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                        withAnimation { noteSavedFeedback = false }
+                    }
+                } label: {
+                    Label("Copy", systemImage: "doc.on.doc")
+                        .font(.caption2.weight(.medium))
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+
+                Button {
+                    quickNoteText = ""
+                    scratchpadVM.clearCurrentNote()
+                } label: {
+                    Text("Clear")
+                        .font(.caption2)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(AppTheme.textTertiary)
+            }
+        }
+        .padding(.vertical, 2)
+    }
+
+    // MARK: - ✅ Quick Task Section
+    private var quickTaskSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            // Task input row
+            HStack(spacing: 8) {
+                TextField("Add task to checklist...", text: $newTaskTitle)
+                    .textFieldStyle(.plain)
+                    .font(.callout)
+                    .padding(8)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .fill(AppTheme.cardBackgroundSubtle)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .stroke(AppTheme.subtleBorder, lineWidth: 1)
+                    )
+                    .onSubmit {
+                        submitQuickTask()
+                    }
+
+                Button {
+                    submitQuickTask()
+                } label: {
+                    Image(systemName: "plus")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(.white)
+                        .frame(width: 30, height: 30)
+                        .background(
+                            Circle()
+                                .fill(AppTheme.accent)
+                        )
+                }
+                .buttonStyle(.plain)
+                .disabled(newTaskTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .help("Add task")
+            }
+
+            // Priority Selector
+            HStack(spacing: 6) {
+                Text("Priority:")
+                    .font(.caption2)
+                    .foregroundStyle(AppTheme.textSecondary)
+
+                ForEach(TaskPriority.allCases) { priority in
+                    Button {
+                        newTaskPriority = priority
+                    } label: {
+                        HStack(spacing: 3) {
+                            Image(systemName: priority.icon)
+                                .font(.system(size: 8))
+                            Text(priority.rawValue)
+                                .font(.system(size: 10, weight: .medium))
+                        }
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 3)
+                        .background(
+                            newTaskPriority == priority
+                                ? priority.color.opacity(0.2)
+                                : AppTheme.cardBackgroundSubtle
+                        )
+                        .foregroundStyle(
+                            newTaskPriority == priority
+                                ? priority.color
+                                : AppTheme.textSecondary
+                        )
+                        .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+
+            Divider()
+
+            // Pending Tasks List (top 3)
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Pending Tasks (\(taskVM.pendingTasksCount))")
+                    .font(.caption2.bold())
+                    .foregroundStyle(AppTheme.textSecondary)
+
+                let pending = taskVM.tasks.filter { !$0.isCompleted }.prefix(3)
+                if pending.isEmpty {
+                    HStack {
+                        Spacer()
+                        VStack(spacing: 4) {
+                            Image(systemName: "checkmark.circle")
+                                .font(.title3)
+                                .foregroundStyle(AppTheme.success)
+                            Text("All tasks completed!")
+                                .font(.caption2)
+                                .foregroundStyle(AppTheme.textSecondary)
+                        }
+                        .padding(.vertical, 8)
+                        Spacer()
+                    }
+                } else {
+                    ForEach(Array(pending)) { task in
+                        HStack(spacing: 8) {
+                            Button {
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                                    taskVM.toggleTaskCompletion(task)
+                                }
+                            } label: {
+                                Image(systemName: "circle")
+                                    .font(.system(size: 12))
+                                    .foregroundStyle(AppTheme.textTertiary)
+                            }
+                            .buttonStyle(.plain)
+
+                            Text(task.title)
+                                .font(.caption.weight(.medium))
+                                .foregroundStyle(AppTheme.textPrimary)
+                                .lineLimit(1)
+
+                            Spacer()
+
+                            Text(task.priority.rawValue)
+                                .font(.system(size: 9, weight: .bold))
+                                .padding(.horizontal, 5)
+                                .padding(.vertical, 2)
+                                .background(task.priority.color.opacity(0.15))
+                                .foregroundStyle(task.priority.color)
+                                .clipShape(Capsule())
+                        }
+                        .padding(6)
+                        .background(
+                            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                .fill(AppTheme.cardBackgroundSubtle.opacity(0.4))
+                        )
+                    }
+                }
+            }
+        }
+        .padding(.vertical, 2)
+    }
+
+    private func submitQuickTask() {
+        let trimmed = newTaskTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        taskVM.addTask(title: trimmed, priority: newTaskPriority)
+        newTaskTitle = ""
+    }
+
+    // MARK: - 🔗 Quick Links Section
+    private var quickLinksSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("Saved Bookmarks")
+                    .font(.caption2.bold())
+                    .foregroundStyle(AppTheme.textSecondary)
+                Spacer()
+                Button {
+                    withAnimation(.spring(response: 0.25, dampingFraction: 0.7)) {
+                        isAddingLink.toggle()
+                    }
+                } label: {
+                    HStack(spacing: 3) {
+                        Image(systemName: isAddingLink ? "xmark" : "plus")
+                            .font(.system(size: 9, weight: .bold))
+                        Text(isAddingLink ? "Cancel" : "Add Link")
+                            .font(.caption2.weight(.medium))
+                    }
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(AppTheme.accent)
+            }
+
+            if isAddingLink {
+                VStack(spacing: 6) {
+                    TextField("Title (e.g. Jira)", text: $newLinkTitle)
+                        .textFieldStyle(.plain)
+                        .font(.caption)
+                        .padding(6)
+                        .background(AppTheme.cardBackgroundSubtle)
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
+
+                    TextField("URL (e.g. https://...)", text: $newLinkUrl)
+                        .textFieldStyle(.plain)
+                        .font(.caption)
+                        .padding(6)
+                        .background(AppTheme.cardBackgroundSubtle)
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
+
+                    Button("Save Bookmark") {
+                        saveNewBookmark()
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(AppTheme.accent)
+                    .controlSize(.small)
+                    .disabled(newLinkTitle.isEmpty || newLinkUrl.isEmpty)
+                }
+                .padding(8)
+                .background(
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(AppTheme.cardBackgroundSubtle.opacity(0.6))
+                )
+            }
+
+            // Quick Links Grid
+            let allLinks = QuickLink.defaultLinks + customLinks
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
+                ForEach(allLinks) { link in
+                    Button {
+                        if let url = link.url {
+                            NSWorkspace.shared.open(url)
+                        }
+                    } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: link.iconName)
+                                .font(.system(size: 11, weight: .bold))
+                                .foregroundStyle(AppTheme.accent)
+                                .frame(width: 20)
+
+                            Text(link.title)
+                                .font(.caption.weight(.medium))
+                                .foregroundStyle(AppTheme.textPrimary)
+                                .lineLimit(1)
+
+                            Spacer()
+
+                            Image(systemName: "arrow.up.right")
+                                .font(.system(size: 9))
+                                .foregroundStyle(AppTheme.textTertiary)
+                        }
+                        .padding(8)
+                        .background(
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                .fill(AppTheme.cardBackgroundSubtle)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                .stroke(AppTheme.subtleBorder, lineWidth: 1)
+                        )
+                    }
+                    .buttonStyle(SpringScaleButtonStyle())
+                }
+            }
+        }
+        .padding(.vertical, 2)
+    }
+
+    private func saveNewBookmark() {
+        let title = newLinkTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        var urlStr = newLinkUrl.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !title.isEmpty, !urlStr.isEmpty else { return }
+
+        if !urlStr.lowercased().hasPrefix("http://") && !urlStr.lowercased().hasPrefix("https://") {
+            urlStr = "https://" + urlStr
+        }
+
+        let link = QuickLink(title: title, urlString: urlStr)
+        customLinks.append(link)
+        saveCustomLinks()
+
+        newLinkTitle = ""
+        newLinkUrl = ""
+        isAddingLink = false
+    }
+
+    private func saveCustomLinks() {
+        if let data = try? JSONEncoder().encode(customLinks) {
+            UserDefaults.standard.set(data, forKey: customLinksStorageKey)
+        }
+    }
+
+    private func loadCustomLinks() {
+        if let data = UserDefaults.standard.data(forKey: customLinksStorageKey),
+           let decoded = try? JSONDecoder().decode([QuickLink].self, from: data) {
+            self.customLinks = decoded
+        }
+    }
+
     // MARK: - Footer Actions
     private var footerSection: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: 8) {
             Divider()
+
+            // Detach Floating Widget Action Button
+            Button {
+                FloatingMiniTimerPanel.shared.toggle(timerVM: timerVM)
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "macwindow.on.rectangle")
+                        .font(.caption.weight(.semibold))
+                    Text("Detach Floating Widget")
+                        .font(.caption.weight(.medium))
+                    Spacer()
+                    Image(systemName: "pip.enter")
+                        .font(.caption2)
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(AppTheme.accent.opacity(0.12))
+                .foregroundStyle(AppTheme.accent)
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+            }
+            .buttonStyle(.plain)
+            .help("Open native floating mini timer window on top of all apps")
 
             HStack {
                 // Open Main App Button
@@ -406,7 +879,7 @@ public struct MenuBarCardView: View {
                         .font(.caption.weight(.medium))
                 }
                 .buttonStyle(.plain)
-                .foregroundStyle(AppTheme.accent)
+                .foregroundStyle(AppTheme.textSecondary)
 
                 Spacer()
 
@@ -436,7 +909,7 @@ public struct MenuBarCardView: View {
 private struct SpringScaleButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .scaleEffect(configuration.isPressed ? 0.88 : 1.0)
+            .scaleEffect(configuration.isPressed ? 0.94 : 1.0)
             .animation(.spring(response: 0.25, dampingFraction: 0.6), value: configuration.isPressed)
     }
 }
