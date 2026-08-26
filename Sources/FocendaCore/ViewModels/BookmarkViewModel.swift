@@ -223,14 +223,20 @@ public final class BookmarkViewModel {
         }
     }
 
-    /// Increments visit click count and opens the URL in default browser
-    public func openBookmark(_ bookmark: BookmarkItem) {
+    /// Increments visit click count and optionally opens the URL in default browser
+    public func openBookmark(_ bookmark: BookmarkItem, openInBrowser: Bool = true) {
         if let index = bookmarks.firstIndex(where: { $0.id == bookmark.id }) {
             bookmarks[index].clickCount += 1
             saveToUserDefaults()
         }
 
-        if let validURL = bookmark.validURL {
+        let isRunningInTest = NSClassFromString("XCTestCase") != nil ||
+                              NSClassFromString("XCTest") != nil ||
+                              ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil ||
+                              ProcessInfo.processInfo.environment["XCTestBundlePath"] != nil ||
+                              ProcessInfo.processInfo.arguments.contains(where: { $0.contains("xctest") || $0.contains("test") })
+
+        if openInBrowser && !isRunningInTest, let validURL = bookmark.validURL {
             NSWorkspace.shared.open(validURL)
         }
     }

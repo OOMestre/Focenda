@@ -115,7 +115,7 @@ final class BookmarkViewModelTests: XCTestCase {
         }
 
         let initialClicks = target.clickCount
-        viewModel.openBookmark(target)
+        viewModel.openBookmark(target, openInBrowser: false)
 
         let updated = viewModel.bookmarks.first(where: { $0.id == target.id })
         XCTAssertEqual(updated?.clickCount, initialClicks + 1)

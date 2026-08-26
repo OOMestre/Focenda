@@ -173,6 +173,13 @@ public final class FocusTimerViewModel {
     }
 
     private func playCompletionSound() {
+        let isRunningInTest = NSClassFromString("XCTestCase") != nil ||
+                              NSClassFromString("XCTest") != nil ||
+                              ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil ||
+                              ProcessInfo.processInfo.environment["XCTestBundlePath"] != nil ||
+                              ProcessInfo.processInfo.arguments.contains(where: { $0.contains("xctest") || $0.contains("test") })
+
+        guard !isRunningInTest else { return }
         NSSound(named: "Glass")?.play()
     }
 
