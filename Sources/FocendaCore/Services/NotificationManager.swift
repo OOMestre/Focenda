@@ -4,30 +4,42 @@ import UserNotifications
 import AppKit
 #endif
 
-/// Protocol defining notification operations for focus sessions and timed task reminders
+/// Protocol defining notification operations for focus sessions, timed task reminders, and recurring reminders
 public protocol NotificationManagerProtocol: AnyObject {
     func requestAuthorization(completion: ((Bool, Error?) -> Void)?)
     func notifySessionCompleted(mode: FocusMode)
     func scheduleTaskReminder(task: TaskItem)
     func cancelTaskReminder(task: TaskItem)
+    func scheduleRecurringReminder(reminder: RecurringReminder)
+    func cancelRecurringReminder(reminder: RecurringReminder)
 }
 
-/// Service managing native macOS system notifications and in-app fallback alerts for Focenda
+/// Service managing native macOS system notifications, rich audible alerts, and in-app banner broadcasts
 public final class NotificationManager: NSObject, UNUserNotificationCenterDelegate, NotificationManagerProtocol {
     public static let shared = NotificationManager()
 
     public static let taskReminderFiredNotification = Notification.Name("FocendaTaskReminderFired")
+    public static let recurringReminderFiredNotification = Notification.Name("FocendaRecurringReminderFired")
+    public static let reminderAlertBannerNotification = Notification.Name("FocendaReminderAlertBanner")
 
     private let center: UNUserNotificationCenter?
     public private(set) var lastNotifiedMode: FocusMode?
     public private(set) var lastScheduledTask: TaskItem?
     public private(set) var lastFiredTask: TaskItem?
+    public private(set) var lastScheduledRecurringReminder: RecurringReminder?
+    public private(set) var lastFiredRecurringReminder: RecurringReminder?
 
-    /// Active in-app fallback timers for scheduled reminders
+    /// Active in-app fallback timers for scheduled task reminders
     private var inAppTimers: [UUID: Timer] = [:]
 
-    /// Optional callback invoked when a task reminder fires (in-app fallback or notification presentation)
+    /// Active in-app fallback timers for recurring reminders
+    private var recurringInAppTimers: [UUID: Timer] = [:]
+
+    /// Optional callback invoked when a task reminder fires
     public var onTaskReminderFired: ((TaskItem) -> Void)?
+
+    /// Optional callback invoked when a recurring reminder fires
+    public var onRecurringReminderFired: ((RecurringReminder) -> Void)?
 
     public init(center: UNUserNotificationCenter? = nil) {
         if let center = center {
@@ -56,6 +68,29 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
         return true
     }
 
+    // MARK: - Rich Audible Alerts
+
+    /// Plays a rich native macOS alert chime sequence (e.g. Hero, Ping, Glass) with fallback
+    public func playRichAlertChime(soundName: String = "Hero") {
+        #if canImport(AppKit)
+        // Guard against playing sound in headless unit test environments
+        guard Self.isNotificationAvailable || ProcessInfo.processInfo.environment["ENABLE_TEST_AUDIO"] == "1" else {
+            return
+        }
+        if let sound = NSSound(named: NSSound.Name(soundName)) {
+            sound.stop()
+            sound.play()
+        } else if let fallbackSound = NSSound(named: NSSound.Name("Ping")) {
+            fallbackSound.stop()
+            fallbackSound.play()
+        } else {
+            NSSound.beep()
+        }
+        #endif
+    }
+
+    // MARK: - Authorization
+
     /// Requests authorization to display native macOS banners, sounds, and badges
     public func requestAuthorization(completion: ((Bool, Error?) -> Void)? = nil) {
         guard let center = center else {
@@ -76,19 +111,19 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
         return try await center.requestAuthorization(options: [.alert, .sound, .badge])
     }
 
-    /// Friendly English notification title for a given focus mode completion
+    // MARK: - Notification Titles & Bodies
+
     public static func notificationTitle(for mode: FocusMode) -> String {
         switch mode {
         case .work:
-            return "Focus Session Completed! 🎯"
+            return "Focus Session Completed"
         case .shortBreak:
-            return "Short Break Finished! ⚡"
+            return "Short Break Finished"
         case .longBreak:
-            return "Long Break Ended! 🚀"
+            return "Long Break Ended"
         }
     }
 
-    /// Friendly English notification body copy for a given focus mode completion
     public static func notificationBody(for mode: FocusMode) -> String {
         switch mode {
         case .work:
@@ -100,12 +135,10 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
         }
     }
 
-    /// Friendly reminder title copy for a given task
     public static func taskReminderTitle(for task: TaskItem) -> String {
-        "⏰ Task Reminder: \(task.title)"
+        "Task Reminder: \(task.title)"
     }
 
-    /// Friendly reminder body copy for a given task
     public static func taskReminderBody(for task: TaskItem) -> String {
         if !task.notes.isEmpty {
             return task.notes
@@ -114,13 +147,25 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
         }
     }
 
-    /// Posts a native macOS banner alert and sound when a focus session or break completes
+    public static func recurringReminderTitle(for reminder: RecurringReminder) -> String {
+        "Reminder (\(reminder.repeatFrequency.rawValue)): \(reminder.title)"
+    }
+
+    public static func recurringReminderBody(for reminder: RecurringReminder) -> String {
+        if !reminder.notes.isEmpty {
+            return "\(reminder.notes) • Scheduled for \(reminder.formattedTime)"
+        } else {
+            return "Scheduled recurring reminder at \(reminder.formattedTime)."
+        }
+    }
+
+    // MARK: - Focus Session Completed
+
+    /// Posts a native macOS banner alert and plays a rich chime sequence when a focus session or break completes
     public func notifySessionCompleted(mode: FocusMode) {
         self.lastNotifiedMode = mode
 
-        #if canImport(AppKit)
-        NSSound.beep()
-        #endif
+        playRichAlertChime(soundName: "Hero")
 
         guard let center = center else {
             return
@@ -143,6 +188,8 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
             }
         }
     }
+
+    // MARK: - Task Reminders
 
     /// Schedules a timed calendar notification reminder for a task with fallback in-app alert timer
     public func scheduleTaskReminder(task: TaskItem) {
@@ -203,25 +250,196 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
         center.removePendingNotificationRequests(withIdentifiers: ["task-reminder-\(task.id.uuidString)"])
     }
 
-    /// Triggers the in-app alert and sound fallback when reminder time is reached
+    /// Triggers the in-app alert and sound fallback when task reminder time is reached
     public func triggerInAppReminderFallback(for task: TaskItem) {
         self.lastFiredTask = task
         self.inAppTimers.removeValue(forKey: task.id)
 
-        #if canImport(AppKit)
-        NSSound.beep()
-        #endif
+        playRichAlertChime(soundName: "Hero")
+
+        let formatter = DateFormatter()
+        formatter.dateFormat = "h:mm a"
+        let timeStr = task.reminderDate != nil ? formatter.string(from: task.reminderDate!) : ""
 
         NotificationCenter.default.post(
             name: Self.taskReminderFiredNotification,
             object: task,
             userInfo: [
+                "taskId": task.id.uuidString,
                 "taskTitle": task.title,
-                "formattedTitle": Self.taskReminderTitle(for: task)
+                "formattedTitle": Self.taskReminderTitle(for: task),
+                "timeString": timeStr
+            ]
+        )
+
+        NotificationCenter.default.post(
+            name: Self.reminderAlertBannerNotification,
+            object: task,
+            userInfo: [
+                "title": task.title,
+                "subtitle": task.notes.isEmpty ? "Task Reminder" : task.notes,
+                "time": timeStr,
+                "type": "task"
             ]
         )
 
         onTaskReminderFired?(task)
+    }
+
+    // MARK: - Recurring Reminders
+
+    /// Schedules recurring calendar notification triggers for a recurring reminder
+    public func scheduleRecurringReminder(reminder: RecurringReminder) {
+        self.lastScheduledRecurringReminder = reminder
+
+        guard reminder.isEnabled else {
+            cancelRecurringReminder(reminder: reminder)
+            return
+        }
+
+        // Cancel previous timers and notifications
+        cancelRecurringReminder(reminder: reminder)
+
+        // Setup in-app fallback timer for the next occurrence
+        if let nextDate = reminder.nextFireDate() {
+            let interval = nextDate.timeIntervalSinceNow
+            if interval > 0 {
+                let timer = Timer(timeInterval: interval, repeats: false) { [weak self] _ in
+                    self?.triggerInAppRecurringReminderFallback(for: reminder)
+                }
+                RunLoop.main.add(timer, forMode: .common)
+                recurringInAppTimers[reminder.id] = timer
+            }
+        }
+
+        guard let center = center else { return }
+
+        let content = UNMutableNotificationContent()
+        content.title = Self.recurringReminderTitle(for: reminder)
+        content.body = Self.recurringReminderBody(for: reminder)
+        content.sound = .default
+
+        let timeComponents = Calendar.current.dateComponents([.hour, .minute], from: reminder.time)
+        guard let hour = timeComponents.hour, let minute = timeComponents.minute else { return }
+
+        switch reminder.repeatFrequency {
+        case .daily:
+            var match = DateComponents()
+            match.hour = hour
+            match.minute = minute
+            let trigger = UNCalendarNotificationTrigger(dateMatching: match, repeats: true)
+            let request = UNNotificationRequest(
+                identifier: "recurring-reminder-\(reminder.id.uuidString)",
+                content: content,
+                trigger: trigger
+            )
+            center.add(request)
+
+        case .weekdays:
+            // Schedule individual recurring requests for Monday through Friday (weekday 2..6)
+            for weekday in 2...6 {
+                var match = DateComponents()
+                match.weekday = weekday
+                match.hour = hour
+                match.minute = minute
+                let trigger = UNCalendarNotificationTrigger(dateMatching: match, repeats: true)
+                let request = UNNotificationRequest(
+                    identifier: "recurring-reminder-\(reminder.id.uuidString)-wd\(weekday)",
+                    content: content,
+                    trigger: trigger
+                )
+                center.add(request)
+            }
+
+        case .weekly:
+            let reminderWeekday = Calendar.current.component(.weekday, from: reminder.time)
+            var match = DateComponents()
+            match.weekday = reminderWeekday
+            match.hour = hour
+            match.minute = minute
+            let trigger = UNCalendarNotificationTrigger(dateMatching: match, repeats: true)
+            let request = UNNotificationRequest(
+                identifier: "recurring-reminder-\(reminder.id.uuidString)",
+                content: content,
+                trigger: trigger
+            )
+            center.add(request)
+
+        case .monthly:
+            let reminderDay = Calendar.current.component(.day, from: reminder.time)
+            var match = DateComponents()
+            match.day = reminderDay
+            match.hour = hour
+            match.minute = minute
+            let trigger = UNCalendarNotificationTrigger(dateMatching: match, repeats: true)
+            let request = UNNotificationRequest(
+                identifier: "recurring-reminder-\(reminder.id.uuidString)",
+                content: content,
+                trigger: trigger
+            )
+            center.add(request)
+        }
+    }
+
+    /// Cancels all scheduled notification triggers and in-app fallback timers for a recurring reminder
+    public func cancelRecurringReminder(reminder: RecurringReminder) {
+        recurringInAppTimers[reminder.id]?.invalidate()
+        recurringInAppTimers.removeValue(forKey: reminder.id)
+
+        guard let center = center else { return }
+
+        var identifiers = ["recurring-reminder-\(reminder.id.uuidString)"]
+        for weekday in 2...6 {
+            identifiers.append("recurring-reminder-\(reminder.id.uuidString)-wd\(weekday)")
+        }
+        center.removePendingNotificationRequests(withIdentifiers: identifiers)
+    }
+
+    /// Triggers the in-app alert, banner, and rich sound when a recurring reminder fires
+    public func triggerInAppRecurringReminderFallback(for reminder: RecurringReminder) {
+        self.lastFiredRecurringReminder = reminder
+        self.recurringInAppTimers.removeValue(forKey: reminder.id)
+
+        playRichAlertChime(soundName: "Hero")
+
+        NotificationCenter.default.post(
+            name: Self.recurringReminderFiredNotification,
+            object: reminder,
+            userInfo: [
+                "reminderId": reminder.id.uuidString,
+                "title": reminder.title,
+                "formattedTitle": Self.recurringReminderTitle(for: reminder),
+                "timeString": reminder.formattedTime,
+                "repeatFrequency": reminder.repeatFrequency.rawValue
+            ]
+        )
+
+        NotificationCenter.default.post(
+            name: Self.reminderAlertBannerNotification,
+            object: reminder,
+            userInfo: [
+                "title": reminder.title,
+                "subtitle": "\(reminder.repeatFrequency.rawValue) Reminder",
+                "time": reminder.formattedTime,
+                "type": "recurring"
+            ]
+        )
+
+        onRecurringReminderFired?(reminder)
+
+        // Reschedule next occurrence timer
+        if reminder.isEnabled {
+            if let nextDate = reminder.nextFireDate() {
+                let interval = nextDate.timeIntervalSinceNow
+                if interval > 0 {
+                    let timer = Timer(timeInterval: interval, repeats: false) { [weak self] _ in
+                        self?.triggerInAppRecurringReminderFallback(for: reminder)
+                    }
+                    RunLoop.main.add(timer, forMode: .common)
+                    recurringInAppTimers[reminder.id] = timer
+                }
+            }
+        }
     }
 
     // MARK: - UNUserNotificationCenterDelegate

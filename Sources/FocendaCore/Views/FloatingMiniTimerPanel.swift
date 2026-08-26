@@ -291,6 +291,8 @@ public struct FloatingControlCenterView: View {
                 quickNoteTab
             case .quickTask:
                 quickTaskTab
+            case .reminders:
+                remindersTab
             case .quickLinks:
                 quickLinksTab
             }
@@ -468,6 +470,39 @@ public struct FloatingControlCenterView: View {
                     Spacer()
                 }
                 .padding(4)
+            }
+        }
+    }
+
+    // MARK: - Reminders Tab
+    private var remindersTab: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Active Reminders")
+                .font(.caption.bold())
+                .foregroundStyle(AppTheme.textSecondary)
+
+            let activeReminders = RecurringReminderViewModel().activeReminders
+            if activeReminders.isEmpty {
+                Text("No active reminders scheduled.")
+                    .font(.caption2)
+                    .foregroundStyle(AppTheme.textTertiary)
+            } else {
+                ForEach(activeReminders.prefix(3)) { reminder in
+                    HStack {
+                        Image(systemName: "bell.fill")
+                            .font(.system(size: 9))
+                            .foregroundStyle(AppTheme.accent)
+                        Text(reminder.title)
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.textPrimary)
+                            .lineLimit(1)
+                        Spacer()
+                        Text(reminder.formattedTime)
+                            .font(.system(size: 9, weight: .bold, design: .monospaced))
+                            .foregroundStyle(AppTheme.textSecondary)
+                    }
+                    .padding(4)
+                }
             }
         }
     }

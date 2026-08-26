@@ -7,15 +7,15 @@ final class NotificationManagerTests: XCTestCase {
     func testNotificationTitles() {
         XCTAssertEqual(
             NotificationManager.notificationTitle(for: .work),
-            "Focus Session Completed! 🎯"
+            "Focus Session Completed"
         )
         XCTAssertEqual(
             NotificationManager.notificationTitle(for: .shortBreak),
-            "Short Break Finished! ⚡"
+            "Short Break Finished"
         )
         XCTAssertEqual(
             NotificationManager.notificationTitle(for: .longBreak),
-            "Long Break Ended! 🚀"
+            "Long Break Ended"
         )
     }
 
@@ -42,7 +42,7 @@ final class NotificationManagerTests: XCTestCase {
         )
         XCTAssertEqual(
             NotificationManager.taskReminderTitle(for: taskWithNotes),
-            "⏰ Task Reminder: Write documentation"
+            "Task Reminder: Write documentation"
         )
         XCTAssertEqual(
             NotificationManager.taskReminderBody(for: taskWithNotes),
@@ -56,11 +56,28 @@ final class NotificationManagerTests: XCTestCase {
         )
         XCTAssertEqual(
             NotificationManager.taskReminderTitle(for: taskWithoutNotes),
-            "⏰ Task Reminder: Quick Sync"
+            "Task Reminder: Quick Sync"
         )
         XCTAssertEqual(
             NotificationManager.taskReminderBody(for: taskWithoutNotes),
             "Time to focus on 'Quick Sync'."
+        )
+    }
+
+    func testRecurringReminderTitlesAndBodies() {
+        let reminder = RecurringReminder(
+            title: "Team Standup",
+            time: Date(),
+            repeatFrequency: .weekdays,
+            notes: "Discuss blockers"
+        )
+
+        XCTAssertEqual(
+            NotificationManager.recurringReminderTitle(for: reminder),
+            "Reminder (Weekdays): Team Standup"
+        )
+        XCTAssertTrue(
+            NotificationManager.recurringReminderBody(for: reminder).contains("Discuss blockers")
         )
     }
 
@@ -69,6 +86,13 @@ final class NotificationManagerTests: XCTestCase {
         for mode in FocusMode.allCases {
             manager.notifySessionCompleted(mode: mode)
         }
+    }
+
+    func testPlayRichAlertChimeDoesNotCrash() {
+        let manager = NotificationManager()
+        manager.playRichAlertChime(soundName: "Hero")
+        manager.playRichAlertChime(soundName: "Ping")
+        manager.playRichAlertChime(soundName: "UnknownSoundFallback")
     }
 
     func testScheduleTaskReminderDoesNotCrash() {
@@ -82,6 +106,19 @@ final class NotificationManagerTests: XCTestCase {
         XCTAssertEqual(manager.lastScheduledTask?.title, "Future Task Reminder")
 
         manager.cancelTaskReminder(task: futureTask)
+    }
+
+    func testScheduleRecurringReminderDoesNotCrash() {
+        let manager = NotificationManager()
+        let reminder = RecurringReminder(
+            title: "Daily Standup",
+            time: Date(),
+            repeatFrequency: .weekdays
+        )
+        manager.scheduleRecurringReminder(reminder: reminder)
+        XCTAssertEqual(manager.lastScheduledRecurringReminder?.title, "Daily Standup")
+
+        manager.cancelRecurringReminder(reminder: reminder)
     }
 
     func testInAppReminderFallbackTrigger() {
@@ -112,6 +149,34 @@ final class NotificationManagerTests: XCTestCase {
         XCTAssertEqual(manager.lastFiredTask?.title, "Urgent Meeting")
     }
 
+    func testInAppRecurringReminderFallbackTrigger() {
+        let manager = NotificationManager()
+        let reminder = RecurringReminder(
+            title: "Hydration Check",
+            time: Date(),
+            repeatFrequency: .daily
+        )
+
+        var callbackFired = false
+        var firedReminder: RecurringReminder?
+        manager.onRecurringReminderFired = { rem in
+            callbackFired = true
+            firedReminder = rem
+        }
+
+        let expectation = expectation(forNotification: NotificationManager.recurringReminderFiredNotification, object: nil) { notification in
+            let item = notification.object as? RecurringReminder
+            return item?.title == "Hydration Check"
+        }
+
+        manager.triggerInAppRecurringReminderFallback(for: reminder)
+
+        wait(for: [expectation], timeout: 2.0)
+        XCTAssertTrue(callbackFired)
+        XCTAssertEqual(firedReminder?.title, "Hydration Check")
+        XCTAssertEqual(manager.lastFiredRecurringReminder?.title, "Hydration Check")
+    }
+
     func testSharedInstance() {
         XCTAssertNotNil(NotificationManager.shared)
     }
@@ -121,6 +186,8 @@ final class NotificationManagerTests: XCTestCase {
             var notifiedModes: [FocusMode] = []
             var scheduledTasks: [TaskItem] = []
             var cancelledTasks: [TaskItem] = []
+            var scheduledRecurring: [RecurringReminder] = []
+            var cancelledRecurring: [RecurringReminder] = []
             var authorizationRequested = false
 
             func requestAuthorization(completion: ((Bool, Error?) -> Void)?) {
@@ -138,6 +205,14 @@ final class NotificationManagerTests: XCTestCase {
 
             func cancelTaskReminder(task: TaskItem) {
                 cancelledTasks.append(task)
+            }
+
+            func scheduleRecurringReminder(reminder: RecurringReminder) {
+                scheduledRecurring.append(reminder)
+            }
+
+            func cancelRecurringReminder(reminder: RecurringReminder) {
+                cancelledRecurring.append(reminder)
             }
         }
 
@@ -160,6 +235,13 @@ final class NotificationManagerTests: XCTestCase {
 
         mock.cancelTaskReminder(task: sampleTask)
         XCTAssertEqual(mock.cancelledTasks.count, 1)
+
+        let sampleRecurring = RecurringReminder(title: "Mock recurring", time: Date(), repeatFrequency: .daily)
+        mock.scheduleRecurringReminder(reminder: sampleRecurring)
+        XCTAssertEqual(mock.scheduledRecurring.count, 1)
+
+        mock.cancelRecurringReminder(reminder: sampleRecurring)
+        XCTAssertEqual(mock.cancelledRecurring.count, 1)
     }
 
     func testRequestAuthorizationAsyncWhenUnavailable() async throws {

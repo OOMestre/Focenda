@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Focenda Release Notes Generator
-Extracts user-friendly change summaries from git log/commits for staging and production release notes.
+Focenda Clean Release Notes Generator (Vosant-Style)
+Generates clean, structured, highly professional release notes without emoji visual pollution.
 """
 
 import argparse
@@ -51,13 +51,13 @@ def get_commits(repo_root, from_ref=None, to_ref="HEAD"):
         rev_range = f"{from_ref}..{to_ref}"
     else:
         rev_range = to_ref
-    
+
     # Format: hash|subject|author|date
     log_format = "%h|%s|%an|%ad"
     raw_log = run_git(["log", f"--pretty=format:{log_format}", "--date=short", rev_range], cwd=repo_root)
     if not raw_log:
         return []
-    
+
     commits = []
     for line in raw_log.splitlines():
         parts = line.strip().split("|", 3)
@@ -72,39 +72,58 @@ def get_commits(repo_root, from_ref=None, to_ref="HEAD"):
 
 
 CATEGORIES = [
-    ("features", "✨ New Features & Enhancements", [r"^(?:feat|feature|add)(?:\([^\)]+\))?:\s*(.*)$", r"^✨\s*(.*)$"]),
-    ("ui", "🎨 User Interface & Experience", [r"^(?:ui|ux|style)(?:\([^\)]+\))?:\s*(.*)$", r"^🎨\s*(.*)$"]),
-    ("fixes", "🐛 Bug Fixes & Improvements", [r"^(?:fix|bugfix|patch)(?:\([^\)]+\))?:\s*(.*)$", r"^🐛\s*(.*)$"]),
-    ("perf", "⚡ Performance Improvements", [r"^(?:perf|performance)(?:\([^\)]+\))?:\s*(.*)$", r"^⚡\s*(.*)$"]),
-    ("refactor", "🛠️ Architecture & Refactoring", [r"^(?:refactor)(?:\([^\)]+\))?:\s*(.*)$", r"^🛠️?\s*(.*)$"]),
-    ("docs", "📚 Documentation", [r"^(?:docs|doc)(?:\([^\)]+\))?:\s*(.*)$", r"^📝\s*(.*)$", r"^📚\s*(.*)$"]),
-    ("ci", "⚙️ CI/CD & Build Infrastructure", [r"^(?:ci|chore|build|tooling)(?:\([^\)]+\))?:\s*(.*)$", r"^⚙️\s*(.*)$"]),
-    ("tests", "🧪 Testing & Quality Assurance", [r"^(?:test|tests)(?:\([^\)]+\))?:\s*(.*)$", r"^🧪\s*(.*)$"]),
+    ("features", "Enhancements & Features", [
+        r"^(?:feat|feature|add)(?:\([^\)]+\))?:\s*(.*)$"
+    ]),
+    ("fixes", "Bug Fixes & Stability", [
+        r"^(?:fix|bugfix|patch)(?:\([^\)]+\))?:\s*(.*)$"
+    ]),
+    ("architecture", "Architectural & UI Refinements", [
+        r"^(?:refactor|architecture|ui|ux|style|perf|performance)(?:\([^\)]+\))?:\s*(.*)$"
+    ]),
+    ("docs", "Documentation & Guides", [
+        r"^(?:docs|doc)(?:\([^\)]+\))?:\s*(.*)$"
+    ]),
+    ("ci", "Build & Infrastructure", [
+        r"^(?:ci|chore|build|tooling)(?:\([^\)]+\))?:\s*(.*)$"
+    ]),
+    ("tests", "Testing & Verification", [
+        r"^(?:test|tests)(?:\([^\)]+\))?:\s*(.*)$"
+    ]),
 ]
 
 
+def clean_emoji_and_symbols(text):
+    """Strips leading emoji, symbols, and formatting noise from commit text."""
+    cleaned = re.sub(r'^[^\w\s\(\)\[\]\-]+', '', text).strip()
+    return cleaned
+
+
 def clean_subject(subject):
+    cleaned_subj = clean_emoji_and_symbols(subject)
     for cat_id, title, patterns in CATEGORIES:
         for p in patterns:
-            m = re.match(p, subject, re.IGNORECASE)
+            m = re.match(p, cleaned_subj, re.IGNORECASE)
             if m:
                 clean = m.group(1).strip()
+                clean = clean_emoji_and_symbols(clean)
                 if clean:
                     return cat_id, clean[0].upper() + clean[1:]
-    
-    m = re.match(r"^[a-zA-Z0-9_\-]+(?:\([^\)]+\))?:\s*(.*)$", subject)
+
+    m = re.match(r"^[a-zA-Z0-9_\-]+(?:\([^\)]+\))?:\s*(.*)$", cleaned_subj)
     if m:
         clean = m.group(1).strip()
+        clean = clean_emoji_and_symbols(clean)
         if clean:
             return "other", clean[0].upper() + clean[1:]
-            
-    clean = subject.strip()
+
+    clean = clean_emoji_and_symbols(subject)
     return "other", (clean[0].upper() + clean[1:]) if clean else ""
 
 
 def generate_release_notes(repo_root, from_ref=None, to_ref="HEAD", version=None, release_type=None, include_raw=False):
     all_tags = get_tags(repo_root)
-    
+
     if not from_ref:
         if all_tags:
             if to_ref in all_tags and len(all_tags) > 1:
@@ -115,17 +134,17 @@ def generate_release_notes(repo_root, from_ref=None, to_ref="HEAD", version=None
                 from_ref = None
 
     commits = get_commits(repo_root, from_ref=from_ref, to_ref=to_ref)
-    
+
     base_version = get_current_version(repo_root)
     if not version:
         if to_ref != "HEAD" and to_ref in all_tags:
             version = to_ref
         else:
             version = f"v{base_version}"
-            
+
     if not version.startswith("v") and not version.startswith("V"):
         version = f"v{version}"
-        
+
     if not release_type:
         if "beta" in version.lower() or "rc" in version.lower() or "alpha" in version.lower():
             release_type = "Staging Beta"
@@ -135,10 +154,10 @@ def generate_release_notes(repo_root, from_ref=None, to_ref="HEAD", version=None
         release_type = release_type.title()
 
     today_str = datetime.date.today().strftime("%Y-%m-%d")
-    
+
     categorized = {cat[0]: [] for cat in CATEGORIES}
     categorized["other"] = []
-    
+
     for c in commits:
         cat_id, cleaned = clean_subject(c["subject"])
         if cat_id not in categorized:
@@ -149,9 +168,9 @@ def generate_release_notes(repo_root, from_ref=None, to_ref="HEAD", version=None
             "raw": c["subject"],
             "author": c["author"]
         })
-        
+
     lines = []
-    lines.append(f"# 🚀 Focenda {version} Release Notes")
+    lines.append(f"# Focenda {version} Release Notes")
     lines.append("")
     lines.append(f"- **Release Date:** `{today_str}`")
     lines.append(f"- **Release Stage:** `{release_type}`")
@@ -163,14 +182,9 @@ def generate_release_notes(repo_root, from_ref=None, to_ref="HEAD", version=None
     lines.append("")
     lines.append("---")
     lines.append("")
-    lines.append("### 🌟 Release Summary")
-    
-    if "beta" in version.lower():
-        lines.append(f"This is a **Staging Beta Release** for **Focenda {version}**. It includes test validation, continuous integration builds, and staging verification for macOS.")
-    else:
-        lines.append(f"Welcome to **Focenda {version}**! This release delivers native productivity workflows, an intelligent focus timer, task prioritization, and dashboard analytics for macOS.")
+    lines.append("## What's Changed")
     lines.append("")
-    
+
     has_items = False
     for cat_id, title, _ in CATEGORIES:
         items = categorized.get(cat_id, [])
@@ -180,37 +194,41 @@ def generate_release_notes(repo_root, from_ref=None, to_ref="HEAD", version=None
             for item in items:
                 lines.append(f"- {item['cleaned']} (`{item['hash']}`)")
             lines.append("")
-            
+
     other_items = categorized.get("other", [])
     if other_items:
         has_items = True
-        lines.append("### 📋 Additional Changes & Maintenance")
+        lines.append("### Additional Improvements & Tooling")
         for item in other_items:
             lines.append(f"- {item['cleaned']} (`{item['hash']}`)")
         lines.append("")
-        
+
     if not has_items:
-        lines.append("### 📝 Changes")
-        lines.append("- Routine maintenance, optimizations, and internal stability improvements.")
+        lines.append("### General Improvements")
+        lines.append("- Routine maintenance, performance optimizations, and stability enhancements.")
         lines.append("")
-        
+
     lines.append("---")
     lines.append("")
-    lines.append("### 📦 Installation & Verification")
+    lines.append("### Installation & Verification")
     if "beta" in version.lower():
-        lines.append("1. Download `Focenda-macOS.zip` or extract `Focenda Staging.app` into `/Applications` or run locally.")
-        lines.append("2. Or build locally using `make staging` or double-click `Focenda Staging Launcher.app`.")
-        lines.append("3. Report any issues or feedback to the development repository.")
+        lines.append("1. Download `Focenda-macOS.zip` or run `Focenda Staging Launcher.app`.")
+        lines.append("2. Build locally using `make staging` or run `swift build -c release`.")
+        lines.append("3. Verify all test suites pass using `make test`.")
     else:
         lines.append("1. Download `Focenda-macOS.zip` from the release assets.")
         lines.append("2. Move `Focenda.app` to your `/Applications` directory.")
-        lines.append("3. Launch Focenda and enjoy focused productivity!")
+        lines.append("3. Launch Focenda and enjoy focused productivity.")
+    lines.append("")
+
+    if from_ref:
+        lines.append(f"### Full Changelog: `{from_ref}...{to_ref}`")
+    else:
+        lines.append(f"### Full Changelog: `{to_ref}`")
     lines.append("")
 
     if include_raw and commits:
-        lines.append("---")
-        lines.append("")
-        lines.append("### 🔍 Full Commit History")
+        lines.append("### Commit Log")
         lines.append("```text")
         for c in commits:
             lines.append(f"{c['hash']} - {c['subject']} ({c['author']}, {c['date']})")
@@ -222,7 +240,7 @@ def generate_release_notes(repo_root, from_ref=None, to_ref="HEAD", version=None
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Extracts user-friendly change summaries from git commits for release notes."
+        description="Extracts clean, professional change summaries from git commits for release notes (Vosant-style)."
     )
     parser.add_argument("--from", dest="from_ref", help="Start git commit/tag range (exclusive)")
     parser.add_argument("--to", dest="to_ref", default="HEAD", help="End git commit/tag range (inclusive, default: HEAD)")
@@ -248,7 +266,7 @@ def main():
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
         with open(output_path, "w", encoding="utf-8") as f:
             f.write(notes + "\n")
-        print(f"✅ Release notes written to {args.output_file}")
+        print(f"Release notes written to {args.output_file}")
     else:
         print(notes)
 

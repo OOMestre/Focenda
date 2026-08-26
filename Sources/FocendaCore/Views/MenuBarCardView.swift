@@ -6,6 +6,7 @@ public enum MenuBarSection: String, CaseIterable, Identifiable {
     case focus = "Focus"
     case quickNote = "Note"
     case quickTask = "Task"
+    case reminders = "Alerts"
     case quickLinks = "Links"
 
     public var id: String { rawValue }
@@ -15,6 +16,7 @@ public enum MenuBarSection: String, CaseIterable, Identifiable {
         case .focus: return "timer"
         case .quickNote: return "square.and.pencil"
         case .quickTask: return "checklist"
+        case .reminders: return "bell.badge"
         case .quickLinks: return "link"
         }
     }
@@ -25,6 +27,7 @@ public struct MenuBarCardView: View {
     public var timerVM: FocusTimerViewModel
     public var taskVM: TaskListViewModel
     public var scratchpadVM: ScratchpadViewModel
+    public var recurringReminderVM: RecurringReminderViewModel
     public var appState: AppState?
 
     @State public var selectedSection: MenuBarSection = .focus
@@ -32,9 +35,18 @@ public struct MenuBarCardView: View {
     @State private var isHovered: Bool = false
     @State private var completionAlertMessage: String? = nil
 
+    // In-App Reminder Banner
+    @State private var activeReminderAlert: (title: String, subtitle: String, time: String)? = nil
+
     // Quick Task state
     @State private var newTaskTitle: String = ""
     @State private var newTaskPriority: TaskPriority = .medium
+
+    // Recurring Reminder state
+    @State private var newReminderTitle: String = ""
+    @State private var newReminderTime: Date = Date()
+    @State private var newReminderFrequency: RepeatFrequency = .daily
+    @State private var isAddingReminder: Bool = false
 
     // Quick Note state
     @State public var selectedNoteFolder: String = "General"
@@ -53,12 +65,14 @@ public struct MenuBarCardView: View {
         timerVM: FocusTimerViewModel,
         taskVM: TaskListViewModel = TaskListViewModel(),
         scratchpadVM: ScratchpadViewModel = ScratchpadViewModel(),
+        recurringReminderVM: RecurringReminderViewModel = RecurringReminderViewModel(),
         appState: AppState? = nil,
         initialSection: MenuBarSection = .focus
     ) {
         self.timerVM = timerVM
         self.taskVM = taskVM
         self.scratchpadVM = scratchpadVM
+        self.recurringReminderVM = recurringReminderVM
         self.appState = appState
         self._selectedSection = State(initialValue: initialSection)
     }
@@ -66,7 +80,7 @@ public struct MenuBarCardView: View {
     public var body: some View {
         cardBody
             .padding(18)
-            .frame(width: 340)
+            .frame(width: 360)
             .background(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .fill(AppTheme.cardBackground)
@@ -119,6 +133,19 @@ public struct MenuBarCardView: View {
                     }
                 }
             }
+            .onReceive(NotificationCenter.default.publisher(for: NotificationManager.reminderAlertBannerNotification)) { notif in
+                let title = notif.userInfo?["title"] as? String ?? "Reminder"
+                let subtitle = notif.userInfo?["subtitle"] as? String ?? "Focenda Alert"
+                let time = notif.userInfo?["time"] as? String ?? ""
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.72)) {
+                    activeReminderAlert = (title: title, subtitle: subtitle, time: time)
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) {
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.72)) {
+                        activeReminderAlert = nil
+                    }
+                }
+            }
     }
 
     private var cardBody: some View {
@@ -126,7 +153,45 @@ public struct MenuBarCardView: View {
             // Header: App Title & Active Mode Tag
             headerSection
 
-            if let alertMsg = completionAlertMessage {
+            // Active Reminder Banner
+            if let reminderAlert = activeReminderAlert {
+                HStack(spacing: 8) {
+                    Image(systemName: "bell.badge.fill")
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.sandstone)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(reminderAlert.title)
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(AppTheme.textPrimary)
+                        Text("\(reminderAlert.subtitle) • \(reminderAlert.time)")
+                            .font(.system(size: 9))
+                            .foregroundStyle(AppTheme.textSecondary)
+                    }
+                    Spacer()
+                    Button {
+                        withAnimation { activeReminderAlert = nil }
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundStyle(AppTheme.textTertiary)
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(AppTheme.sandstone.opacity(0.15))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .stroke(AppTheme.sandstone.opacity(0.35), lineWidth: 1)
+                )
+                .transition(.asymmetric(
+                    insertion: .scale(scale: 0.95).combined(with: .opacity),
+                    removal: .opacity
+                ))
+            } else if let alertMsg = completionAlertMessage {
                 HStack(spacing: 6) {
                     Image(systemName: "bell.badge.fill")
                         .font(.caption)
@@ -161,6 +226,8 @@ public struct MenuBarCardView: View {
                     quickNoteSection
                 case .quickTask:
                     quickTaskSection
+                case .reminders:
+                    recurringRemindersSection
                 case .quickLinks:
                     quickLinksSection
                 }
@@ -204,7 +271,7 @@ public struct MenuBarCardView: View {
 
     // MARK: - Segmented Control Bar
     private var segmentedControlSection: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: 3) {
             ForEach(MenuBarSection.allCases) { section in
                 Button {
                     withAnimation(.spring(response: 0.25, dampingFraction: 0.72)) {
@@ -217,13 +284,13 @@ public struct MenuBarCardView: View {
                         }
                     }
                 } label: {
-                    HStack(spacing: 5) {
+                    HStack(spacing: 4) {
                         Image(systemName: section.iconName)
-                            .font(.system(size: 11, weight: .bold))
+                            .font(.system(size: 10, weight: .bold))
                         Text(section.rawValue)
-                            .font(.caption2.weight(.bold))
+                            .font(.system(size: 10, weight: .bold))
                     }
-                    .padding(.vertical, 6)
+                    .padding(.vertical, 5)
                     .frame(maxWidth: .infinity)
                     .background(
                         selectedSection == section
@@ -235,14 +302,14 @@ public struct MenuBarCardView: View {
                             ? .white
                             : AppTheme.textSecondary
                     )
-                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
                 }
                 .buttonStyle(SpringScaleButtonStyle())
             }
         }
         .padding(3)
         .background(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
+            RoundedRectangle(cornerRadius: 9, style: .continuous)
                 .fill(AppTheme.cardBackgroundSubtle.opacity(0.6))
         )
     }
@@ -250,19 +317,10 @@ public struct MenuBarCardView: View {
     // MARK: - ⏱️ Focus Section
     private var focusSection: some View {
         VStack(spacing: 12) {
-            // Mode Selector Pills
             modeSelectorSection
-
-            // Mini Circular Progress & Countdown
             miniProgressRingSection
-
-            // Quick Preset Buttons (-5m, +5m)
             quickPresetSection
-
-            // Cycle progress dots
             cycleDotsSection
-
-            // Control buttons
             controlsSection
         }
     }
@@ -307,14 +365,12 @@ public struct MenuBarCardView: View {
 
     private var miniProgressRingSection: some View {
         ZStack {
-            // Background track
             Circle()
                 .stroke(
                     timerVM.currentMode.themeColor.opacity(0.12),
                     lineWidth: 9
                 )
 
-            // Dynamic progress ring
             Circle()
                 .trim(from: 0.0, to: CGFloat(min(timerVM.progress, 1.0)))
                 .stroke(
@@ -324,7 +380,6 @@ public struct MenuBarCardView: View {
                 .rotationEffect(.degrees(-90))
                 .animation(.easeInOut(duration: 0.3), value: timerVM.progress)
 
-            // Center Countdown Readout
             VStack(spacing: 2) {
                 Text(timerVM.formattedTimeRemaining)
                     .font(.system(size: 28, weight: .bold, design: .rounded))
@@ -482,6 +537,149 @@ public struct MenuBarCardView: View {
         }
     }
 
+    // MARK: - 🔔 Recurring Reminders Section
+    private var recurringRemindersSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("Recurring Reminders (\(recurringReminderVM.activeReminders.count))")
+                    .font(.caption2.bold())
+                    .foregroundStyle(AppTheme.textSecondary)
+
+                Spacer()
+
+                Button {
+                    withAnimation(.spring(response: 0.25, dampingFraction: 0.7)) {
+                        isAddingReminder.toggle()
+                    }
+                } label: {
+                    HStack(spacing: 3) {
+                        Image(systemName: isAddingReminder ? "xmark" : "plus")
+                            .font(.system(size: 9, weight: .bold))
+                        Text(isAddingReminder ? "Cancel" : "Add")
+                            .font(.caption2.weight(.medium))
+                    }
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(AppTheme.accent)
+            }
+
+            if isAddingReminder {
+                VStack(spacing: 6) {
+                    TextField("Reminder title (e.g. Standup)", text: $newReminderTitle)
+                        .textFieldStyle(.plain)
+                        .font(.caption)
+                        .padding(6)
+                        .background(AppTheme.cardBackgroundSubtle)
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
+
+                    HStack(spacing: 6) {
+                        DatePicker("", selection: $newReminderTime, displayedComponents: [.hourAndMinute])
+                            .font(.caption)
+                            .labelsHidden()
+
+                        Picker("", selection: $newReminderFrequency) {
+                            ForEach(RepeatFrequency.allCases) { freq in
+                                Text(freq.rawValue).tag(freq)
+                            }
+                        }
+                        .font(.caption)
+                        .labelsHidden()
+
+                        Spacer()
+
+                        Button("Save") {
+                            saveQuickRecurringReminder()
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(AppTheme.accent)
+                        .controlSize(.small)
+                        .disabled(newReminderTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    }
+                }
+                .padding(8)
+                .background(
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(AppTheme.cardBackgroundSubtle.opacity(0.6))
+                )
+            }
+
+            if recurringReminderVM.reminders.isEmpty {
+                HStack {
+                    Spacer()
+                    VStack(spacing: 4) {
+                        Image(systemName: "bell.badge")
+                            .font(.title3)
+                            .foregroundStyle(AppTheme.textTertiary)
+                        Text("No recurring reminders")
+                            .font(.caption2)
+                            .foregroundStyle(AppTheme.textSecondary)
+                    }
+                    .padding(.vertical, 8)
+                    Spacer()
+                }
+            } else {
+                ScrollView {
+                    VStack(spacing: 5) {
+                        ForEach(recurringReminderVM.reminders) { reminder in
+                            HStack(spacing: 8) {
+                                Button {
+                                    withAnimation(.spring(response: 0.28, dampingFraction: 0.7)) {
+                                        recurringReminderVM.toggleReminder(id: reminder.id)
+                                    }
+                                } label: {
+                                    Image(systemName: reminder.isEnabled ? "checkmark.circle.fill" : "circle")
+                                        .font(.system(size: 11))
+                                        .foregroundStyle(reminder.isEnabled ? AppTheme.accent : AppTheme.textTertiary)
+                                }
+                                .buttonStyle(.plain)
+
+                                Text(reminder.title)
+                                    .font(.caption.weight(.medium))
+                                    .foregroundStyle(reminder.isEnabled ? AppTheme.textPrimary : AppTheme.textSecondary)
+                                    .lineLimit(1)
+
+                                Spacer()
+
+                                Text(reminder.formattedTime)
+                                    .font(.system(size: 9, weight: .bold, design: .monospaced))
+                                    .foregroundStyle(AppTheme.textPrimary)
+
+                                Text(reminder.repeatFrequency.rawValue)
+                                    .font(.system(size: 8, weight: .bold))
+                                    .padding(.horizontal, 4)
+                                    .padding(.vertical, 1.5)
+                                    .background(AppTheme.accent.opacity(0.12))
+                                    .foregroundStyle(AppTheme.accent)
+                                    .clipShape(Capsule())
+                            }
+                            .padding(6)
+                            .background(
+                                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                    .fill(AppTheme.cardBackgroundSubtle.opacity(0.4))
+                            )
+                        }
+                    }
+                }
+                .frame(maxHeight: 140)
+            }
+        }
+        .padding(.vertical, 2)
+    }
+
+    private func saveQuickRecurringReminder() {
+        let trimmed = newReminderTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+
+        recurringReminderVM.addReminder(
+            title: trimmed,
+            time: newReminderTime,
+            repeatFrequency: newReminderFrequency
+        )
+
+        newReminderTitle = ""
+        isAddingReminder = false
+    }
+
     // MARK: - 📝 Quick Note Section
     private var quickNoteSection: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -524,7 +722,6 @@ public struct MenuBarCardView: View {
                 .padding(.vertical, 2)
             }
 
-            // Quick Note Text Editor
             ZStack(alignment: .topLeading) {
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
                     .fill(AppTheme.cardBackgroundSubtle.opacity(0.5))
@@ -550,7 +747,6 @@ public struct MenuBarCardView: View {
             }
             .frame(height: 120)
 
-            // Note Actions & Feedback
             HStack {
                 if noteSavedFeedback {
                     HStack(spacing: 4) {
@@ -632,7 +828,6 @@ public struct MenuBarCardView: View {
     // MARK: - ✅ Quick Task Section
     private var quickTaskSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            // Task input row
             HStack(spacing: 8) {
                 TextField("Add task to checklist...", text: $newTaskTitle)
                     .textFieldStyle(.plain)
@@ -667,7 +862,6 @@ public struct MenuBarCardView: View {
                 .help("Add task")
             }
 
-            // Priority Selector
             HStack(spacing: 6) {
                 Text("Priority:")
                     .font(.caption2)
@@ -704,7 +898,6 @@ public struct MenuBarCardView: View {
 
             Divider()
 
-            // Pending Tasks List (top 3)
             VStack(alignment: .leading, spacing: 6) {
                 Text("Pending Tasks (\(taskVM.pendingTasksCount))")
                     .font(.caption2.bold())
@@ -828,7 +1021,6 @@ public struct MenuBarCardView: View {
                 )
             }
 
-            // Quick Links Grid
             let allLinks = QuickLink.defaultLinks + customLinks
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
                 ForEach(allLinks) { link in
@@ -908,7 +1100,6 @@ public struct MenuBarCardView: View {
             Divider()
 
             HStack {
-                // Open Main App Button
                 Button {
                     openMainApp()
                 } label: {
@@ -920,7 +1111,6 @@ public struct MenuBarCardView: View {
 
                 Spacer()
 
-                // Quit Button
                 Button {
                     NSApplication.shared.terminate(nil)
                 } label: {

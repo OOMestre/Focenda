@@ -1,4 +1,4 @@
-# 📝 Changelog
+# Changelog
 
 All notable changes, new features, and bug fixes for **Focenda** are documented here.
 
@@ -8,7 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 
 ## [0.1.0] - 2026-08-25
 
-### ✨ Added
+### Added
 - **Initial Release of Focenda:** Native macOS productivity application.
 - **Intelligent Focus Timer:** Deep focus, short breaks, and long breaks with circular progress indicator.
 - **Task Management:** Add, prioritize (`High`, `Medium`, `Low`), tag, search, and check off tasks.

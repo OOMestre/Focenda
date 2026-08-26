@@ -125,16 +125,41 @@ final class MenuBarCardViewTests: XCTestCase {
 
     func testMenuBarSectionsAndIcons() {
         let sections = MenuBarSection.allCases
-        XCTAssertEqual(sections.count, 4)
+        XCTAssertEqual(sections.count, 5)
         XCTAssertTrue(sections.contains(.focus))
         XCTAssertTrue(sections.contains(.quickNote))
         XCTAssertTrue(sections.contains(.quickTask))
+        XCTAssertTrue(sections.contains(.reminders))
         XCTAssertTrue(sections.contains(.quickLinks))
 
         for section in sections {
             XCTAssertFalse(section.iconName.isEmpty)
             XCTAssertFalse(section.rawValue.isEmpty)
         }
+    }
+
+    func testMenuBarRecurringRemindersIntegration() {
+        let timerVM = FocusTimerViewModel()
+        let taskVM = TaskListViewModel()
+        let scratchpadVM = ScratchpadViewModel()
+        let habitVM = HabitViewModel()
+        let reminderVM = RecurringReminderViewModel()
+        reminderVM.reminders = []
+
+        reminderVM.addReminder(title: "MenuBar Standup", time: Date(), repeatFrequency: .daily)
+
+        let cardView = MenuBarCardView(
+            timerVM: timerVM,
+            taskVM: taskVM,
+            scratchpadVM: scratchpadVM,
+            habitVM: habitVM,
+            recurringReminderVM: reminderVM,
+            initialSection: .reminders
+        )
+
+        XCTAssertNotNil(cardView.body)
+        XCTAssertEqual(cardView.recurringReminderVM.reminders.count, 1)
+        XCTAssertEqual(cardView.recurringReminderVM.reminders.first?.title, "MenuBar Standup")
     }
 
     func testQuickLinksModel() {

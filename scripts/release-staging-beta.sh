@@ -7,7 +7,7 @@ REPOSITORY_ROOT=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)
 VERSION_FILE="$REPOSITORY_ROOT/VERSION"
 
 fail() {
-  echo "❌ Error: $*" >&2
+  echo "Error: $*" >&2
   exit 1
 }
 
@@ -81,8 +81,7 @@ command -v git >/dev/null 2>&1 || fail "git command is required but not found"
 
 # Read base version
 BASE_VERSION=$(tr -d '[:space:]' < "$VERSION_FILE")
-if ! printf '%s
-' "$BASE_VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+if ! printf '%s\n' "$BASE_VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
   fail "VERSION must contain semantic version format MAJOR.MINOR.PATCH (e.g. 0.1.0). Found: '$BASE_VERSION'"
 fi
 
@@ -105,8 +104,7 @@ else
     # Extract highest beta number
     HIGHEST_BETA=0
     for tag in $EXISTING_BETAS; do
-      num=$(printf '%s
-' "$tag" | sed "s/^v${BASE_VERSION}-beta\.//" | grep -E '^[0-9]+$' || true)
+      num=$(printf '%s\n' "$tag" | sed "s/^v${BASE_VERSION}-beta\.//" | grep -E '^[0-9]+$' || true)
       if [ -n "$num" ] && [ "$num" -gt "$HIGHEST_BETA" ]; then
         HIGHEST_BETA="$num"
       fi
@@ -117,47 +115,47 @@ else
 fi
 
 echo "=================================================="
-echo "🚀 Focenda Staging Beta Release: $BETA_TAG"
+echo "Focenda Staging Beta Release: $BETA_TAG"
 echo "=================================================="
-echo "• Base Version: $BASE_VERSION"
-echo "• Target Tag:   $BETA_TAG"
-echo "• Commit Hash:  $(git rev-parse --short HEAD 2>/dev/null || echo 'HEAD')"
+echo "- Base Version: $BASE_VERSION"
+echo "- Target Tag:   $BETA_TAG"
+echo "- Commit Hash:  $(git rev-parse --short HEAD 2>/dev/null || echo 'HEAD')"
 echo "=================================================="
 
 # Step 1: Validate tests
 if [ "$SKIP_TESTS" -eq 0 ]; then
   echo ""
-  echo "📋 [1/3] Validating test suite with 'make test'..."
+  echo "[1/3] Validating test suite with 'make test'..."
   make test || fail "Test suite failed! Staging beta release aborted."
-  echo "✅ Tests passed successfully."
+  echo "Tests passed successfully."
 else
   echo ""
-  echo "⚠️  [1/3] Skipping test validation (--skip-tests specified)."
+  echo "[1/3] Skipping test validation (--skip-tests specified)."
 fi
 
 # Step 2: Git Tagging
 echo ""
-echo "🏷️  [2/3] Tagging release commit with '$BETA_TAG'..."
+echo "[2/3] Tagging release commit with '$BETA_TAG'..."
 if git rev-parse "$BETA_TAG" >/dev/null 2>&1; then
   if [ "$DRY_RUN" -eq 1 ]; then
-    echo "ℹ️  Tag '$BETA_TAG' already exists (dry run mode)."
+    echo "Tag '$BETA_TAG' already exists (dry run mode)."
   else
     fail "Tag '$BETA_TAG' already exists in the repository! Choose a different tag or delete the old one."
   fi
 else
   if [ "$DRY_RUN" -eq 1 ]; then
-    echo "ℹ️  [Dry Run] Would create tag: git tag -a '$BETA_TAG' -m 'Release $BETA_TAG (Staging Beta)'"
+    echo "[Dry Run] Would create tag: git tag -a '$BETA_TAG' -m 'Release $BETA_TAG (Staging Beta)'"
   else
     git tag -a "$BETA_TAG" -m "Release $BETA_TAG (Staging Beta)"
-    echo "✅ Tag '$BETA_TAG' successfully created."
+    echo "Tag '$BETA_TAG' successfully created."
   fi
 fi
 
 # Step 3: Build Focenda Staging.app
 echo ""
-echo "📦 [3/3] Building Focenda Staging.app..."
+echo "[3/3] Building Focenda Staging.app..."
 if [ "$DRY_RUN" -eq 1 ]; then
-  echo "ℹ️  [Dry Run] Would execute: ./scripts/build-staging.sh"
+  echo "[Dry Run] Would execute: ./scripts/build-staging.sh"
 else
   if [ "$NO_OPEN" -eq 1 ]; then
     FOCENDA_NO_OPEN=1 "$SCRIPT_DIR/build-staging.sh"
@@ -168,9 +166,9 @@ fi
 
 echo ""
 echo "=================================================="
-echo "🎉 Staging Beta Release Process Complete!"
-echo "• Tag:      $BETA_TAG"
-echo "• Artifact: dist/Focenda Staging.app"
+echo "Staging Beta Release Process Complete"
+echo "- Tag:      $BETA_TAG"
+echo "- Artifact: dist/Focenda Staging.app"
 echo ""
 echo "To publish this staging beta tag to GitHub, run:"
 echo "  git push origin $BETA_TAG"

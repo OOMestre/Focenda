@@ -20,6 +20,8 @@ public struct CalendarDay: Identifiable, Equatable {
     public let dueTasksCount: Int
     public let hasDueTasks: Bool
     public let hasReminders: Bool
+    public let recurringRemindersCount: Int
+    public let hasRecurringReminders: Bool
 
     public var focusHeatmapLevel: Int {
         if focusMinutes <= 0 { return 0 }
@@ -39,7 +41,9 @@ public struct CalendarDay: Identifiable, Equatable {
         tasksCount: Int,
         dueTasksCount: Int = 0,
         hasDueTasks: Bool = false,
-        hasReminders: Bool = false
+        hasReminders: Bool = false,
+        recurringRemindersCount: Int = 0,
+        hasRecurringReminders: Bool = false
     ) {
         self.date = date
         self.dayNumber = dayNumber
@@ -52,32 +56,50 @@ public struct CalendarDay: Identifiable, Equatable {
         self.dueTasksCount = dueTasksCount
         self.hasDueTasks = hasDueTasks
         self.hasReminders = hasReminders
+        self.recurringRemindersCount = recurringRemindersCount
+        self.hasRecurringReminders = hasRecurringReminders
     }
 }
 
-/// Interactive monthly calendar and timebox agenda view with responsive split layout
+/// Interactive monthly calendar, hover popover previews, and timebox agenda view with recurring reminders
 public struct CalendarView: View {
     public var timerVM: FocusTimerViewModel
     public var taskVM: TaskListViewModel
+    public var recurringReminderVM: RecurringReminderViewModel
 
     @State public var selectedDate: Date
     @State public var displayedMonth: Date
     @State private var quickTaskTitle: String = ""
     @State private var quickTaskPriority: TaskPriority = .medium
     @State private var hoveredDate: Date? = nil
+    @State private var hoveredPopoverDay: CalendarDay? = nil
+
+    // Recurring reminder creation state
+    @State private var isAddingRecurringReminder: Bool = false
+    @State private var newReminderTitle: String = ""
+    @State private var newReminderTime: Date = Date()
+    @State private var newReminderFrequency: RepeatFrequency = .daily
+    @State private var newReminderNotes: String = ""
+
+    // In-app alert banner
+    @State private var activeAlertBanner: (title: String, subtitle: String, time: String)? = nil
 
     private let calendar: Calendar = .current
 
     public init(
         timerVM: FocusTimerViewModel,
         taskVM: TaskListViewModel,
+        recurringReminderVM: RecurringReminderViewModel = RecurringReminderViewModel(),
         initialDate: Date = Date()
     ) {
         self.timerVM = timerVM
         self.taskVM = taskVM
+        self.recurringReminderVM = recurringReminderVM
         let startOfDay = Calendar.current.startOfDay(for: initialDate)
         _selectedDate = State(initialValue: startOfDay)
         let comp = Calendar.current.dateComponents([.year, .month], from: initialDate)
+        _displayedMonth = State(initialValue: Calendar.current.date(from: comp) ?? startOfDay)
+    }
         _displayedMonth = State(initialValue: Calendar.current.date(from: comp) ?? startOfDay)
     }
 
@@ -85,46 +107,124 @@ public struct CalendarView: View {
         GeometryReader { geometry in
             let isCompact = geometry.size.width < 760
 
-            if isCompact {
-                ScrollView {
-                    VStack(spacing: 20) {
-                        calendarMonthSection
-                            .padding(.horizontal, 16)
-                            .padding(.top, 16)
+            VStack(spacing: 0) {
+                // In-App Reminder Alert Banner (if active)
+                if let alert = activeAlertBanner {
+                    reminderBannerCard(title: alert.title, subtitle: alert.subtitle, time: alert.time)
+                        .padding(.horizontal, 16)
+                        .padding(.top, 12)
+                        .transition(.asymmetric(
+                            insertion: .move(edge: .top).combined(with: .opacity),
+                            removal: .opacity
+                        ))
+                }
+
+                if isCompact {
+                    ScrollView {
+                        VStack(spacing: 20) {
+                            calendarMonthSection
+                                .padding(.horizontal, 16)
+                                .padding(.top, 16)
+
+                            Divider()
+                                .background(AppTheme.border)
+                                .padding(.horizontal, 16)
+
+                            selectedDayAgendaSection
+                                .padding(.horizontal, 16)
+                                .padding(.bottom, 24)
+                        }
+                    }
+                } else {
+                    HStack(spacing: 0) {
+                        // Left Column: Monthly Calendar & Navigation
+                        ScrollView {
+                            calendarMonthSection
+                                .padding(20)
+                        }
+                        .frame(minWidth: 320, maxWidth: .infinity)
 
                         Divider()
                             .background(AppTheme.border)
-                            .padding(.horizontal, 16)
 
-                        selectedDayAgendaSection
-                            .padding(.horizontal, 16)
-                            .padding(.bottom, 24)
+                        // Right Column: Selected Day Agenda & Timebox Pane
+                        ScrollView {
+                            selectedDayAgendaSection
+                                .padding(20)
+                        }
+                        .frame(minWidth: 320, idealWidth: 380, maxWidth: 440)
+                        .background(AppTheme.cardBackgroundSubtle.opacity(0.35))
                     }
-                }
-            } else {
-                HStack(spacing: 0) {
-                    // Left Column: Monthly Calendar & Navigation
-                    ScrollView {
-                        calendarMonthSection
-                            .padding(20)
-                    }
-                    .frame(minWidth: 320, maxWidth: .infinity)
-
-                    Divider()
-                        .background(AppTheme.border)
-
-                    // Right Column: Selected Day Agenda & Timebox Pane
-                    ScrollView {
-                        selectedDayAgendaSection
-                            .padding(20)
-                    }
-                    .frame(minWidth: 300, idealWidth: 360, maxWidth: 420)
-                    .background(AppTheme.cardBackgroundSubtle.opacity(0.35))
                 }
             }
         }
         .background(AppTheme.background)
         .navigationTitle("Calendar & Agenda")
+        .onReceive(NotificationCenter.default.publisher(for: NotificationManager.reminderAlertBannerNotification)) { notif in
+            let title = notif.userInfo?["title"] as? String ?? "Reminder"
+            let subtitle = notif.userInfo?["subtitle"] as? String ?? "Focenda Alert"
+            let time = notif.userInfo?["time"] as? String ?? ""
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+                activeAlertBanner = (title: title, subtitle: subtitle, time: time)
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) {
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+                    activeAlertBanner = nil
+                }
+            }
+        }
+    }
+
+    // MARK: - In-App Reminder Banner Card
+    private func reminderBannerCard(title: String, subtitle: String, time: String) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: "bell.badge.fill")
+                .font(.system(size: 16, weight: .bold))
+                .foregroundStyle(AppTheme.sandstone)
+                .frame(width: 32, height: 32)
+                .background(AppTheme.sandstone.opacity(0.18))
+                .clipShape(Circle())
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(AppTheme.textPrimary)
+
+                HStack(spacing: 4) {
+                    Text(subtitle)
+                        .font(.system(size: 10))
+                        .foregroundStyle(AppTheme.textSecondary)
+
+                    if !time.isEmpty {
+                        Text("• \(time)")
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundStyle(AppTheme.sandstone)
+                    }
+                }
+            }
+
+            Spacer()
+
+            Button {
+                withAnimation { activeAlertBanner = nil }
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(AppTheme.textTertiary)
+                    .padding(6)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(10)
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(AppTheme.cardBackground)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .stroke(AppTheme.sandstone.opacity(0.4), lineWidth: 1.2)
+        )
+        .shadow(color: Color.black.opacity(0.08), radius: 6, x: 0, y: 3)
     }
 
     // MARK: - Left Pane: Calendar Month View
@@ -155,7 +255,7 @@ public struct CalendarView: View {
                     .font(.system(size: 22, weight: .bold, design: .rounded))
                     .foregroundStyle(AppTheme.textPrimary)
 
-                Text("Focus consistency & daily timebox breakdown")
+                Text("Focus consistency, timebox breakdown & recurring reminders")
                     .font(.caption)
                     .foregroundStyle(AppTheme.textSecondary)
             }
@@ -234,10 +334,12 @@ public struct CalendarView: View {
 
     private func calendarDayCell(day: CalendarDay) -> some View {
         let isHovered = hoveredDate != nil && calendar.isDate(hoveredDate!, inSameDayAs: day.date)
+        let isPopoverPresented = hoveredPopoverDay?.id == day.id
 
         return Button {
             withAnimation(.spring(response: 0.28, dampingFraction: 0.75)) {
                 selectedDate = day.date
+                hoveredPopoverDay = nil
                 if !day.isCurrentMonth {
                     displayedMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: day.date)) ?? displayedMonth
                 }
@@ -262,7 +364,11 @@ public struct CalendarView: View {
 
                     Spacer(minLength: 0)
 
-                    if day.hasReminders {
+                    if day.hasRecurringReminders {
+                        Image(systemName: "repeat")
+                            .font(.system(size: 7, weight: .bold))
+                            .foregroundStyle(day.isSelected ? .white.opacity(0.9) : AppTheme.accent)
+                    } else if day.hasReminders {
                         Image(systemName: "bell.fill")
                             .font(.system(size: 7))
                             .foregroundStyle(day.isSelected ? .white.opacity(0.9) : AppTheme.sandstone)
@@ -271,7 +377,7 @@ public struct CalendarView: View {
 
                 Spacer(minLength: 1)
 
-                // Heatmap dots & task indicators (Focus + Due Tasks + Tasks)
+                // Heatmap dots & task indicators (Focus + Due Tasks + Tasks + Recurring)
                 HStack(spacing: 3) {
                     // Focus Heatmap indicator
                     if day.focusHeatmapLevel > 0 {
@@ -284,6 +390,13 @@ public struct CalendarView: View {
                     if day.hasDueTasks {
                         Circle()
                             .fill(day.isSelected ? Color.white : AppTheme.sandstone)
+                            .frame(width: 4, height: 4)
+                    }
+
+                    // Recurring Reminders indicator
+                    if day.hasRecurringReminders {
+                        Circle()
+                            .fill(day.isSelected ? Color.white : AppTheme.deepFocus)
                             .frame(width: 4, height: 4)
                     }
 
@@ -313,12 +426,12 @@ public struct CalendarView: View {
                     .stroke(
                         day.isSelected
                             ? AppTheme.accent
-                            : (day.isToday ? AppTheme.accent.opacity(0.4) : AppTheme.subtleBorder),
+                            : (day.isToday ? AppTheme.accent.opacity(0.4) : (isHovered ? AppTheme.accent.opacity(0.3) : AppTheme.subtleBorder)),
                         lineWidth: day.isToday ? 1.5 : 1.0
                     )
             )
             .shadow(
-                color: Color.black.opacity(day.isSelected ? 0.10 : (isHovered ? 0.04 : 0.0)),
+                color: Color.black.opacity(day.isSelected ? 0.10 : (isHovered ? 0.05 : 0.0)),
                 radius: day.isSelected ? 3 : 1,
                 x: 0,
                 y: 1
@@ -327,8 +440,201 @@ public struct CalendarView: View {
         .buttonStyle(.plain)
         .onHover { hovering in
             hoveredDate = hovering ? day.date : nil
+            withAnimation(.spring(response: 0.25, dampingFraction: 0.75)) {
+                hoveredPopoverDay = hovering ? day : nil
+            }
+        .popover(
+            isPresented: Binding(
+                get: { isPopoverPresented },
+                set: { presenting in
+                    if !presenting && hoveredPopoverDay?.id == day.id {
+                        hoveredPopoverDay = nil
+                    }
+                }
+            ),
+            arrowEdge: .top
+        ) {
+            dayHoverPreviewCard(for: day)
         }
-        .help("\(formattedFullDate(day.date)): \(day.focusMinutes)m focus, \(day.tasksCount) tasks\(day.dueTasksCount > 0 ? ", \(day.dueTasksCount) due" : "")\(day.hasReminders ? ", has reminders" : "")")
+        .help("\(formattedFullDate(day.date)): \(day.focusMinutes)m focus, \(day.tasksCount) tasks\(day.dueTasksCount > 0 ? ", \(day.dueTasksCount) due" : "")\(day.recurringRemindersCount > 0 ? ", \(day.recurringRemindersCount) reminders" : "")")
+    }
+
+    // MARK: - Day Hover Popover Preview Card
+    private func dayHoverPreviewCard(for day: CalendarDay) -> some View {
+        let dayTasks = tasks(for: day.date)
+        let dayReminders = recurringReminderVM.reminders(for: day.date, calendar: calendar)
+        let daySessions = sessions(for: day.date)
+        let dayHabits = habitsCompleted(for: day.date)
+
+        return VStack(alignment: .leading, spacing: 10) {
+            // Header
+            HStack(alignment: .center) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(formattedDayHeader(day.date))
+                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                        .foregroundStyle(AppTheme.textPrimary)
+
+                    Text(formattedFullDate(day.date))
+                        .font(.caption2)
+                        .foregroundStyle(AppTheme.textSecondary)
+                }
+
+                Spacer(minLength: 12)
+
+                Text(relativeDayLabel(day.date))
+                    .font(.system(size: 8, weight: .heavy))
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(AppTheme.accent.opacity(0.15))
+                    .foregroundStyle(AppTheme.accent)
+                    .clipShape(Capsule())
+            }
+
+            Divider()
+
+            // Metrics Summary Bar
+            HStack(spacing: 8) {
+                HStack(spacing: 3) {
+                    Image(systemName: "timer")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(AppTheme.deepFocus)
+                    Text("\(day.focusMinutes)m focus")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(AppTheme.textPrimary)
+                }
+
+                HStack(spacing: 3) {
+                    Image(systemName: "flame.fill")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(AppTheme.sandstone)
+                    Text("\(dayHabits.count) habits")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(AppTheme.textPrimary)
+                }
+
+                HStack(spacing: 3) {
+                    Image(systemName: "checklist")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(AppTheme.success)
+                    Text("\(dayTasks.filter(\.isCompleted).count)/\(dayTasks.count) tasks")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(AppTheme.textPrimary)
+                }
+            }
+
+            // Recurring Reminders Preview
+            if !dayReminders.isEmpty {
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "repeat")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundStyle(AppTheme.accent)
+                        Text("Recurring Reminders (\(dayReminders.count))")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(AppTheme.textSecondary)
+                    }
+
+                    ForEach(dayReminders.prefix(3)) { reminder in
+                        HStack(spacing: 6) {
+                            Text(reminder.formattedTime)
+                                .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                                .padding(.horizontal, 4)
+                                .padding(.vertical, 1)
+                                .background(AppTheme.accent.opacity(0.12))
+                                .foregroundStyle(AppTheme.accent)
+                                .clipShape(RoundedRectangle(cornerRadius: 3))
+
+                            Text(reminder.title)
+                                .font(.system(size: 10))
+                                .foregroundStyle(AppTheme.textPrimary)
+                                .lineLimit(1)
+
+                            Spacer()
+
+                            Text(reminder.repeatFrequency.rawValue)
+                                .font(.system(size: 8, weight: .medium))
+                                .foregroundStyle(AppTheme.textTertiary)
+                        }
+                    }
+                }
+                .padding(6)
+                .background(
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(AppTheme.cardBackgroundSubtle.opacity(0.5))
+                )
+            }
+
+            // Scheduled Tasks Preview
+            if !dayTasks.isEmpty {
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "checklist")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundStyle(AppTheme.success)
+                        Text("Scheduled Tasks")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(AppTheme.textSecondary)
+                    }
+
+                    ForEach(dayTasks.prefix(3)) { task in
+                        HStack(spacing: 6) {
+                            Image(systemName: task.isCompleted ? "checkmark.circle.fill" : "circle")
+                                .font(.system(size: 9))
+                                .foregroundStyle(task.isCompleted ? AppTheme.success : AppTheme.textTertiary)
+
+                            Text(task.title)
+                                .font(.system(size: 10))
+                                .strikethrough(task.isCompleted, color: AppTheme.textSecondary)
+                                .foregroundStyle(task.isCompleted ? AppTheme.textSecondary : AppTheme.textPrimary)
+                                .lineLimit(1)
+
+                            Spacer()
+
+                            Text(task.priority.rawValue)
+                                .font(.system(size: 8, weight: .bold))
+                                .padding(.horizontal, 4)
+                                .padding(.vertical, 1)
+                                .background(task.priority.color.opacity(0.15))
+                                .foregroundStyle(task.priority.color)
+                                .clipShape(Capsule())
+                        }
+                    }
+                }
+            } else if dayReminders.isEmpty && daySessions.isEmpty {
+                Text("No scheduled items or recorded sessions for this day.")
+                    .font(.caption2)
+                    .foregroundStyle(AppTheme.textTertiary)
+                    .padding(.vertical, 2)
+            }
+
+            // Focus Sessions breakdown
+            if !daySessions.isEmpty {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Focus Breakdown (\(daySessions.count) sessions)")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(AppTheme.textSecondary)
+
+                    HStack(spacing: 4) {
+                        ForEach(daySessions.prefix(4)) { session in
+                            HStack(spacing: 3) {
+                                Circle().fill(session.mode.themeColor).frame(width: 5, height: 5)
+                                Text("\(session.durationSeconds / 60)m")
+                                    .font(.system(size: 9, weight: .semibold))
+                                    .foregroundStyle(AppTheme.textSecondary)
+                            }
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 2)
+                            .background(session.mode.themeColor.opacity(0.12))
+                            .clipShape(Capsule())
+                        }
+                    }
+                }
+            }
+        }
+        .padding(12)
+        .frame(width: 280)
+        .background(AppTheme.cardBackground)
+>>>>>>> subagent-Calendar--Reminders---Audio-Specialist-focenda-worker-68a22f1c
     }
 
     private func heatmapDotColor(level: Int, isSelected: Bool) -> Color {
@@ -385,15 +691,17 @@ public struct CalendarView: View {
             Spacer(minLength: 4)
 
             HStack(spacing: 3) {
-                Circle().fill(AppTheme.sandstone).frame(width: 5, height: 5)
-                Text("Due Task")
+                Image(systemName: "repeat")
+                    .font(.system(size: 8))
+                    .foregroundStyle(AppTheme.accent)
+                Text("Recurring")
                     .font(.system(size: 9))
                     .foregroundStyle(AppTheme.textTertiary)
             }
 
             HStack(spacing: 3) {
-                Circle().fill(AppTheme.riverSlate).frame(width: 5, height: 5)
-                Text("Task")
+                Circle().fill(AppTheme.sandstone).frame(width: 5, height: 5)
+                Text("Due Task")
                     .font(.system(size: 9))
                     .foregroundStyle(AppTheme.textTertiary)
             }
@@ -490,6 +798,9 @@ public struct CalendarView: View {
             // Selected Day Header Banner
             selectedDayHeaderBanner
 
+            // Recurring Reminders for Day
+            recurringRemindersSection
+
             // Focus Sessions Log
             focusSessionsLogSection
 
@@ -536,12 +847,20 @@ public struct CalendarView: View {
             // Summary Metric Chips
             let dayFocusMinutes = focusMinutes(for: selectedDate)
             let dayTasks = tasks(for: selectedDate)
+            let dayReminders = recurringReminderVM.reminders(for: selectedDate, calendar: calendar)
 
             HStack(spacing: 6) {
                 agendaChip(
                     icon: "timer",
                     label: "\(dayFocusMinutes)m focus",
                     color: AppTheme.deepFocus
+                )
+
+                agendaChip(
+                agendaChip(
+                    icon: "repeat",
+                    label: "\(dayReminders.count) rem",
+                    color: AppTheme.accent
                 )
 
                 agendaChip(
@@ -577,7 +896,168 @@ public struct CalendarView: View {
         .clipShape(Capsule())
     }
 
-    // MARK: - Focus Sessions Log Section
+    // MARK: - 🔔 Recurring Reminders Section
+    private var recurringRemindersSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Label("Recurring Reminders", systemImage: "repeat")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(AppTheme.textPrimary)
+
+                Spacer()
+
+                Button {
+                    withAnimation(.spring(response: 0.28, dampingFraction: 0.75)) {
+                        isAddingRecurringReminder.toggle()
+                    }
+                } label: {
+                    HStack(spacing: 3) {
+                        Image(systemName: isAddingRecurringReminder ? "xmark" : "plus")
+                            .font(.system(size: 9, weight: .bold))
+                        Text(isAddingRecurringReminder ? "Cancel" : "Add")
+                            .font(.caption2.weight(.medium))
+                    }
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(AppTheme.accent)
+            }
+
+            if isAddingRecurringReminder {
+                addRecurringReminderForm
+            }
+
+            let dayReminders = recurringReminderVM.reminders(for: selectedDate, calendar: calendar)
+            if dayReminders.isEmpty {
+                emptyAgendaCard(
+                    icon: "bell.badge",
+                    title: "No recurring reminders for this day",
+                    subtitle: "Add a daily or repeating reminder above to stay on track."
+                )
+            } else {
+                VStack(spacing: 6) {
+                    ForEach(dayReminders) { reminder in
+                        HStack(spacing: 8) {
+                            Button {
+                                withAnimation(.spring(response: 0.28, dampingFraction: 0.7)) {
+                                    recurringReminderVM.toggleReminder(id: reminder.id)
+                                }
+                            } label: {
+                                Image(systemName: reminder.isEnabled ? "checkmark.circle.fill" : "circle")
+                                    .font(.body)
+                                    .foregroundStyle(reminder.isEnabled ? AppTheme.accent : AppTheme.textTertiary)
+                            }
+                            .buttonStyle(.plain)
+                            .help(reminder.isEnabled ? "Disable reminder" : "Enable reminder")
+
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(reminder.title)
+                                    .font(.caption.weight(.medium))
+                                    .foregroundStyle(reminder.isEnabled ? AppTheme.textPrimary : AppTheme.textSecondary)
+
+                                if !reminder.notes.isEmpty {
+                                    Text(reminder.notes)
+                                        .font(.system(size: 9))
+                                        .foregroundStyle(AppTheme.textTertiary)
+                                }
+                            }
+
+                            Spacer()
+
+                            HStack(spacing: 4) {
+                                Text(reminder.formattedTime)
+                                    .font(.system(size: 9, weight: .bold, design: .monospaced))
+                                    .padding(.horizontal, 5)
+                                    .padding(.vertical, 2)
+                                    .background(AppTheme.cardBackgroundSubtle)
+                                    .foregroundStyle(AppTheme.textPrimary)
+                                    .clipShape(RoundedRectangle(cornerRadius: 4))
+
+                                Text(reminder.repeatFrequency.rawValue)
+                                    .font(.system(size: 8, weight: .bold))
+                                    .padding(.horizontal, 5)
+                                    .padding(.vertical, 2)
+                                    .background(AppTheme.accent.opacity(0.12))
+                                    .foregroundStyle(AppTheme.accent)
+                                    .clipShape(Capsule())
+                            }
+                        }
+                        .padding(8)
+                        .background(
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                .fill(AppTheme.cardBackground)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                .stroke(AppTheme.subtleBorder, lineWidth: 1)
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    private var addRecurringReminderForm: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            TextField("Reminder title (e.g. Daily Standup)", text: $newReminderTitle)
+                .textFieldStyle(.plain)
+                .font(.caption)
+                .padding(6)
+                .background(AppTheme.cardBackgroundSubtle)
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+
+            HStack(spacing: 8) {
+                DatePicker("Time:", selection: $newReminderTime, displayedComponents: [.hourAndMinute])
+                    .font(.caption)
+                    .labelsHidden()
+
+                Picker("Frequency", selection: $newReminderFrequency) {
+                    ForEach(RepeatFrequency.allCases) { freq in
+                        Text(freq.rawValue).tag(freq)
+                    }
+                }
+                .font(.caption)
+                .labelsHidden()
+
+                Spacer()
+
+                Button("Save Reminder") {
+                    saveNewRecurringReminder()
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(AppTheme.accent)
+                .controlSize(.small)
+                .disabled(newReminderTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+        }
+        .padding(10)
+        .background(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(AppTheme.cardBackgroundSubtle.opacity(0.5))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .stroke(AppTheme.accent.opacity(0.3), lineWidth: 1)
+        )
+    }
+
+    private func saveNewRecurringReminder() {
+        let trimmed = newReminderTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+
+        recurringReminderVM.addReminder(
+            title: trimmed,
+            time: newReminderTime,
+            repeatFrequency: newReminderFrequency,
+            notes: newReminderNotes
+        )
+
+        newReminderTitle = ""
+        newReminderNotes = ""
+        isAddingRecurringReminder = false
+    }
+
+    // MARK: - ⏱️ Focus Sessions Log Section
+>>>>>>> subagent-Calendar--Reminders---Audio-Specialist-focenda-worker-68a22f1c
     private var focusSessionsLogSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
@@ -587,8 +1067,8 @@ public struct CalendarView: View {
 
                 Spacer()
 
-                let sessions = sessions(for: selectedDate)
-                Text("\(sessions.count) logged")
+                let sessionsList = sessions(for: selectedDate)
+                Text("\(sessionsList.count) logged")
                     .font(.caption2.bold())
                     .foregroundStyle(AppTheme.textSecondary)
             }
@@ -847,8 +1327,9 @@ public struct CalendarView: View {
             let dayNumber = calendar.component(.day, from: currentDate)
 
             let focusMin = focusMinutes(for: currentDate)
-            let sessions = sessions(for: currentDate)
+            let sessionsList = sessions(for: currentDate)
             let tasksList = tasks(for: currentDate)
+            let recurringRemindersList = recurringReminderVM.reminders(for: currentDate, calendar: calendar)
 
             let dueTasks = tasksList.filter { task in
                 if let due = task.dueDate {
@@ -870,11 +1351,13 @@ public struct CalendarView: View {
                 isToday: isToday,
                 isSelected: isSelected,
                 focusMinutes: focusMin,
-                focusSessionsCount: sessions.count,
+                focusSessionsCount: sessionsList.count,
                 tasksCount: tasksList.count,
                 dueTasksCount: dueTasks.count,
                 hasDueTasks: !dueTasks.isEmpty,
-                hasReminders: hasReminders
+                hasReminders: hasReminders || !recurringRemindersList.isEmpty,
+                recurringRemindersCount: recurringRemindersList.count,
+                hasRecurringReminders: !recurringRemindersList.isEmpty
             )
             days.append(day)
 
