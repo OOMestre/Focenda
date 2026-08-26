@@ -1,10 +1,10 @@
-# 🚀 Focenda Release & Deployment Guide
+# Focenda Release & Deployment Guide
 
 This guide details the release management philosophy, workflows, gating mechanisms, and tooling for **Focenda** on macOS. It outlines how development moves from fast-iteration **Staging Beta Releases** to battle-tested **Production Releases**.
 
 ---
 
-## 📑 Table of Contents
+## Table of Contents
 1. [Overview & Philosophy](#overview--philosophy)
 2. [Release Stages & Gating Matrix](#release-stages--gating-matrix)
 3. [Release Lifecycle Architecture](#release-lifecycle-architecture)
