@@ -60,10 +60,26 @@ final class SettingsViewTests: XCTestCase {
         appState.dailyFocusGoalMinutes = 180
         appState.soundEnabled = false
         appState.selectedTheme = .obsidianMinimal
+        appState.globalShortcutsEnabled = false
+        appState.shortcutPreset = .powerUser
+        appState.showShortcutFeedback = false
         appState.savePreferences()
 
         XCTAssertEqual(UserDefaults.standard.integer(forKey: "dailyFocusGoalMinutes"), 180)
         XCTAssertFalse(UserDefaults.standard.bool(forKey: "soundEnabled"))
         XCTAssertEqual(UserDefaults.standard.string(forKey: AppTheme.storageKey), AppThemeOption.obsidianMinimal.rawValue)
+        XCTAssertFalse(UserDefaults.standard.bool(forKey: "globalShortcutsEnabled"))
+        XCTAssertEqual(UserDefaults.standard.string(forKey: "shortcutPreset"), GlobalShortcutPreset.powerUser.rawValue)
+        XCTAssertFalse(UserDefaults.standard.bool(forKey: "showShortcutFeedback"))
+    }
+
+    func testSettingsViewWithShortcutsDisabled() {
+        let appState = AppState()
+        appState.globalShortcutsEnabled = false
+        let timerVM = FocusTimerViewModel()
+        let settingsView = SettingsView(appState: appState, timerVM: timerVM)
+
+        XCTAssertNotNil(settingsView)
+        XCTAssertNotNil(settingsView.body)
     }
 }

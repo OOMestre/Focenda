@@ -52,6 +52,9 @@ public struct SettingsView: View {
                     .padding(12)
                 }
 
+                // Global Keyboard Shortcuts
+                keyboardShortcutsSection
+
                 // General Preferences
                 GroupBox(label: Label("General Preferences", systemImage: "slider.horizontal.3").foregroundStyle(AppTheme.textPrimary)) {
                     VStack(spacing: 16) {
@@ -147,6 +150,121 @@ public struct SettingsView: View {
             }
             .padding(12)
         }
+    }
+
+    // MARK: - Global Keyboard Shortcuts Section
+    private var keyboardShortcutsSection: some View {
+        GroupBox(label: Label("Global Keyboard Shortcuts", systemImage: "keyboard").foregroundStyle(AppTheme.textPrimary)) {
+            VStack(alignment: .leading, spacing: 16) {
+                // Master Toggle
+                Toggle(isOn: $appState.globalShortcutsEnabled) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Enable System-Wide Global Shortcuts")
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(AppTheme.textPrimary)
+                        Text("Control your focus timer anywhere in macOS even when Focenda is in the background or menu bar.")
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.textSecondary)
+                    }
+                }
+                .toggleStyle(.switch)
+                .tint(AppTheme.accent)
+
+                if appState.globalShortcutsEnabled {
+                    Divider()
+
+                    // Preset Picker
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Shortcut Scheme:")
+                                .font(.subheadline.weight(.medium))
+                                .foregroundStyle(AppTheme.textPrimary)
+                            Text("Select modifier combination for focus shortcuts.")
+                                .font(.caption)
+                                .foregroundStyle(AppTheme.textSecondary)
+                        }
+                        Spacer()
+                        Picker("", selection: $appState.shortcutPreset) {
+                            ForEach(GlobalShortcutPreset.allCases) { preset in
+                                Text(preset.displayName).tag(preset)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        .frame(maxWidth: 320)
+                    }
+
+                    Divider()
+
+                    // Shortcut List Cards
+                    VStack(spacing: 8) {
+                        let combinations = ShortcutKeyCombination.defaultCombinations(for: appState.shortcutPreset)
+                        ForEach(combinations) { combo in
+                            ShortcutRowView(combination: combo)
+                        }
+                    }
+
+                    Divider()
+
+                    // Audio Confirmation Feedback Toggle
+                    Toggle("Play subtle confirmation sound when shortcut is triggered", isOn: $appState.showShortcutFeedback)
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.textSecondary)
+                }
+            }
+            .padding(12)
+        }
+    }
+}
+
+// MARK: - Shortcut Row View
+
+private struct ShortcutRowView: View {
+    let combination: ShortcutKeyCombination
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: combination.action.iconName)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(AppTheme.accent)
+                .frame(width: 20)
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text(combination.action.displayName)
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(AppTheme.textPrimary)
+                Text(combination.action.description)
+                    .font(.system(size: 10))
+                    .foregroundStyle(AppTheme.textTertiary)
+            }
+
+            Spacer()
+
+            // Keycap Badges
+            HStack(spacing: 4) {
+                ForEach(combination.keyBadges, id: \.self) { badge in
+                    Text(badge)
+                        .font(.system(size: 11, weight: .bold, design: .monospaced))
+                        .foregroundStyle(AppTheme.textPrimary)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 3)
+                        .background(
+                            RoundedRectangle(cornerRadius: 5, style: .continuous)
+                                .fill(AppTheme.cardBackgroundSubtle)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 5, style: .continuous)
+                                .stroke(AppTheme.border, lineWidth: 1)
+                        )
+                        .shadow(color: Color.black.opacity(0.08), radius: 1, x: 0, y: 1)
+                }
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(AppTheme.cardBackgroundSubtle.opacity(0.35))
+        )
     }
 }
 

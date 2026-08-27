@@ -95,11 +95,24 @@ public final class FocusTimerViewModel {
         advanceToNextMode()
     }
 
+    public func toggleStartPause() {
+        if status == .running {
+            pause()
+        } else {
+            start()
+        }
+    }
+
     public func switchMode(to mode: FocusMode) {
         pause()
         currentMode = mode
         status = .idle
         resetToCurrentMode()
+    }
+
+    public func startMode(_ mode: FocusMode) {
+        switchMode(to: mode)
+        start()
     }
 
     /// Adjust remaining time by a delta in seconds (clamped to minimum 60s)

@@ -4,6 +4,13 @@ All notable changes, new features, and bug fixes for **Focenda** are documented 
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **Global Keyboard Shortcuts for Focus:** Implemented native system-wide keyboard shortcuts using macOS Carbon HIToolbox (`RegisterEventHotKey`) and `AppKit` to start/pause focus (`⌥ ⌘ F`), launch deep focus mode (`⌥ ⌘ 1`), trigger short breaks (`⌥ ⌘ 2`), start long breaks (`⌥ ⌘ 3`), reset the timer (`⌥ ⌘ R`), and skip sessions (`⌥ ⌘ S`) from any application across macOS.
+- **Global Shortcuts Settings & Custom Presets:** Added a dedicated Keyboard Shortcuts preferences section in Settings with Apple-style keycap badges, scheme presets (Standard `⌥ ⌘`, Power User `⌃ ⌥ ⌘`, Compact `⌃ ⌥`), and audio feedback options.
+- **macOS Menu Bar Focus Commands:** Integrated a native `CommandMenu("Focus")` with standard keyboard shortcuts in the macOS menu bar.
+
 ---
 
 ## [0.1.0-beta.5] - 2026-08-26

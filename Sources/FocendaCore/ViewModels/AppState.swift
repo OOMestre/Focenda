@@ -39,6 +39,23 @@ public final class AppState {
     public var soundEnabled: Bool = true
     public var autoStartBreaks: Bool = false
     public var autoStartFocus: Bool = false
+    public var globalShortcutsEnabled: Bool = true {
+        didSet {
+            GlobalShortcutManager.shared.setEnabled(globalShortcutsEnabled)
+            savePreferences()
+        }
+    }
+    public var shortcutPreset: GlobalShortcutPreset = .standard {
+        didSet {
+            GlobalShortcutManager.shared.setPreset(shortcutPreset)
+            savePreferences()
+        }
+    }
+    public var showShortcutFeedback: Bool = true {
+        didSet {
+            savePreferences()
+        }
+    }
     public var selectedTheme: AppThemeOption {
         didSet {
             UserDefaults.standard.set(selectedTheme.rawValue, forKey: AppTheme.storageKey)
@@ -51,6 +68,15 @@ public final class AppState {
         self.dailyFocusGoalMinutes = savedGoal == 0 ? 120 : savedGoal
         self.soundEnabled = UserDefaults.standard.object(forKey: "soundEnabled") == nil ? true : UserDefaults.standard.bool(forKey: "soundEnabled")
         
+        self.globalShortcutsEnabled = UserDefaults.standard.object(forKey: "globalShortcutsEnabled") == nil ? true : UserDefaults.standard.bool(forKey: "globalShortcutsEnabled")
+        if let savedPresetRaw = UserDefaults.standard.string(forKey: "shortcutPreset"),
+           let preset = GlobalShortcutPreset(rawValue: savedPresetRaw) {
+            self.shortcutPreset = preset
+        } else {
+            self.shortcutPreset = .standard
+        }
+        self.showShortcutFeedback = UserDefaults.standard.object(forKey: "showShortcutFeedback") == nil ? true : UserDefaults.standard.bool(forKey: "showShortcutFeedback")
+
         let storedTheme = UserDefaults.standard.string(forKey: AppTheme.storageKey)
         let resolvedTheme = AppThemeOption.from(storedValue: storedTheme)
         self.selectedTheme = resolvedTheme
@@ -60,6 +86,9 @@ public final class AppState {
     public func savePreferences() {
         UserDefaults.standard.set(dailyFocusGoalMinutes, forKey: "dailyFocusGoalMinutes")
         UserDefaults.standard.set(soundEnabled, forKey: "soundEnabled")
+        UserDefaults.standard.set(globalShortcutsEnabled, forKey: "globalShortcutsEnabled")
+        UserDefaults.standard.set(shortcutPreset.rawValue, forKey: "shortcutPreset")
+        UserDefaults.standard.set(showShortcutFeedback, forKey: "showShortcutFeedback")
         UserDefaults.standard.set(selectedTheme.rawValue, forKey: AppTheme.storageKey)
         AppTheme.current = selectedTheme
     }
