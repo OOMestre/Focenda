@@ -53,6 +53,8 @@ struct FocendaApp: App {
         }
         .windowStyle(.titleBar)
         .windowToolbarStyle(.unified)
+        .windowResizability(.contentMinSize)
+        .defaultSize(width: MainView.defaultWindowWidth, height: MainView.defaultWindowHeight)
         .commands {
             SidebarCommands()
             CommandGroup(replacing: .newItem) {
