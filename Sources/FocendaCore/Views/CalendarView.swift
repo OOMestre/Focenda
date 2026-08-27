@@ -86,6 +86,9 @@ public struct CalendarView: View {
     @State private var activeAlertBanner: (title: String, subtitle: String, time: String)? = nil
 
     private let calendar: Calendar = .current
+    /// The smallest practical width for the seven-day grid, including the monthly summary.
+    /// Below this width the calendar remains usable through an explicit horizontal fallback.
+    private let minimumCalendarContentWidth: CGFloat = 320
 
     public init(
         timerVM: FocusTimerViewModel,
@@ -104,10 +107,8 @@ public struct CalendarView: View {
 
     public var body: some View {
         GeometryReader { geometry in
-            let minCalendarWidth: CGFloat = 520
-            let agendaWidth: CGFloat = 360
-            let totalContentWidth: CGFloat = minCalendarWidth + agendaWidth + 1
-            let totalWidth = max(totalContentWidth, geometry.size.width)
+            let availableContentWidth = max(0, geometry.size.width - 40)
+            let requiresHorizontalFallback = availableContentWidth < minimumCalendarContentWidth
 
             VStack(spacing: 0) {
                 // In-App Reminder Alert Banner (if active)
@@ -121,30 +122,23 @@ public struct CalendarView: View {
                         ))
                 }
 
-                ScrollView(.horizontal, showsIndicators: true) {
-                    HStack(spacing: 0) {
-                        // Left Column: Monthly Calendar & Navigation
-                        ScrollView(.vertical, showsIndicators: true) {
-                            calendarMonthSection
-                                .padding(20)
-                                .frame(minWidth: minCalendarWidth, maxWidth: .infinity)
-                        }
-                        .frame(minWidth: minCalendarWidth, maxWidth: .infinity)
-
-                        Divider()
-                            .background(AppTheme.border)
-
-                        // Right Column: Selected Day Agenda & Timebox Pane
-                        ScrollView(.vertical, showsIndicators: true) {
-                            selectedDayAgendaSection
+                // The calendar and agenda share one vertical scroll area.  A horizontal
+                // fallback is kept only for windows too narrow for a seven-day grid.
+                ScrollView(.vertical, showsIndicators: true) {
+                    if requiresHorizontalFallback {
+                        ScrollView(.horizontal, showsIndicators: true) {
+                            calendarAndAgendaContent
+                                .frame(width: minimumCalendarContentWidth, alignment: .topLeading)
                                 .padding(20)
                         }
-                        .frame(width: agendaWidth)
-                        .background(AppTheme.cardBackgroundSubtle.opacity(0.35))
+                        .forceVisibleScrollers(horizontal: true, vertical: false)
+                    } else {
+                        calendarAndAgendaContent
+                            .frame(width: availableContentWidth, alignment: .topLeading)
+                            .padding(20)
                     }
-                    .frame(minWidth: totalWidth, minHeight: geometry.size.height, alignment: .topLeading)
                 }
-                .forceVisibleScrollers(horizontal: true, vertical: false)
+                .forceVisibleScrollers(horizontal: false, vertical: true)
             }
         }
         .background(AppTheme.background)
@@ -165,6 +159,24 @@ public struct CalendarView: View {
         .onDisappear {
             hoverDebounceTask?.cancel()
             hoverDebounceTask = nil
+        }
+    }
+
+    private var calendarAndAgendaContent: some View {
+        VStack(alignment: .leading, spacing: 28) {
+            calendarMonthSection
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            Divider()
+                .background(AppTheme.border)
+
+            selectedDayAgendaSection
+                .padding(16)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(AppTheme.cardBackgroundSubtle.opacity(0.35))
+                )
         }
     }
 
@@ -656,41 +668,41 @@ public struct CalendarView: View {
 
     // MARK: - Heatmap Legend
     private var heatmapLegendBar: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 10) {
+                focusLegendItems
+                Spacer(minLength: 4)
+                reminderLegendItems
+            }
+
+            VStack(alignment: .leading, spacing: 5) {
+                focusLegendItems
+                reminderLegendItems
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
+        .background(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(AppTheme.cardBackgroundSubtle.opacity(0.5))
+        )
+    }
+
+    private var focusLegendItems: some View {
         HStack(spacing: 10) {
             Text("Focus:")
                 .font(.system(size: 10, weight: .semibold))
                 .foregroundStyle(AppTheme.textSecondary)
 
-            HStack(spacing: 4) {
-                Circle().fill(AppTheme.border).frame(width: 6, height: 6)
-                Text("0m")
-                    .font(.system(size: 9))
-                    .foregroundStyle(AppTheme.textTertiary)
-            }
+            heatmapLegendItem(color: AppTheme.border, label: "0m")
+            heatmapLegendItem(color: AppTheme.shortBreak, label: "1-25m")
+            heatmapLegendItem(color: AppTheme.deepFocus, label: "26-60m")
+            heatmapLegendItem(color: AppTheme.success, label: "60m+")
+        }
+    }
 
-            HStack(spacing: 4) {
-                Circle().fill(AppTheme.shortBreak).frame(width: 6, height: 6)
-                Text("1-25m")
-                    .font(.system(size: 9))
-                    .foregroundStyle(AppTheme.textTertiary)
-            }
-
-            HStack(spacing: 4) {
-                Circle().fill(AppTheme.deepFocus).frame(width: 6, height: 6)
-                Text("26-60m")
-                    .font(.system(size: 9))
-                    .foregroundStyle(AppTheme.textTertiary)
-            }
-
-            HStack(spacing: 4) {
-                Circle().fill(AppTheme.success).frame(width: 6, height: 6)
-                Text("60m+")
-                    .font(.system(size: 9))
-                    .foregroundStyle(AppTheme.textTertiary)
-            }
-
-            Spacer(minLength: 4)
-
+    private var reminderLegendItems: some View {
+        HStack(spacing: 10) {
             HStack(spacing: 3) {
                 Image(systemName: "repeat")
                     .font(.system(size: 8))
@@ -707,12 +719,15 @@ public struct CalendarView: View {
                     .foregroundStyle(AppTheme.textTertiary)
             }
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 7)
-        .background(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .fill(AppTheme.cardBackgroundSubtle.opacity(0.5))
-        )
+    }
+
+    private func heatmapLegendItem(color: Color, label: String) -> some View {
+        HStack(spacing: 4) {
+            Circle().fill(color).frame(width: 6, height: 6)
+            Text(label)
+                .font(.system(size: 9))
+                .foregroundStyle(AppTheme.textTertiary)
+        }
     }
 
     // MARK: - Monthly Summary Cards
