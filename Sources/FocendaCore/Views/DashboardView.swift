@@ -210,8 +210,7 @@ public struct DashboardView: View {
 
     // MARK: - Focus Summary / Upcoming Due Tasks Widget
     private var upcomingDueTasks: [TaskItem] {
-        let calendar = Calendar.current
-                let pending = taskVM.tasks.filter { !$0.isCompleted }
+        let pending = taskVM.tasks.filter { !$0.isCompleted }
 
         // Filter tasks that have a dueDate or are high priority
         let withDue = pending.filter { task in

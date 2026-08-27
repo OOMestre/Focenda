@@ -88,8 +88,7 @@ public struct BookmarksView: View {
 
                 Divider()
 
-                // Keep the page vertically scrollable. Horizontal overflow is intentionally
-                // limited to controls that benefit from it, such as the category filter.
+                // Keep the page vertically scrollable. The category filter wraps naturally with FlowLayout.
                 ScrollView(.vertical, showsIndicators: true) {
                     VStack(alignment: .leading, spacing: 20) {
                         categoryFilterSection
@@ -244,53 +243,48 @@ public struct BookmarksView: View {
 
     // MARK: - Category Filters
     private var categoryFilterSection: some View {
-        ScrollView(.horizontal, showsIndicators: true) {
-            HStack(spacing: 8) {
-                ForEach(viewModel.allCategories, id: \.self) { category in
-                    let isSelected = viewModel.selectedCategory.caseInsensitiveCompare(category) == .orderedSame
-                    let count = viewModel.categoryCount(for: category)
+        FlowLayout(spacing: 8, lineSpacing: 8) {
+            ForEach(viewModel.allCategories, id: \.self) { category in
+                let isSelected = viewModel.selectedCategory.caseInsensitiveCompare(category) == .orderedSame
+                let count = viewModel.categoryCount(for: category)
 
-                    Button {
-                        withAnimation(.spring(response: 0.25)) {
-                            viewModel.selectedCategory = category
-                        }
-                    } label: {
-                        HStack(spacing: 6) {
-                            Text(category)
-                                .font(.system(size: 12, weight: isSelected ? .semibold : .regular))
-                                .foregroundStyle(isSelected ? AppTheme.accent : AppTheme.textPrimary)
-                                .lineLimit(1)
-
-                            Text("\(count)")
-                                .font(.system(size: 10, weight: .bold).monospacedDigit())
-                                .foregroundStyle(isSelected ? AppTheme.accent : AppTheme.textTertiary)
-                                .padding(.horizontal, 5)
-                                .padding(.vertical, 2)
-                                .background(
-                                    Capsule()
-                                        .fill(isSelected ? AppTheme.accent.opacity(0.18) : AppTheme.cardBackgroundSubtle)
-                                )
-                                .lineLimit(1)
-                        }
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(
-                            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                .fill(isSelected ? AppTheme.accent.opacity(0.12) : AppTheme.cardBackground)
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                .stroke(isSelected ? AppTheme.accent.opacity(0.35) : AppTheme.subtleBorder, lineWidth: 1)
-                        )
+                Button {
+                    withAnimation(.spring(response: 0.25)) {
+                        viewModel.selectedCategory = category
                     }
-                    .buttonStyle(.plain)
+                } label: {
+                    HStack(spacing: 6) {
+                        Text(category)
+                            .font(.system(size: 12, weight: isSelected ? .semibold : .regular))
+                            .foregroundStyle(isSelected ? AppTheme.accent : AppTheme.textPrimary)
+                            .lineLimit(1)
+
+                        Text("\(count)")
+                            .font(.system(size: 10, weight: .bold).monospacedDigit())
+                            .foregroundStyle(isSelected ? AppTheme.accent : AppTheme.textTertiary)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 2)
+                            .background(
+                                Capsule()
+                                    .fill(isSelected ? AppTheme.accent.opacity(0.18) : AppTheme.cardBackgroundSubtle)
+                            )
+                            .lineLimit(1)
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .fill(isSelected ? AppTheme.accent.opacity(0.12) : AppTheme.cardBackground)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .stroke(isSelected ? AppTheme.accent.opacity(0.35) : AppTheme.subtleBorder, lineWidth: 1)
+                    )
                 }
+                .buttonStyle(.plain)
             }
-            .padding(.horizontal, 2)
-            .padding(.vertical, 2)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .forceVisibleScrollers(horizontal: true, vertical: false)
     }
 
     // MARK: - Stats Banner
