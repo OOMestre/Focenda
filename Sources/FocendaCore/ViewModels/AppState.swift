@@ -1,6 +1,9 @@
 import Foundation
 import SwiftUI
 import Observation
+#if os(macOS)
+import AppKit
+#endif
 
 /// Navigation tabs in Focenda
 public enum AppTab: String, CaseIterable, Identifiable {
@@ -60,6 +63,14 @@ public final class AppState {
         didSet {
             UserDefaults.standard.set(selectedTheme.rawValue, forKey: AppTheme.storageKey)
             AppTheme.current = selectedTheme
+            #if os(macOS)
+            DispatchQueue.main.async {
+                for window in NSApp.windows {
+                    window.contentView?.needsDisplay = true
+                    window.viewsNeedDisplay = true
+                }
+            }
+            #endif
         }
     }
 

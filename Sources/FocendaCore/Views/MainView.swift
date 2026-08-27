@@ -6,7 +6,7 @@ public struct MainView: View {
     public static let minimumWindowWidth: CGFloat = 720
     public static let minimumWindowHeight: CGFloat = 540
 
-    @State private var appState: AppState
+    @Bindable var appState: AppState
     @State private var timerVM: FocusTimerViewModel
     @State private var taskVM: TaskListViewModel
     @State private var scratchpadVM: ScratchpadViewModel
@@ -22,7 +22,7 @@ public struct MainView: View {
         bookmarkVM: BookmarkViewModel = BookmarkViewModel(),
         recurringReminderVM: RecurringReminderViewModel = RecurringReminderViewModel()
     ) {
-        _appState = State(initialValue: appState)
+        self.appState = appState
         _timerVM = State(initialValue: timerVM)
         _taskVM = State(initialValue: taskVM)
         _scratchpadVM = State(initialValue: scratchpadVM)
@@ -90,6 +90,5 @@ public struct MainView: View {
         )
         .background(AppTheme.background)
         .preferredColorScheme(appState.selectedTheme.colorScheme)
-        .id(appState.selectedTheme)
     }
 }

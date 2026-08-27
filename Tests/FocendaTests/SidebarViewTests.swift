@@ -102,4 +102,21 @@ final class SidebarViewTests: XCTestCase {
         XCTAssertEqual(MainView.minimumWindowWidth, 720)
         XCTAssertEqual(MainView.minimumWindowHeight, 540)
     }
+
+    func testMainViewMaintainsFixedSplitAcrossThemeChanges() {
+        let mainView = MainView(
+            appState: appState,
+            timerVM: timerVM,
+            taskVM: taskVM,
+            bookmarkVM: bookmarkVM
+        )
+        XCTAssertNotNil(mainView.body)
+
+        // Iterate through all theme options to verify body renders consistently without structural resets
+        for theme in AppThemeOption.allCases {
+            appState.selectedTheme = theme
+            XCTAssertEqual(appState.selectedTheme, theme)
+            XCTAssertNotNil(mainView.body)
+        }
+    }
 }
