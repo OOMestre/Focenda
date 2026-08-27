@@ -135,10 +135,15 @@ final class WindowMinimumSizeTests: XCTestCase {
     }
 
     func testScratchpadViewResilienceAtMinimumDimensions() {
-        let scratchpadView = ScratchpadView(viewModel: scratchpadVM)
+        scratchpadVM.showFoldersSidebar = true
+        let scratchpadViewWithFolders = ScratchpadView(viewModel: scratchpadVM)
+        XCTAssertNotNil(scratchpadViewWithFolders)
+        XCTAssertNotNil(scratchpadViewWithFolders.body)
 
-        XCTAssertNotNil(scratchpadView)
-        XCTAssertNotNil(scratchpadView.body)
+        scratchpadVM.showFoldersSidebar = false
+        let scratchpadViewWithoutFolders = ScratchpadView(viewModel: scratchpadVM)
+        XCTAssertNotNil(scratchpadViewWithoutFolders)
+        XCTAssertNotNil(scratchpadViewWithoutFolders.body)
     }
 
     func testBookmarksViewResilienceAtMinimumDimensions() {
@@ -149,9 +154,27 @@ final class WindowMinimumSizeTests: XCTestCase {
     }
 
     func testSettingsViewResilienceAtMinimumDimensions() {
-        let settingsView = SettingsView(appState: appState, timerVM: timerVM)
+        appState.globalShortcutsEnabled = true
+        for preset in GlobalShortcutPreset.allCases {
+            appState.shortcutPreset = preset
+            let settingsView = SettingsView(appState: appState, timerVM: timerVM)
+            XCTAssertNotNil(settingsView)
+            XCTAssertNotNil(settingsView.body)
+        }
+    }
 
-        XCTAssertNotNil(settingsView)
-        XCTAssertNotNil(settingsView.body)
+    func testKanbanBoardLayoutResponsiveness() {
+        let narrowWidth: CGFloat = 560
+        let normalWidth: CGFloat = 800
+        let wideWidth: CGFloat = 1200
+
+        let narrowCol = KanbanBoardLayout.columnWidth(for: narrowWidth)
+        let normalCol = KanbanBoardLayout.columnWidth(for: normalWidth)
+        let wideCol = KanbanBoardLayout.columnWidth(for: wideWidth)
+
+        XCTAssertGreaterThanOrEqual(narrowCol, KanbanBoardLayout.minimumColumnWidth)
+        XCTAssertLessThanOrEqual(wideCol, KanbanBoardLayout.preferredColumnWidth)
+        XCTAssertGreaterThanOrEqual(wideCol, normalCol)
+        XCTAssertGreaterThanOrEqual(normalCol, narrowCol)
     }
 }

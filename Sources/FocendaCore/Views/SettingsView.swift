@@ -119,7 +119,7 @@ public struct SettingsView: View {
                     .padding(12)
                 }
             }
-            .padding(28)
+            .padding(20)
         }
         .background(AppTheme.background)
         .navigationTitle("Settings")
@@ -173,24 +173,46 @@ public struct SettingsView: View {
                 if appState.globalShortcutsEnabled {
                     Divider()
 
-                    // Preset Picker
-                    HStack {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Shortcut Scheme:")
-                                .font(.subheadline.weight(.medium))
-                                .foregroundStyle(AppTheme.textPrimary)
-                            Text("Select modifier combination for focus shortcuts.")
-                                .font(.caption)
-                                .foregroundStyle(AppTheme.textSecondary)
-                        }
-                        Spacer()
-                        Picker("", selection: $appState.shortcutPreset) {
-                            ForEach(GlobalShortcutPreset.allCases) { preset in
-                                Text(preset.displayName).tag(preset)
+                    // Preset Picker with responsive layout protection
+                    ViewThatFits(in: .horizontal) {
+                        // Wide Horizontal Layout
+                        HStack(alignment: .center) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Shortcut Scheme:")
+                                    .font(.subheadline.weight(.medium))
+                                    .foregroundStyle(AppTheme.textPrimary)
+                                Text("Select modifier combination for focus shortcuts.")
+                                    .font(.caption)
+                                    .foregroundStyle(AppTheme.textSecondary)
                             }
+                            Spacer()
+                            Picker("", selection: $appState.shortcutPreset) {
+                                ForEach(GlobalShortcutPreset.allCases) { preset in
+                                    Text(preset.displayName).tag(preset)
+                                }
+                            }
+                            .pickerStyle(.segmented)
+                            .frame(maxWidth: 320)
                         }
-                        .pickerStyle(.segmented)
-                        .frame(maxWidth: 320)
+
+                        // Compact Vertical Layout (avoids overflowing right card edge)
+                        VStack(alignment: .leading, spacing: 8) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Shortcut Scheme:")
+                                    .font(.subheadline.weight(.medium))
+                                    .foregroundStyle(AppTheme.textPrimary)
+                                Text("Select modifier combination for focus shortcuts.")
+                                    .font(.caption)
+                                    .foregroundStyle(AppTheme.textSecondary)
+                            }
+                            Picker("", selection: $appState.shortcutPreset) {
+                                ForEach(GlobalShortcutPreset.allCases) { preset in
+                                    Text(preset.displayName).tag(preset)
+                                }
+                            }
+                            .pickerStyle(.segmented)
+                            .frame(maxWidth: .infinity)
+                        }
                     }
 
                     Divider()
@@ -279,7 +301,7 @@ private struct ThemeOptionRow: View {
 
     var body: some View {
         Button(action: onSelect) {
-            HStack(spacing: 14) {
+            HStack(spacing: 12) {
                 // Radio indicator
                 ZStack {
                     Circle()
@@ -298,20 +320,22 @@ private struct ThemeOptionRow: View {
                     Text(theme.displayName)
                         .font(.subheadline.weight(isSelected ? .bold : .semibold))
                         .foregroundStyle(AppTheme.textPrimary)
+                        .lineLimit(1)
 
                     Text(theme.subtitle)
                         .font(.caption)
                         .foregroundStyle(AppTheme.textSecondary)
+                        .lineLimit(1)
                 }
 
-                Spacer()
+                Spacer(minLength: 8)
 
                 // Live Preview Color Swatches
-                HStack(spacing: 6) {
+                HStack(spacing: 5) {
                     ForEach(Array(theme.previewSwatches.enumerated()), id: \.offset) { _, swatchColor in
                         Circle()
                             .fill(swatchColor)
-                            .frame(width: 16, height: 16)
+                            .frame(width: 14, height: 14)
                             .overlay(
                                 Circle()
                                     .stroke(Color.black.opacity(0.12), lineWidth: 0.8)
@@ -319,8 +343,8 @@ private struct ThemeOptionRow: View {
                             .shadow(color: Color.black.opacity(0.06), radius: 1, x: 0, y: 0.5)
                     }
                 }
-                .padding(.horizontal, 8)
-                .padding(.vertical, 5)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 4)
                 .background(
                     Capsule()
                         .fill(AppTheme.cardBackgroundSubtle.opacity(0.8))
@@ -329,6 +353,7 @@ private struct ThemeOptionRow: View {
                     Capsule()
                         .stroke(AppTheme.subtleBorder, lineWidth: 1)
                 )
+                .fixedSize(horizontal: true, vertical: false)
             }
             .padding(12)
             .background(

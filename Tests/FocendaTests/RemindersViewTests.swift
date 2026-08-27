@@ -158,7 +158,7 @@ final class RemindersViewTests: XCTestCase {
 
     func testStatsBannerCalculations() {
         let calendar = Calendar.current
-        let today = Date()
+        let today = calendar.date(bySettingHour: 12, minute: 0, second: 0, of: Date()) ?? Date()
 
         let reminderToday = RecurringReminder(
             title: "Today Alert",

@@ -23,31 +23,35 @@ public struct ScratchpadView: View {
 
             // Main 3-Pane Area (Folders Sidebar + Notes List + Editor)
             GeometryReader { geometry in
-                let minPaneWidth: CGFloat = (viewModel.showFoldersSidebar ? 221 : 0) + 321 + 380
-                let totalPaneWidth = max(minPaneWidth, geometry.size.width)
+                let availableWidth = geometry.size.width
+                let showFolders = viewModel.showFoldersSidebar
 
-                ScrollView([.horizontal, .vertical], showsIndicators: true) {
-                    HStack(spacing: 0) {
-                        // Folder / Notebook Sidebar (Leftmost Column)
-                        if viewModel.showFoldersSidebar {
-                            foldersSidebarPane
-                                .frame(width: 220)
+                // Dynamically calculate responsive pane widths based on available width
+                let foldersWidth: CGFloat = showFolders ? min(200, max(140, availableWidth * 0.24)) : 0
+                let notesListWidth: CGFloat = showFolders
+                    ? min(280, max(165, (availableWidth - foldersWidth) * 0.40))
+                    : min(320, max(210, availableWidth * 0.38))
 
-                            Divider()
-                        }
-
-                        // Notes List (Middle Master Column)
-                        notesListPane
-                            .frame(width: 320)
+                HStack(spacing: 0) {
+                    // Folder / Notebook Sidebar (Leftmost Column)
+                    if showFolders {
+                        foldersSidebarPane
+                            .frame(width: foldersWidth)
 
                         Divider()
-
-                        // Editor Pane (Right Detail Column)
-                        editorPane
-                            .frame(minWidth: 380, maxWidth: .infinity)
                     }
-                    .frame(minWidth: totalPaneWidth, minHeight: geometry.size.height, alignment: .leading)
+
+                    // Notes List (Middle Master Column)
+                    notesListPane
+                        .frame(width: notesListWidth)
+
+                    Divider()
+
+                    // Editor Pane (Right Detail Column - always visible & directly accessible)
+                    editorPane
+                        .frame(minWidth: 180, maxWidth: .infinity)
                 }
+                .frame(width: availableWidth, height: geometry.size.height, alignment: .leading)
             }
             .frame(minWidth: 0, maxWidth: .infinity, maxHeight: .infinity)
         }
@@ -75,99 +79,130 @@ public struct ScratchpadView: View {
 
     // MARK: - Header Bar
     private var headerBar: some View {
-        HStack(spacing: 12) {
-            // Folders Sidebar Toggle Button
-            Button {
-                withAnimation(.spring(response: 0.25)) {
-                    viewModel.showFoldersSidebar.toggle()
-                }
-            } label: {
-                Image(systemName: "sidebar.left")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(viewModel.showFoldersSidebar ? AppTheme.accent : AppTheme.textSecondary)
-                    .padding(7)
-                    .background(viewModel.showFoldersSidebar ? AppTheme.accent.opacity(0.12) : AppTheme.cardBackground)
-                    .clipShape(RoundedRectangle(cornerRadius: 7))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 7)
-                            .stroke(viewModel.showFoldersSidebar ? AppTheme.accent.opacity(0.3) : AppTheme.border, lineWidth: 1)
-                    )
-            }
-            .buttonStyle(.plain)
-            .help(viewModel.showFoldersSidebar ? "Hide Folders Sidebar" : "Show Folders Sidebar")
-
-            // Title
-            Text("Scratchpad")
-                .font(.system(size: 22, weight: .bold, design: .rounded))
-                .foregroundStyle(AppTheme.textPrimary)
-                .lineLimit(1)
-
-            // Search Bar
-            HStack(spacing: 6) {
-                Image(systemName: "magnifyingglass")
-                    .font(.system(size: 12))
-                    .foregroundStyle(AppTheme.textTertiary)
-
-                TextField("Search...", text: $viewModel.searchQuery)
-                    .textFieldStyle(.plain)
-                    .font(.system(size: 13))
-                    .foregroundStyle(AppTheme.textPrimary)
-
-                if !viewModel.searchQuery.isEmpty {
-                    Button {
-                        viewModel.searchQuery = ""
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 12))
-                            .foregroundStyle(AppTheme.textTertiary)
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
-            .frame(minWidth: 120, idealWidth: 160, maxWidth: 220)
-            .background(AppTheme.cardBackground)
-            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .stroke(AppTheme.border, lineWidth: 1)
-            )
-
-            // Category Chips (All + 5 Categories)
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 6) {
-                    categoryChip(title: "All", color: nil)
-                    ForEach(ScratchpadColor.allCases) { color in
-                        categoryChip(title: color.rawValue, color: color)
-                    }
-                }
-                .padding(.vertical, 2)
+        ViewThatFits(in: .horizontal) {
+            // Wide Header Layout
+            HStack(spacing: 12) {
+                sidebarToggleButton
+                titleView
+                searchBarView
+                categoryChipsView
+                Spacer(minLength: 4)
+                newNoteButton
             }
 
-            Spacer(minLength: 4)
-
-            // + New Note Button
-            Button {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
-                    let targetColor = viewModel.selectedFilterColor ?? viewModel.selectedColor
-                    _ = viewModel.createNote(color: targetColor)
-                    isTitleFocused = true
+            // Compact Header Layout for narrow windows
+            VStack(spacing: 8) {
+                HStack(spacing: 10) {
+                    sidebarToggleButton
+                    titleView
+                    Spacer(minLength: 4)
+                    newNoteButton
                 }
-            } label: {
-                Label("New Note", systemImage: "plus")
-                    .font(.system(size: 13, weight: .semibold))
-                    .lineLimit(1)
+
+                HStack(spacing: 8) {
+                    searchBarView
+                    categoryChipsView
+                }
             }
-            .buttonStyle(.borderedProminent)
-            .tint(AppTheme.deepFocus)
-            .controlSize(.regular)
-            .help("Create a new note in active folder")
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+        .padding(.vertical, 10)
         .frame(minWidth: 0, maxWidth: .infinity)
         .background(AppTheme.background)
+    }
+
+    private var sidebarToggleButton: some View {
+        Button {
+            withAnimation(.spring(response: 0.25)) {
+                viewModel.showFoldersSidebar.toggle()
+            }
+        } label: {
+            Image(systemName: "sidebar.left")
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(viewModel.showFoldersSidebar ? AppTheme.accent : AppTheme.textSecondary)
+                .padding(7)
+                .background(viewModel.showFoldersSidebar ? AppTheme.accent.opacity(0.12) : AppTheme.cardBackground)
+                .clipShape(RoundedRectangle(cornerRadius: 7))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 7)
+                        .stroke(viewModel.showFoldersSidebar ? AppTheme.accent.opacity(0.3) : AppTheme.border, lineWidth: 1)
+                )
+        }
+        .buttonStyle(.plain)
+        .fixedSize(horizontal: true, vertical: false)
+        .help(viewModel.showFoldersSidebar ? "Hide Folders Sidebar" : "Show Folders Sidebar")
+    }
+
+    private var titleView: some View {
+        Text("Scratchpad")
+            .font(.system(size: 20, weight: .bold, design: .rounded))
+            .foregroundStyle(AppTheme.textPrimary)
+            .lineLimit(1)
+            .layoutPriority(1)
+    }
+
+    private var searchBarView: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 12))
+                .foregroundStyle(AppTheme.textTertiary)
+
+            TextField("Search...", text: $viewModel.searchQuery)
+                .textFieldStyle(.plain)
+                .font(.system(size: 13))
+                .foregroundStyle(AppTheme.textPrimary)
+
+            if !viewModel.searchQuery.isEmpty {
+                Button {
+                    viewModel.searchQuery = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 12))
+                        .foregroundStyle(AppTheme.textTertiary)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .frame(minWidth: 100, idealWidth: 140, maxWidth: 200)
+        .background(AppTheme.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .stroke(AppTheme.border, lineWidth: 1)
+        )
+    }
+
+    private var categoryChipsView: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 6) {
+                categoryChip(title: "All", color: nil)
+                ForEach(ScratchpadColor.allCases) { color in
+                    categoryChip(title: color.rawValue, color: color)
+                }
+            }
+            .padding(.vertical, 2)
+        }
+    }
+
+    private var newNoteButton: some View {
+        Button {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+                let targetColor = viewModel.selectedFilterColor ?? viewModel.selectedColor
+                _ = viewModel.createNote(color: targetColor)
+                isTitleFocused = true
+            }
+        } label: {
+            Label("New Note", systemImage: "plus")
+                .font(.system(size: 13, weight: .semibold))
+                .lineLimit(1)
+        }
+        .buttonStyle(.borderedProminent)
+        .tint(AppTheme.deepFocus)
+        .controlSize(.regular)
+        .fixedSize(horizontal: true, vertical: false)
+        .help("Create a new note in active folder")
     }
 
     // MARK: - Category Chip
@@ -575,168 +610,34 @@ public struct ScratchpadView: View {
     private var editorPane: some View {
         VStack(spacing: 0) {
             // Note Meta / Action Toolbar Bar
-            HStack(spacing: 8) {
-                // Move to Folder Menu
-                Menu {
-                    ForEach(viewModel.folders, id: \.self) { folder in
-                        Button {
-                            withAnimation(.spring(response: 0.25)) {
-                                viewModel.moveCurrentNote(to: folder)
-                            }
-                        } label: {
-                            Label(folder, systemImage: ScratchpadViewModel.iconForFolder(folder))
-                        }
-                    }
-                } label: {
-                    HStack(spacing: 5) {
-                        Image(systemName: ScratchpadViewModel.iconForFolder(viewModel.currentNote.folder))
-                            .font(.system(size: 11))
-                            .foregroundStyle(AppTheme.accent)
-                        Text(viewModel.currentNote.folder)
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundStyle(AppTheme.textSecondary)
-                            .lineLimit(1)
-                        Image(systemName: "chevron.up.chevron.down")
-                            .font(.system(size: 9))
-                            .foregroundStyle(AppTheme.textTertiary)
-                    }
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 5)
-                    .background(AppTheme.cardBackground)
-                    .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 6, style: .continuous)
-                            .stroke(AppTheme.border, lineWidth: 1)
-                    )
+            ViewThatFits(in: .horizontal) {
+                // Wide single-row toolbar
+                HStack(spacing: 8) {
+                    noteFolderMenu
+                    noteColorMenu
+                    noteTitleField
+                    Spacer(minLength: 4)
+                    notePinButton
+                    noteCopyButton
+                    noteDeleteButton
                 }
-                .menuStyle(.borderlessButton)
-                .fixedSize(horizontal: true, vertical: false)
-                .help("Move note to another folder")
 
-                // Color Category Picker Menu
-                Menu {
-                    ForEach(ScratchpadColor.allCases) { color in
-                        Button {
-                            withAnimation(.spring(response: 0.25)) {
-                                viewModel.updateColor(color)
-                            }
-                        } label: {
-                            Label(color.rawValue, systemImage: color.iconName)
-                        }
+                // Compact two-row toolbar for narrow editor widths
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(spacing: 6) {
+                        noteFolderMenu
+                        noteColorMenu
+                        Spacer(minLength: 4)
+                        notePinButton
+                        noteCopyButton
+                        noteDeleteButton
                     }
-                } label: {
-                    HStack(spacing: 5) {
-                        Circle()
-                            .fill(viewModel.currentNote.color.color)
-                            .frame(width: 9, height: 9)
-                        Text(viewModel.currentNote.color.rawValue)
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundStyle(AppTheme.textSecondary)
-                            .lineLimit(1)
-                        Image(systemName: "chevron.up.chevron.down")
-                            .font(.system(size: 9))
-                            .foregroundStyle(AppTheme.textTertiary)
-                    }
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 5)
-                    .background(AppTheme.cardBackground)
-                    .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 6, style: .continuous)
-                            .stroke(AppTheme.border, lineWidth: 1)
-                    )
+                    noteTitleField
                 }
-                .menuStyle(.borderlessButton)
-                .fixedSize(horizontal: true, vertical: false)
-                .help("Change category color")
-
-                // Inline Editable Title
-                TextField("Untitled Note", text: $viewModel.currentTitle)
-                    .font(.system(size: 20, weight: .bold, design: .rounded))
-                    .textFieldStyle(.plain)
-                    .foregroundStyle(AppTheme.textPrimary)
-                    .focused($isTitleFocused)
-                    .onChange(of: viewModel.currentTitle) { _, _ in
-                        viewModel.saveToUserDefaults()
-                    }
-
-                Spacer(minLength: 4)
-
-                // Pin Toggle Button
-                Button {
-                    withAnimation(.spring(response: 0.25)) {
-                        viewModel.togglePin(for: viewModel.currentNote)
-                    }
-                } label: {
-                    Image(systemName: viewModel.currentNote.isPinned ? "pin.fill" : "pin")
-                        .font(.system(size: 12))
-                        .foregroundStyle(viewModel.currentNote.isPinned ? viewModel.currentNote.color.color : AppTheme.textSecondary)
-                        .padding(6)
-                        .background(viewModel.currentNote.isPinned ? viewModel.currentNote.color.color.opacity(0.15) : AppTheme.cardBackground)
-                        .clipShape(RoundedRectangle(cornerRadius: 6))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 6)
-                                .stroke(viewModel.currentNote.isPinned ? viewModel.currentNote.color.color.opacity(0.3) : AppTheme.border, lineWidth: 1)
-                        )
-                }
-                .buttonStyle(.plain)
-                .fixedSize(horizontal: true, vertical: false)
-                .help(viewModel.currentNote.isPinned ? "Unpin Note" : "Pin Note")
-
-                // Copy Button
-                Button {
-                    viewModel.copyCurrentNoteToClipboard()
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                        copiedFeedback = true
-                    }
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) {
-                        withAnimation {
-                            copiedFeedback = false
-                        }
-                    }
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: copiedFeedback ? "checkmark" : "doc.on.doc")
-                        Text(copiedFeedback ? "Copied" : "Copy")
-                            .lineLimit(1)
-                    }
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(copiedFeedback ? AppTheme.success : AppTheme.textSecondary)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 5)
-                    .background(AppTheme.cardBackground)
-                    .clipShape(RoundedRectangle(cornerRadius: 6))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 6)
-                            .stroke(AppTheme.border, lineWidth: 1)
-                    )
-                }
-                .buttonStyle(.plain)
-                .fixedSize(horizontal: true, vertical: false)
-                .help("Copy note content")
-
-                // Delete Button
-                Button {
-                    showingDeleteConfirmation = true
-                } label: {
-                    Image(systemName: "trash")
-                        .font(.system(size: 12))
-                        .foregroundStyle(AppTheme.textSecondary)
-                        .padding(6)
-                        .background(AppTheme.cardBackground)
-                        .clipShape(RoundedRectangle(cornerRadius: 6))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 6)
-                                .stroke(AppTheme.border, lineWidth: 1)
-                        )
-                }
-                .buttonStyle(.plain)
-                .fixedSize(horizontal: true, vertical: false)
-                .help("Delete note")
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 12)
-            .padding(.bottom, 10)
+            .padding(.horizontal, 14)
+            .padding(.top, 10)
+            .padding(.bottom, 8)
 
             Divider()
 
@@ -773,6 +674,168 @@ public struct ScratchpadView: View {
         }
         .frame(minWidth: 0, maxWidth: .infinity, maxHeight: .infinity)
         .background(AppTheme.background)
+    }
+
+    private var noteFolderMenu: some View {
+        Menu {
+            ForEach(viewModel.folders, id: \.self) { folder in
+                Button {
+                    withAnimation(.spring(response: 0.25)) {
+                        viewModel.moveCurrentNote(to: folder)
+                    }
+                } label: {
+                    Label(folder, systemImage: ScratchpadViewModel.iconForFolder(folder))
+                }
+            }
+        } label: {
+            HStack(spacing: 5) {
+                Image(systemName: ScratchpadViewModel.iconForFolder(viewModel.currentNote.folder))
+                    .font(.system(size: 11))
+                    .foregroundStyle(AppTheme.accent)
+                Text(viewModel.currentNote.folder)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(AppTheme.textSecondary)
+                    .lineLimit(1)
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.system(size: 9))
+                    .foregroundStyle(AppTheme.textTertiary)
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 5)
+            .background(AppTheme.cardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .stroke(AppTheme.border, lineWidth: 1)
+            )
+        }
+        .menuStyle(.borderlessButton)
+        .fixedSize(horizontal: true, vertical: false)
+        .help("Move note to another folder")
+    }
+
+    private var noteColorMenu: some View {
+        Menu {
+            ForEach(ScratchpadColor.allCases) { color in
+                Button {
+                    withAnimation(.spring(response: 0.25)) {
+                        viewModel.updateColor(color)
+                    }
+                } label: {
+                    Label(color.rawValue, systemImage: color.iconName)
+                }
+            }
+        } label: {
+            HStack(spacing: 5) {
+                Circle()
+                    .fill(viewModel.currentNote.color.color)
+                    .frame(width: 9, height: 9)
+                Text(viewModel.currentNote.color.rawValue)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(AppTheme.textSecondary)
+                    .lineLimit(1)
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.system(size: 9))
+                    .foregroundStyle(AppTheme.textTertiary)
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 5)
+            .background(AppTheme.cardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .stroke(AppTheme.border, lineWidth: 1)
+            )
+        }
+        .menuStyle(.borderlessButton)
+        .fixedSize(horizontal: true, vertical: false)
+        .help("Change category color")
+    }
+
+    private var noteTitleField: some View {
+        TextField("Untitled Note", text: $viewModel.currentTitle)
+            .font(.system(size: 18, weight: .bold, design: .rounded))
+            .textFieldStyle(.plain)
+            .foregroundStyle(AppTheme.textPrimary)
+            .focused($isTitleFocused)
+            .onChange(of: viewModel.currentTitle) { _, _ in
+                viewModel.saveToUserDefaults()
+            }
+    }
+
+    private var notePinButton: some View {
+        Button {
+            withAnimation(.spring(response: 0.25)) {
+                viewModel.togglePin(for: viewModel.currentNote)
+            }
+        } label: {
+            Image(systemName: viewModel.currentNote.isPinned ? "pin.fill" : "pin")
+                .font(.system(size: 12))
+                .foregroundStyle(viewModel.currentNote.isPinned ? viewModel.currentNote.color.color : AppTheme.textSecondary)
+                .padding(6)
+                .background(viewModel.currentNote.isPinned ? viewModel.currentNote.color.color.opacity(0.15) : AppTheme.cardBackground)
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 6)
+                        .stroke(viewModel.currentNote.isPinned ? viewModel.currentNote.color.color.opacity(0.3) : AppTheme.border, lineWidth: 1)
+                )
+        }
+        .buttonStyle(.plain)
+        .fixedSize(horizontal: true, vertical: false)
+        .help(viewModel.currentNote.isPinned ? "Unpin Note" : "Pin Note")
+    }
+
+    private var noteCopyButton: some View {
+        Button {
+            viewModel.copyCurrentNoteToClipboard()
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                copiedFeedback = true
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) {
+                withAnimation {
+                    copiedFeedback = false
+                }
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: copiedFeedback ? "checkmark" : "doc.on.doc")
+                Text(copiedFeedback ? "Copied" : "Copy")
+                    .lineLimit(1)
+            }
+            .font(.system(size: 12, weight: .medium))
+            .foregroundStyle(copiedFeedback ? AppTheme.success : AppTheme.textSecondary)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 5)
+            .background(AppTheme.cardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: 6))
+            .overlay(
+                RoundedRectangle(cornerRadius: 6)
+                    .stroke(AppTheme.border, lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+        .fixedSize(horizontal: true, vertical: false)
+        .help("Copy note content")
+    }
+
+    private var noteDeleteButton: some View {
+        Button {
+            showingDeleteConfirmation = true
+        } label: {
+            Image(systemName: "trash")
+                .font(.system(size: 12))
+                .foregroundStyle(AppTheme.textSecondary)
+                .padding(6)
+                .background(AppTheme.cardBackground)
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 6)
+                        .stroke(AppTheme.border, lineWidth: 1)
+                )
+        }
+        .buttonStyle(.plain)
+        .fixedSize(horizontal: true, vertical: false)
+        .help("Delete note")
     }
 
     // MARK: - Footer Status Bar
