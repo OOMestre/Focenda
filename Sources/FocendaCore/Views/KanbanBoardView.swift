@@ -5,9 +5,9 @@ import SwiftUI
 enum KanbanBoardLayout {
     static let columnCount: CGFloat = 3
     static let preferredColumnWidth: CGFloat = 320
-    static let minimumColumnWidth: CGFloat = 220
-    static let columnSpacing: CGFloat = 16
-    static let horizontalPadding: CGFloat = 40
+    static let minimumColumnWidth: CGFloat = 200
+    static let columnSpacing: CGFloat = 14
+    static let horizontalPadding: CGFloat = 32
 
     static func columnWidth(for availableWidth: CGFloat) -> CGFloat {
         let equalColumnWidth = (
@@ -1405,7 +1405,7 @@ public struct KanbanTaskFormSheet: View {
             .padding(.top, 8)
         }
         .padding(24)
-        .frame(width: 520)
+        .frame(minWidth: 380, idealWidth: 480, maxWidth: 520)
         .onAppear {
             if let task = editingTask {
                 title = task.title
