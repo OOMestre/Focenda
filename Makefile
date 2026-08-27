@@ -19,3 +19,12 @@ release-notes:
 
 clean:
 	rm -rf .build dist
+
+worktree-add:
+	./scripts/manage-worktrees.sh add $(NAME) $(BRANCH)
+
+worktree-list:
+	./scripts/manage-worktrees.sh list
+
+worktree-remove:
+	./scripts/manage-worktrees.sh remove $(NAME)

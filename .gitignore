@@ -3,6 +3,10 @@ AGENTS.md
 .agents/
 .agent/
 
+# Git Worktrees
+.worktrees/
+worktrees/
+
 # Swift Package Manager & Builds
 .build/
 dist/
