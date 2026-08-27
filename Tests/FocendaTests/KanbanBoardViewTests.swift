@@ -271,4 +271,65 @@ final class KanbanBoardViewTests: XCTestCase {
             "Columns should not become unusably narrow; the board scrolls horizontally instead."
         )
     }
+
+    func testKanbanTaskDuplicate() {
+        let task = TaskItem(
+            title: "Kanban Feature",
+            notes: "Notes for card",
+            priority: .high,
+            status: .inProgress,
+            tags: ["Kanban", "Sprint"]
+        )
+        taskVM.tasks = [task]
+
+        var duplicatedId: UUID? = nil
+        let columnView = KanbanColumnView(
+            status: .inProgress,
+            tasks: taskVM.tasks(for: .inProgress),
+            onAddTask: {},
+            onQuickAdd: { _, _ in },
+            onMoveTask: { _, _ in },
+            onToggleTask: { _ in },
+            onDeleteTask: { _ in },
+            onEditTask: { _ in },
+            onDuplicateTask: { id in
+                duplicatedId = id
+                self.taskVM.duplicateTask(withId: id)
+            },
+            onIncrementPomodoro: { _ in }
+        )
+
+        XCTAssertNotNil(columnView.body)
+        columnView.onDuplicateTask(task.id)
+
+        XCTAssertEqual(duplicatedId, task.id)
+        XCTAssertEqual(taskVM.tasks(for: .inProgress).count, 2)
+        let duplicate = taskVM.tasks(for: .inProgress).first { $0.id != task.id }
+        XCTAssertNotNil(duplicate)
+        XCTAssertEqual(duplicate?.title, "Kanban Feature (Copy)")
+        XCTAssertEqual(duplicate?.status, .inProgress)
+        XCTAssertEqual(duplicate?.priority, .high)
+        XCTAssertEqual(duplicate?.tags, ["Kanban", "Sprint"])
+    }
+
+    func testKanbanCardViewDuplicateAction() {
+        let task = TaskItem(title: "Direct Card Task", priority: .medium, status: .todo)
+        var duplicateCalled = false
+
+        let cardView = KanbanCardView(
+            task: task,
+            onMove: { _ in },
+            onToggle: {},
+            onDelete: {},
+            onEdit: {},
+            onDuplicate: {
+                duplicateCalled = true
+            },
+            onIncrementPomodoro: {}
+        )
+
+        XCTAssertNotNil(cardView.body)
+        cardView.onDuplicate()
+        XCTAssertTrue(duplicateCalled)
+    }
 }

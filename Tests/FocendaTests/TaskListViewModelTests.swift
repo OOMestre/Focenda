@@ -235,4 +235,37 @@ final class TaskListViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.completedTasksCount, 2)
         XCTAssertEqual(viewModel.highPriorityPendingCount, 1)
     }
+
+    func testDuplicateTask() {
+        let original = TaskItem(
+            title: "Original Feature Task",
+            notes: "Deep focus notes",
+            priority: .high,
+            status: .inProgress,
+            dueDate: Date().addingTimeInterval(86400),
+            tags: ["Feature", "Urgent"],
+            estimatedPomodoros: 4,
+            completedPomodoros: 2
+        )
+        viewModel.tasks = [original]
+
+        let duplicate = viewModel.duplicateTask(withId: original.id)
+
+        XCTAssertNotNil(duplicate)
+        XCTAssertEqual(viewModel.tasks.count, 2)
+        XCTAssertEqual(duplicate?.title, "Original Feature Task (Copy)")
+        XCTAssertEqual(duplicate?.notes, "Deep focus notes")
+        XCTAssertEqual(duplicate?.priority, .high)
+        XCTAssertEqual(duplicate?.status, .inProgress)
+        XCTAssertEqual(duplicate?.dueDate, original.dueDate)
+        XCTAssertEqual(duplicate?.tags, ["Feature", "Urgent"])
+        XCTAssertEqual(duplicate?.estimatedPomodoros, 4)
+        XCTAssertEqual(duplicate?.completedPomodoros, 0)
+        XCTAssertNotEqual(duplicate?.id, original.id)
+
+        // Verify non-existent ID
+        let nonExistentDuplicate = viewModel.duplicateTask(withId: UUID())
+        XCTAssertNil(nonExistentDuplicate)
+        XCTAssertEqual(viewModel.tasks.count, 2)
+    }
 }

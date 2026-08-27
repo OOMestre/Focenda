@@ -200,6 +200,11 @@ public struct TaskListView: View {
                                 onEdit: {
                                     editingTask = task
                                 },
+                                onDuplicate: {
+                                    withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
+                                        _ = taskVM.duplicateTask(task)
+                                    }
+                                },
                                 onIncrementPomodoro: {
                                     withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
                                         taskVM.incrementTaskPomodoro(taskId: task.id)
@@ -418,6 +423,7 @@ public struct TaskRowView: View {
     public let onDelete: () -> Void
     public var onMove: ((TaskStatus) -> Void)? = nil
     public var onEdit: (() -> Void)? = nil
+    public var onDuplicate: (() -> Void)? = nil
     public var onIncrementPomodoro: (() -> Void)? = nil
 
     @State private var isHovered: Bool = false
@@ -429,6 +435,7 @@ public struct TaskRowView: View {
         onDelete: @escaping () -> Void,
         onMove: ((TaskStatus) -> Void)? = nil,
         onEdit: (() -> Void)? = nil,
+        onDuplicate: (() -> Void)? = nil,
         onIncrementPomodoro: (() -> Void)? = nil
     ) {
         self.task = task
@@ -436,6 +443,7 @@ public struct TaskRowView: View {
         self.onDelete = onDelete
         self.onMove = onMove
         self.onEdit = onEdit
+        self.onDuplicate = onDuplicate
         self.onIncrementPomodoro = onIncrementPomodoro
     }
 
@@ -592,6 +600,23 @@ public struct TaskRowView: View {
             .clipShape(Capsule())
             .fixedSize(horizontal: true, vertical: false)
 
+            // Duplicate button (if onDuplicate != nil)
+            if let onDuplicate = onDuplicate {
+                Button {
+                    onDuplicate()
+                } label: {
+                    Image(systemName: "doc.on.doc")
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.textSecondary)
+                        .frame(width: 24, height: 24)
+                        .background(AppTheme.cardBackgroundSubtle)
+                        .clipShape(Circle())
+                }
+                .buttonStyle(.plain)
+                .fixedSize(horizontal: true, vertical: false)
+                .help("Duplicate task")
+            }
+
             // Edit button (if onEdit != nil)
             if let onEdit = onEdit {
                 Button {
@@ -645,6 +670,45 @@ public struct TaskRowView: View {
         .animation(.spring(response: 0.25, dampingFraction: 0.75), value: isHovered)
         .onHover { hovering in
             isHovered = hovering
+        }
+        .contextMenu {
+            if let onDuplicate = onDuplicate {
+                Button {
+                    onDuplicate()
+                } label: {
+                    Label("Duplicate Task", systemImage: "doc.on.doc")
+                }
+            }
+
+            if let onEdit = onEdit {
+                Button {
+                    onEdit()
+                } label: {
+                    Label("Edit Task", systemImage: "pencil")
+                }
+            }
+
+            if let onIncrementPomodoro = onIncrementPomodoro {
+                Button {
+                    onIncrementPomodoro()
+                } label: {
+                    Label("Add Pomodoro (+1)", systemImage: "timer")
+                }
+            }
+
+            if let onMove = onMove {
+                Menu("Move to...") {
+                    Button("To Do") { onMove(.todo) }
+                    Button("In Progress") { onMove(.inProgress) }
+                    Button("Done") { onMove(.done) }
+                }
+            }
+
+            Divider()
+
+            Button(role: .destructive, action: onDelete) {
+                Label("Delete Task", systemImage: "trash")
+            }
         }
     }
 

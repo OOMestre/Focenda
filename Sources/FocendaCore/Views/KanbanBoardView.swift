@@ -312,6 +312,11 @@ public struct KanbanBoardView: View {
                             onEditTask: { task in
                                 editingTask = task
                             },
+                            onDuplicateTask: { taskId in
+                                withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
+                                    _ = taskVM.duplicateTask(withId: taskId)
+                                }
+                            },
                             onIncrementPomodoro: { taskId in
                                 withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
                                     taskVM.incrementTaskPomodoro(taskId: taskId)
@@ -376,6 +381,11 @@ public struct KanbanBoardView: View {
                         },
                         onEdit: {
                             editingTask = task
+                        },
+                        onDuplicate: {
+                            withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
+                                _ = taskVM.duplicateTask(task)
+                            }
                         },
                         onIncrementPomodoro: {
                             withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
@@ -446,6 +456,7 @@ public struct KanbanColumnView: View {
     public let onToggleTask: (TaskItem) -> Void
     public let onDeleteTask: (UUID) -> Void
     public let onEditTask: (TaskItem) -> Void
+    public let onDuplicateTask: (UUID) -> Void
     public let onIncrementPomodoro: (UUID) -> Void
 
     @State private var isShowingInlineAdd: Bool = false
@@ -462,6 +473,7 @@ public struct KanbanColumnView: View {
         onToggleTask: @escaping (TaskItem) -> Void,
         onDeleteTask: @escaping (UUID) -> Void,
         onEditTask: @escaping (TaskItem) -> Void,
+        onDuplicateTask: @escaping (UUID) -> Void = { _ in },
         onIncrementPomodoro: @escaping (UUID) -> Void
     ) {
         self.status = status
@@ -472,6 +484,7 @@ public struct KanbanColumnView: View {
         self.onToggleTask = onToggleTask
         self.onDeleteTask = onDeleteTask
         self.onEditTask = onEditTask
+        self.onDuplicateTask = onDuplicateTask
         self.onIncrementPomodoro = onIncrementPomodoro
     }
 
@@ -505,6 +518,7 @@ public struct KanbanColumnView: View {
                                 onToggle: { onToggleTask(task) },
                                 onDelete: { onDeleteTask(task.id) },
                                 onEdit: { onEditTask(task) },
+                                onDuplicate: { onDuplicateTask(task.id) },
                                 onIncrementPomodoro: { onIncrementPomodoro(task.id) }
                             )
                         }
@@ -698,6 +712,7 @@ public struct KanbanCardView: View {
     public let onToggle: () -> Void
     public let onDelete: () -> Void
     public let onEdit: () -> Void
+    public let onDuplicate: () -> Void
     public let onIncrementPomodoro: () -> Void
 
     @State private var isHovered: Bool = false
@@ -708,6 +723,7 @@ public struct KanbanCardView: View {
         onToggle: @escaping () -> Void,
         onDelete: @escaping () -> Void,
         onEdit: @escaping () -> Void,
+        onDuplicate: @escaping () -> Void = {},
         onIncrementPomodoro: @escaping () -> Void
     ) {
         self.task = task
@@ -715,6 +731,7 @@ public struct KanbanCardView: View {
         self.onToggle = onToggle
         self.onDelete = onDelete
         self.onEdit = onEdit
+        self.onDuplicate = onDuplicate
         self.onIncrementPomodoro = onIncrementPomodoro
     }
 
@@ -774,6 +791,12 @@ public struct KanbanCardView: View {
             }
 
             Button {
+                onDuplicate()
+            } label: {
+                Label("Duplicate Task", systemImage: "doc.on.doc")
+            }
+
+            Button {
                 onIncrementPomodoro()
             } label: {
                 Label("Add Pomodoro (+1)", systemImage: "timer")
@@ -800,6 +823,7 @@ public struct KanbanCardView: View {
             priorityBadge
             Spacer(minLength: 0)
             pomodoroButton
+            duplicateButton
             editButton
             deleteButton
             moreActionsMenu
@@ -861,6 +885,22 @@ public struct KanbanCardView: View {
         .help("Completed pomodoros (tap to +1)")
     }
 
+    private var duplicateButton: some View {
+        Button {
+            onDuplicate()
+        } label: {
+            Image(systemName: "doc.on.doc")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(AppTheme.textSecondary)
+                .frame(width: 20, height: 20)
+                .background(AppTheme.cardBackgroundSubtle)
+                .clipShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .fixedSize(horizontal: true, vertical: false)
+        .help("Duplicate task")
+    }
+
     private var editButton: some View {
         Button {
             onEdit()
@@ -899,6 +939,12 @@ public struct KanbanCardView: View {
                 Button("To Do") { onMove(.todo) }
                 Button("In Progress") { onMove(.inProgress) }
                 Button("Done") { onMove(.done) }
+            }
+
+            Button {
+                onDuplicate()
+            } label: {
+                Label("Duplicate Task", systemImage: "doc.on.doc")
             }
 
             Button {

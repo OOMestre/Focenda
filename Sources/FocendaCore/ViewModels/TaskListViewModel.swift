@@ -169,6 +169,44 @@ public final class TaskListViewModel {
         saveTasks()
     }
 
+    @discardableResult
+    public func duplicateTask(withId id: UUID) -> TaskItem? {
+        guard let original = tasks.first(where: { $0.id == id }) else { return nil }
+        return duplicateTask(original)
+    }
+
+    @discardableResult
+    public func duplicateTask(_ task: TaskItem) -> TaskItem {
+        let duplicated = TaskItem(
+            id: UUID(),
+            title: "\(task.title) (Copy)",
+            notes: task.notes,
+            priority: task.priority,
+            status: task.status,
+            isCompleted: task.isCompleted,
+            createdAt: Date(),
+            completedAt: task.isCompleted ? Date() : nil,
+            reminderDate: (task.reminderDate != nil && task.reminderDate! > Date()) ? task.reminderDate : nil,
+            dueDate: task.dueDate,
+            tags: task.tags,
+            estimatedPomodoros: task.estimatedPomodoros,
+            completedPomodoros: 0
+        )
+
+        if let index = tasks.firstIndex(where: { $0.id == task.id }) {
+            tasks.insert(duplicated, at: index + 1)
+        } else {
+            tasks.insert(duplicated, at: 0)
+        }
+
+        if let reminder = duplicated.reminderDate, reminder > Date() {
+            NotificationManager.shared.scheduleTaskReminder(task: duplicated)
+        }
+
+        saveTasks()
+        return duplicated
+    }
+
     public func updateTask(_ task: TaskItem) {
         if let index = tasks.firstIndex(where: { $0.id == task.id }) {
             tasks[index] = task
