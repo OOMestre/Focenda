@@ -23,7 +23,7 @@ public struct ScratchpadView: View {
 
             // Main 3-Pane Area (Folders Sidebar + Notes List + Editor)
             GeometryReader { geometry in
-                let minPaneWidth: CGFloat = (viewModel.showFoldersSidebar ? 176 : 0) + 251 + 340
+                let minPaneWidth: CGFloat = (viewModel.showFoldersSidebar ? 221 : 0) + 321 + 380
                 let totalPaneWidth = max(minPaneWidth, geometry.size.width)
 
                 ScrollView([.horizontal, .vertical], showsIndicators: true) {
@@ -31,20 +31,20 @@ public struct ScratchpadView: View {
                         // Folder / Notebook Sidebar (Leftmost Column)
                         if viewModel.showFoldersSidebar {
                             foldersSidebarPane
-                                .frame(width: 175)
+                                .frame(width: 220)
 
                             Divider()
                         }
 
                         // Notes List (Middle Master Column)
                         notesListPane
-                            .frame(width: 250)
+                            .frame(width: 320)
 
                         Divider()
 
                         // Editor Pane (Right Detail Column)
                         editorPane
-                            .frame(minWidth: 340, maxWidth: .infinity)
+                            .frame(minWidth: 380, maxWidth: .infinity)
                     }
                     .frame(minWidth: totalPaneWidth, minHeight: geometry.size.height, alignment: .leading)
                 }
@@ -214,8 +214,8 @@ public struct ScratchpadView: View {
             // Folders Header
             HStack {
                 Text("Folders")
-                    .font(.system(size: 11, weight: .bold))
-                    .tracking(0.5)
+                    .font(.system(size: 12, weight: .bold))
+                    .tracking(0.6)
                     .foregroundStyle(AppTheme.textTertiary)
                     .textCase(.uppercase)
                     .lineLimit(1)
@@ -227,20 +227,20 @@ public struct ScratchpadView: View {
                     showingNewFolderSheet = true
                 } label: {
                     Image(systemName: "plus")
-                        .font(.system(size: 11, weight: .bold))
+                        .font(.system(size: 12, weight: .bold))
                         .foregroundStyle(AppTheme.textSecondary)
-                        .padding(4)
+                        .padding(5)
                 }
                 .buttonStyle(.plain)
                 .help("Add new folder")
             }
-            .padding(.horizontal, 12)
-            .padding(.top, 12)
-            .padding(.bottom, 6)
+            .padding(.horizontal, 14)
+            .padding(.top, 14)
+            .padding(.bottom, 8)
 
             // Folders List
             ScrollView {
-                VStack(spacing: 3) {
+                VStack(spacing: 4) {
                     // All Notes item
                     folderRowItem(
                         name: ScratchpadViewModel.allNotesFolder,
@@ -262,7 +262,7 @@ public struct ScratchpadView: View {
                         )
                     }
                 }
-                .padding(.horizontal, 8)
+                .padding(.horizontal, 10)
                 .padding(.vertical, 4)
             }
 
@@ -273,17 +273,17 @@ public struct ScratchpadView: View {
                 newFolderName = ""
                 showingNewFolderSheet = true
             } label: {
-                HStack(spacing: 6) {
+                HStack(spacing: 7) {
                     Image(systemName: "folder.badge.plus")
-                        .font(.system(size: 12))
+                        .font(.system(size: 13))
                     Text("New Folder")
-                        .font(.system(size: 12.5, weight: .medium))
+                        .font(.system(size: 13.5, weight: .medium))
                         .lineLimit(1)
                     Spacer()
                 }
                 .foregroundStyle(AppTheme.accent)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 9)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
             }
             .buttonStyle(.plain)
             .background(AppTheme.cardBackgroundSubtle)
@@ -300,14 +300,14 @@ public struct ScratchpadView: View {
                 viewModel.selectFolder(name)
             }
         } label: {
-            HStack(spacing: 8) {
+            HStack(spacing: 9) {
                 Image(systemName: icon)
-                    .font(.system(size: 13, weight: .medium))
+                    .font(.system(size: 14, weight: .medium))
                     .foregroundStyle(isSelected ? AppTheme.accent : AppTheme.textSecondary)
-                    .frame(width: 16)
+                    .frame(width: 18)
 
                 Text(name)
-                    .font(.system(size: 13, weight: isSelected ? .semibold : .regular))
+                    .font(.system(size: 14, weight: isSelected ? .semibold : .regular))
                     .foregroundStyle(isSelected ? AppTheme.textPrimary : AppTheme.textSecondary)
                     .lineLimit(1)
                     .truncationMode(.tail)
@@ -315,24 +315,24 @@ public struct ScratchpadView: View {
                 Spacer(minLength: 2)
 
                 Text("\(count)")
-                    .font(.system(size: 11, weight: .medium).monospacedDigit())
+                    .font(.system(size: 12, weight: .medium).monospacedDigit())
                     .foregroundStyle(isSelected ? AppTheme.accent : AppTheme.textTertiary)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 2.5)
                     .background(
                         Capsule()
                             .fill(isSelected ? AppTheme.accent.opacity(0.18) : AppTheme.cardBackground)
                     )
                     .lineLimit(1)
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 6)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 7)
             .background(
-                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                RoundedRectangle(cornerRadius: 7, style: .continuous)
                     .fill(isSelected ? AppTheme.accent.opacity(0.12) : Color.clear)
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                RoundedRectangle(cornerRadius: 7, style: .continuous)
                     .stroke(isSelected ? AppTheme.accent.opacity(0.35) : Color.clear, lineWidth: 1)
             )
         }
@@ -355,13 +355,13 @@ public struct ScratchpadView: View {
         VStack(spacing: 0) {
             // Notes List Header info
             HStack {
-                HStack(spacing: 6) {
+                HStack(spacing: 7) {
                     Image(systemName: ScratchpadViewModel.iconForFolder(viewModel.selectedFolder))
-                        .font(.system(size: 12))
+                        .font(.system(size: 13))
                         .foregroundStyle(AppTheme.accent)
 
                     Text(viewModel.selectedFolder)
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(AppTheme.textPrimary)
                         .lineLimit(1)
                         .truncationMode(.tail)
@@ -370,12 +370,12 @@ public struct ScratchpadView: View {
                 Spacer(minLength: 2)
 
                 Text("\(viewModel.filteredNotes.count)")
-                    .font(.system(size: 11, weight: .medium).monospacedDigit())
+                    .font(.system(size: 12, weight: .medium).monospacedDigit())
                     .foregroundStyle(AppTheme.textTertiary)
                     .lineLimit(1)
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 9)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
             .background(AppTheme.cardBackgroundSubtle)
 
             Divider()
@@ -384,11 +384,11 @@ public struct ScratchpadView: View {
                 VStack(spacing: 12) {
                     Spacer()
                     Image(systemName: "doc.text.magnifyingglass")
-                        .font(.system(size: 30))
+                        .font(.system(size: 32))
                         .foregroundStyle(AppTheme.textTertiary)
 
                     Text(viewModel.searchQuery.isEmpty ? "No notes in \(viewModel.selectedFolder)" : "No matching notes")
-                        .font(.system(size: 12, weight: .medium))
+                        .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(AppTheme.textSecondary)
                         .lineLimit(1)
 
@@ -398,7 +398,7 @@ public struct ScratchpadView: View {
                         }
                         .font(.caption)
                         .buttonStyle(.bordered)
-                        .controlSize(.small)
+                        .controlSize(.regular)
                     } else {
                         Button {
                             withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
@@ -407,24 +407,24 @@ public struct ScratchpadView: View {
                             }
                         } label: {
                             Label("New Note", systemImage: "plus")
-                                .font(.caption.weight(.medium))
+                                .font(.system(size: 12.5, weight: .medium))
                                 .lineLimit(1)
                         }
                         .buttonStyle(.bordered)
-                        .controlSize(.small)
+                        .controlSize(.regular)
                     }
                     Spacer()
                 }
                 .frame(maxWidth: .infinity)
-                .padding(.horizontal, 14)
+                .padding(.horizontal, 16)
             } else {
                 ScrollView {
-                    LazyVStack(spacing: 6) {
+                    LazyVStack(spacing: 8) {
                         ForEach(viewModel.filteredNotes) { note in
                             noteCardRow(for: note)
                         }
                     }
-                    .padding(8)
+                    .padding(10)
                 }
             }
         }
@@ -441,17 +441,17 @@ public struct ScratchpadView: View {
                 viewModel.selectNote(note)
             }
         } label: {
-            VStack(alignment: .leading, spacing: 5) {
+            VStack(alignment: .leading, spacing: 6) {
                 // Header: Color dot + Title + Pin
-                HStack(alignment: .center, spacing: 6) {
+                HStack(alignment: .center, spacing: 7) {
                     Circle()
                         .fill(note.color.color)
-                        .frame(width: 8, height: 8)
-                        .shadow(color: note.color.color.opacity(0.3), radius: 1, x: 0, y: 1)
+                        .frame(width: 9, height: 9)
+                        .shadow(color: note.color.color.opacity(0.3), radius: 1.5, x: 0, y: 1)
 
                     Text(note.displayTitle)
-                        .font(.system(size: 13.5, weight: isSelected ? .bold : .semibold))
-                        .foregroundStyle(isSelected ? AppTheme.textPrimary : AppTheme.textPrimary.opacity(0.9))
+                        .font(.system(size: 14.5, weight: isSelected ? .bold : .semibold))
+                        .foregroundStyle(isSelected ? AppTheme.textPrimary : AppTheme.textPrimary.opacity(0.92))
                         .lineLimit(1)
                         .truncationMode(.tail)
 
@@ -459,7 +459,7 @@ public struct ScratchpadView: View {
 
                     if note.isPinned {
                         Image(systemName: "pin.fill")
-                            .font(.system(size: 10))
+                            .font(.system(size: 11))
                             .foregroundStyle(note.color.color)
                     }
                 }
@@ -468,23 +468,23 @@ public struct ScratchpadView: View {
                 if viewModel.selectedFolder == ScratchpadViewModel.allNotesFolder {
                     HStack(spacing: 4) {
                         Image(systemName: ScratchpadViewModel.iconForFolder(note.folder))
-                            .font(.system(size: 9))
+                            .font(.system(size: 10))
                         Text(note.folder)
-                            .font(.system(size: 10, weight: .medium))
+                            .font(.system(size: 11, weight: .medium))
                             .lineLimit(1)
                             .truncationMode(.tail)
                     }
                     .foregroundStyle(AppTheme.textTertiary)
-                    .padding(.horizontal, 5)
-                    .padding(.vertical, 1.5)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
                     .background(AppTheme.cardBackground)
                     .clipShape(Capsule())
                 }
 
                 // Snippet text preview
                 Text(note.snippet)
-                    .font(.system(size: 12.5))
-                    .lineSpacing(2)
+                    .font(.system(size: 13))
+                    .lineSpacing(3)
                     .foregroundStyle(AppTheme.textSecondary)
                     .lineLimit(2)
                     .multilineTextAlignment(.leading)
@@ -492,26 +492,26 @@ public struct ScratchpadView: View {
                 // Footer: relative timestamp + word count
                 HStack {
                     Text(note.relativeFormattedDate)
-                        .font(.system(size: 10.5))
+                        .font(.system(size: 11))
                         .foregroundStyle(AppTheme.textTertiary)
                         .lineLimit(1)
 
                     Spacer()
 
                     Text("\(note.wordCount)w")
-                        .font(.system(size: 10.5).monospacedDigit())
+                        .font(.system(size: 11).monospacedDigit())
                         .foregroundStyle(AppTheme.textTertiary)
                         .lineLimit(1)
                 }
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 9)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
             .background(
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                RoundedRectangle(cornerRadius: 9, style: .continuous)
                     .fill(isSelected ? note.color.color.opacity(0.12) : AppTheme.cardBackgroundSubtle)
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                RoundedRectangle(cornerRadius: 9, style: .continuous)
                     .stroke(
                         isSelected ? note.color.color.opacity(0.4) : AppTheme.subtleBorder,
                         lineWidth: 1
