@@ -59,6 +59,7 @@ public struct BookmarksView: View {
     @State private var showingAddSheet = false
     @State private var editingBookmark: BookmarkItem?
     @State private var copiedBookmarkId: UUID?
+    @State private var bookmarkToDelete: BookmarkItem?
 
     // Add / Edit form fields
     @State private var formTitle: String = ""
@@ -121,6 +122,26 @@ public struct BookmarksView: View {
         }
         .sheet(item: $editingBookmark) { bookmark in
             bookmarkEditorSheet(isEditing: true, existing: bookmark)
+        }
+        .alert(
+            "Delete Bookmark?",
+            isPresented: Binding(
+                get: { bookmarkToDelete != nil },
+                set: { if !$0 { bookmarkToDelete = nil } }
+            ),
+            presenting: bookmarkToDelete
+        ) { bookmark in
+            Button("Delete Link", role: .destructive) {
+                withAnimation(.spring(response: 0.25)) {
+                    viewModel.deleteBookmark(bookmark)
+                }
+                bookmarkToDelete = nil
+            }
+            Button("Cancel", role: .cancel) {
+                bookmarkToDelete = nil
+            }
+        } message: { bookmark in
+            Text("Are you sure you want to delete \"\(bookmark.title)\"? This action cannot be undone.")
         }
     }
 
@@ -466,7 +487,7 @@ public struct BookmarksView: View {
             Divider()
 
             Button(role: .destructive) {
-                viewModel.deleteBookmark(bookmark)
+                bookmarkToDelete = bookmark
             } label: {
                 Label("Delete Link", systemImage: "trash")
             }
@@ -487,21 +508,22 @@ public struct BookmarksView: View {
     }
 
     private func regularBookmarkActions(for bookmark: BookmarkItem) -> some View {
-            HStack(spacing: 8) {
-                openBookmarkButton(for: bookmark, title: "Open Link", usesIconOnlyLabel: false)
+        HStack(spacing: 8) {
+            openBookmarkButton(for: bookmark, title: "Open Link", usesIconOnlyLabel: false)
 
-                if bookmark.clickCount > 0 {
-                    Text("\(bookmark.clickCount) \(bookmark.clickCount == 1 ? "launch" : "launches")")
-                        .font(.system(size: 10).monospacedDigit())
-                        .foregroundStyle(AppTheme.textTertiary)
-                        .lineLimit(1)
-                }
-
-                Spacer()
-
-                copyURLButton(for: bookmark)
-                pinButton(for: bookmark)
+            if bookmark.clickCount > 0 {
+                Text("\(bookmark.clickCount) \(bookmark.clickCount == 1 ? "launch" : "launches")")
+                    .font(.system(size: 10).monospacedDigit())
+                    .foregroundStyle(AppTheme.textTertiary)
+                    .lineLimit(1)
             }
+
+            Spacer()
+
+            copyURLButton(for: bookmark)
+            pinButton(for: bookmark)
+            deleteBookmarkButton(for: bookmark)
+        }
     }
 
     private func compactBookmarkActions(for bookmark: BookmarkItem) -> some View {
@@ -518,6 +540,7 @@ public struct BookmarksView: View {
 
             copyURLButton(for: bookmark)
             pinButton(for: bookmark)
+            deleteBookmarkButton(for: bookmark)
         }
     }
 
@@ -527,6 +550,7 @@ public struct BookmarksView: View {
             Spacer(minLength: 2)
             copyURLButton(for: bookmark)
             pinButton(for: bookmark)
+            deleteBookmarkButton(for: bookmark)
         }
     }
 
@@ -604,6 +628,22 @@ public struct BookmarksView: View {
         }
         .buttonStyle(.plain)
         .help(bookmark.isPinned ? "Unpin from favorites" : "Pin to favorites")
+    }
+
+    private func deleteBookmarkButton(for bookmark: BookmarkItem) -> some View {
+        Button(role: .destructive) {
+            bookmarkToDelete = bookmark
+        } label: {
+            Image(systemName: "trash")
+                .font(.system(size: 12))
+                .foregroundStyle(AppTheme.textSecondary)
+                .padding(6)
+                .background(AppTheme.cardBackgroundSubtle)
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+        }
+        .buttonStyle(.plain)
+        .help("Delete bookmark")
+        .accessibilityLabel("Delete \(bookmark.title)")
     }
 
     // MARK: - Empty State View
@@ -792,6 +832,18 @@ public struct BookmarksView: View {
 
             // Sheet Action Buttons
             HStack {
+                if isEditing, let existing = existing {
+                    Button(role: .destructive) {
+                        editingBookmark = nil
+                        bookmarkToDelete = existing
+                    } label: {
+                        Label("Delete Link", systemImage: "trash")
+                            .foregroundStyle(AppTheme.terracotta)
+                    }
+                    .buttonStyle(.bordered)
+                    .help("Delete this bookmark")
+                }
+
                 Spacer()
 
                 Button("Cancel") {

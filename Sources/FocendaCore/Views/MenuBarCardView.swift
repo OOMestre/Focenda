@@ -1050,6 +1050,7 @@ public struct MenuBarCardView: View {
             let allLinks = QuickLink.defaultLinks + customLinks
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
                 ForEach(allLinks) { link in
+                    let isCustom = customLinks.contains(where: { $0.id == link.id })
                     Button {
                         if let url = link.url {
                             NSWorkspace.shared.open(url)
@@ -1083,6 +1084,35 @@ public struct MenuBarCardView: View {
                         )
                     }
                     .buttonStyle(SpringScaleButtonStyle())
+                    .contextMenu {
+                        Button {
+                            if let url = link.url {
+                                NSWorkspace.shared.open(url)
+                            }
+                        } label: {
+                            Label("Open in Browser", systemImage: "arrow.up.right")
+                        }
+
+                        Button {
+                            let pasteboard = NSPasteboard.general
+                            pasteboard.clearContents()
+                            pasteboard.setString(link.urlString, forType: .string)
+                        } label: {
+                            Label("Copy URL", systemImage: "doc.on.doc")
+                        }
+
+                        if isCustom {
+                            Divider()
+
+                            Button(role: .destructive) {
+                                withAnimation(.spring(response: 0.25)) {
+                                    deleteCustomLink(link)
+                                }
+                            } label: {
+                                Label("Delete Bookmark", systemImage: "trash")
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -1105,6 +1135,15 @@ public struct MenuBarCardView: View {
         newLinkTitle = ""
         newLinkUrl = ""
         isAddingLink = false
+    }
+
+    public func deleteCustomLink(_ link: QuickLink) {
+        deleteCustomLink(id: link.id)
+    }
+
+    public func deleteCustomLink(id: UUID) {
+        customLinks.removeAll(where: { $0.id == id })
+        saveCustomLinks()
     }
 
     private func saveCustomLinks() {

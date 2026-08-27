@@ -142,4 +142,35 @@ final class BookmarksViewTests: XCTestCase {
             1
         )
     }
+
+    func testBookmarksViewDeleteBookmarkFlow() {
+        let viewModel = BookmarkViewModel(userDefaults: testDefaults)
+        let initialCount = viewModel.bookmarks.count
+        guard let first = viewModel.bookmarks.first else {
+            XCTFail("Expected at least one default bookmark")
+            return
+        }
+
+        let view = BookmarksView(viewModel: viewModel)
+        XCTAssertNotNil(view.body)
+
+        viewModel.deleteBookmark(first)
+        XCTAssertEqual(viewModel.bookmarks.count, initialCount - 1)
+        XCTAssertFalse(viewModel.bookmarks.contains(where: { $0.id == first.id }))
+    }
+
+    func testBookmarksViewDeleteFromCategoryUpdatesCounts() {
+        let viewModel = BookmarkViewModel(userDefaults: testDefaults)
+        viewModel.addBookmark(title: "Rust Lang", url: "https://rust-lang.org", category: "Development")
+        let devCountBefore = viewModel.categoryCount(for: "Development")
+
+        guard let rustBookmark = viewModel.bookmarks.first(where: { $0.title == "Rust Lang" }) else {
+            XCTFail("Rust bookmark not found")
+            return
+        }
+
+        viewModel.deleteBookmark(id: rustBookmark.id)
+        let devCountAfter = viewModel.categoryCount(for: "Development")
+        XCTAssertEqual(devCountAfter, devCountBefore - 1)
+    }
 }

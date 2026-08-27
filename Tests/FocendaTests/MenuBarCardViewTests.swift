@@ -314,4 +314,15 @@ final class MenuBarCardViewTests: XCTestCase {
             XCTAssertNotNil(cardView.body)
         }
     }
+
+    func testDeleteCustomLinkInMenuBarCardView() {
+        let timerVM = FocusTimerViewModel()
+        let cardView = MenuBarCardView(timerVM: timerVM, initialSection: .quickLinks)
+
+        let customLink = QuickLink(title: "Test Bookmark", urlString: "https://example.com/test")
+        cardView.deleteCustomLink(customLink)
+        cardView.deleteCustomLink(id: customLink.id)
+
+        XCTAssertNotNil(cardView.body)
+    }
 }
