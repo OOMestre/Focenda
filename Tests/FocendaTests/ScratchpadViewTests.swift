@@ -32,7 +32,7 @@ final class ScratchpadViewTests: XCTestCase {
 
     func testScratchpadViewWithCustomNotes() {
         let viewModel = ScratchpadViewModel(userDefaults: testDefaults)
-        let note = viewModel.createNote(folder: "Projects", color: .lavender)
+        let note = viewModel.createNote(color: .lavender, folder: "Projects")
         viewModel.selectNote(note)
         viewModel.updateContent("Important project notes with deep detail")
         viewModel.updateTitle("Project Alpha")
@@ -46,8 +46,8 @@ final class ScratchpadViewTests: XCTestCase {
     func testScratchpadViewFolderFilterAndNotesCount() {
         let viewModel = ScratchpadViewModel(userDefaults: testDefaults)
         viewModel.createFolder("Personal")
-        let note1 = viewModel.createNote(folder: "Personal", color: .rose)
-        let note2 = viewModel.createNote(folder: "Personal", color: .amber)
+        let note1 = viewModel.createNote(color: .rose, folder: "Personal")
+        let note2 = viewModel.createNote(color: .amber, folder: "Personal")
 
         viewModel.selectFolder("Personal")
         XCTAssertEqual(viewModel.filteredNotes.count, 2)
