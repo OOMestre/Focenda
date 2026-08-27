@@ -823,7 +823,7 @@ public struct RemindersView: View {
     }
 
     private func triggerChimeFeedback(for id: UUID? = nil) {
-        NotificationManager.shared.playRichAlertChime()
+        NotificationManager.shared.playUserReminderSound()
         if let id = id {
             withAnimation(.spring(response: 0.2)) {
                 playingChimeId = id

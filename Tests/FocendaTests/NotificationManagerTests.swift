@@ -95,6 +95,52 @@ final class NotificationManagerTests: XCTestCase {
         manager.playRichAlertChime(soundName: "UnknownSoundFallback")
     }
 
+    func testPlayReminderAlertChimeWithRepetitions() {
+        let manager = NotificationManager()
+        manager.playReminderAlertChime(soundName: "Hero", repeatCount: 3, interval: 0.1)
+        manager.playReminderAlertChime(soundName: "Ping", customFilePath: nil, repeatCount: 5, interval: 0.05)
+        manager.stopActiveSound()
+        XCTAssertFalse(manager.isPlayingSound)
+    }
+
+    func testPlayReminderAlertChimeWithCustomPathFallback() {
+        let manager = NotificationManager()
+        manager.playReminderAlertChime(soundName: "Hero", customFilePath: "/non/existent/path/sound.wav", repeatCount: 2, interval: 0.05)
+        manager.stopActiveSound()
+    }
+
+    func testPlayUserReminderSoundRespectsPreferences() {
+        let manager = NotificationManager()
+        UserDefaults.standard.set(true, forKey: "reminderSoundEnabled")
+        UserDefaults.standard.set(ReminderSoundType.glass.rawValue, forKey: "reminderSoundType")
+        UserDefaults.standard.set(4, forKey: "reminderSoundRepeatCount")
+        manager.playUserReminderSound()
+        manager.stopActiveSound()
+
+        UserDefaults.standard.set(false, forKey: "reminderSoundEnabled")
+        manager.playUserReminderSound()
+        XCTAssertFalse(manager.isPlayingSound)
+
+        // Reset
+        UserDefaults.standard.removeObject(forKey: "reminderSoundEnabled")
+        UserDefaults.standard.removeObject(forKey: "reminderSoundType")
+        UserDefaults.standard.removeObject(forKey: "reminderSoundRepeatCount")
+    }
+
+    func testReminderSoundOptionProperties() {
+        XCTAssertEqual(ReminderSoundType.hero.displayName, "Hero (Default)")
+        XCTAssertEqual(ReminderSoundType.custom.displayName, "Custom Audio File...")
+        XCTAssertEqual(ReminderSoundType.ping.displayName, "Ping")
+        XCTAssertFalse(ReminderSoundType.hero.isCustom)
+        XCTAssertTrue(ReminderSoundType.custom.isCustom)
+        XCTAssertEqual(ReminderSoundType.hero.systemSoundName, "Hero")
+        XCTAssertNil(ReminderSoundType.custom.systemSoundName)
+        XCTAssertEqual(ReminderSoundType.defaultSound, .hero)
+        XCTAssertEqual(ReminderSoundType.defaultRepeatCount, 3)
+        XCTAssertEqual(ReminderSoundType.minRepeatCount, 1)
+        XCTAssertEqual(ReminderSoundType.maxRepeatCount, 5)
+    }
+
     func testScheduleTaskReminderDoesNotCrash() {
         let manager = NotificationManager()
         let futureTask = TaskItem(

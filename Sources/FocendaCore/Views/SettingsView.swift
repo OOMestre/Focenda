@@ -1,8 +1,15 @@
 import SwiftUI
+import UniformTypeIdentifiers
+#if canImport(AppKit)
+import AppKit
+#endif
 
 public struct SettingsView: View {
     @Bindable var appState: AppState
     var timerVM: FocusTimerViewModel
+
+    @State private var isTestingSound: Bool = false
+    @State private var testingTask: Task<Void, Never>?
 
     public init(
         appState: AppState,
@@ -17,6 +24,9 @@ public struct SettingsView: View {
             VStack(alignment: .leading, spacing: 24) {
                 // Appearance & Theme Picker
                 themePickerSection
+
+                // Reminder Sounds & Chimes
+                reminderSoundSection
 
                 // Focus Intervals
                 GroupBox(label: Label("Focus Intervals (Minutes)", systemImage: "timer").foregroundStyle(AppTheme.textPrimary)) {
@@ -123,6 +133,220 @@ public struct SettingsView: View {
         }
         .background(AppTheme.background)
         .navigationTitle("Settings")
+        .onDisappear {
+            stopAudioPreview()
+        }
+    }
+
+    // MARK: - Reminder Sounds Section
+    private var reminderSoundSection: some View {
+        GroupBox(label: Label("Reminder Alerts & Sound Chimes", systemImage: "bell.and.waves.left.and.right").foregroundStyle(AppTheme.textPrimary)) {
+            VStack(alignment: .leading, spacing: 16) {
+                // Master Toggle
+                Toggle(isOn: $appState.reminderSoundEnabled) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Enable Sound for Reminders")
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(AppTheme.textPrimary)
+                        Text("Plays an audible alert chime whenever a timed task or recurring reminder is due.")
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.textSecondary)
+                    }
+                }
+                .toggleStyle(.switch)
+                .tint(AppTheme.accent)
+
+                if appState.reminderSoundEnabled {
+                    Divider()
+
+                    // Sound Type Picker (System sounds or Custom)
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Alert Chime Sound:")
+                                .font(.subheadline.weight(.medium))
+                                .foregroundStyle(AppTheme.textPrimary)
+                            Text("Select a built-in macOS alert sound or upload your own audio file.")
+                                .font(.caption)
+                                .foregroundStyle(AppTheme.textSecondary)
+                        }
+                        Spacer()
+                        Picker("", selection: $appState.reminderSoundType) {
+                            ForEach(ReminderSoundType.allCases) { sound in
+                                Text(sound.displayName).tag(sound)
+                            }
+                        }
+                        .frame(maxWidth: 220)
+                    }
+
+                    // Custom Audio File Selector (if .custom)
+                    if appState.reminderSoundType == .custom {
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack(spacing: 10) {
+                                Image(systemName: "waveform.circle.fill")
+                                    .font(.system(size: 18))
+                                    .foregroundStyle(AppTheme.accent)
+
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(appState.reminderCustomSoundName.isEmpty ? "No custom audio file selected" : appState.reminderCustomSoundName)
+                                        .font(.subheadline.weight(.semibold))
+                                        .foregroundStyle(AppTheme.textPrimary)
+                                        .lineLimit(1)
+                                        .truncationMode(.middle)
+
+                                    if !appState.reminderCustomSoundPath.isEmpty {
+                                        Text(appState.reminderCustomSoundPath)
+                                            .font(.system(size: 10, design: .monospaced))
+                                            .foregroundStyle(AppTheme.textTertiary)
+                                            .lineLimit(1)
+                                            .truncationMode(.middle)
+                                    }
+                                }
+
+                                Spacer()
+
+                                Button {
+                                    chooseCustomAudioFile()
+                                } label: {
+                                    Label(appState.reminderCustomSoundPath.isEmpty ? "Browse File..." : "Change File...", systemImage: "folder")
+                                        .font(.caption.weight(.medium))
+                                }
+                                .buttonStyle(.bordered)
+                                .controlSize(.small)
+
+                                if !appState.reminderCustomSoundPath.isEmpty {
+                                    Button {
+                                        appState.reminderCustomSoundPath = ""
+                                        appState.reminderCustomSoundName = ""
+                                    } label: {
+                                        Image(systemName: "xmark.circle.fill")
+                                            .foregroundStyle(AppTheme.textTertiary)
+                                    }
+                                    .buttonStyle(.plain)
+                                    .help("Clear selected audio file")
+                                }
+                            }
+                            .padding(10)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                    .fill(AppTheme.cardBackgroundSubtle.opacity(0.6))
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                    .stroke(AppTheme.border, lineWidth: 1)
+                            )
+                        }
+                    }
+
+                    Divider()
+
+                    // Sound Repetition Stepper
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Chime Repetitions:")
+                                .font(.subheadline.weight(.medium))
+                                .foregroundStyle(AppTheme.textPrimary)
+                            Text("Repeat the chime 3 to 5 times so you don't miss notifications.")
+                                .font(.caption)
+                                .foregroundStyle(AppTheme.textSecondary)
+                        }
+                        Spacer()
+                        Stepper("\(appState.reminderSoundRepeatCount)x", value: $appState.reminderSoundRepeatCount, in: ReminderSoundType.minRepeatCount...ReminderSoundType.maxRepeatCount, step: 1)
+                            .foregroundStyle(AppTheme.textPrimary)
+                    }
+
+                    Divider()
+
+                    // Test Audio Preview Button
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Sound Preview:")
+                                .font(.subheadline.weight(.medium))
+                                .foregroundStyle(AppTheme.textPrimary)
+                            Text("Test how the alert chime will sound with \(appState.reminderSoundRepeatCount) repetitions.")
+                                .font(.caption)
+                                .foregroundStyle(AppTheme.textSecondary)
+                        }
+
+                        Spacer()
+
+                        Button {
+                            toggleAudioPreview()
+                        } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: isTestingSound ? "stop.fill" : "speaker.wave.3.fill")
+                                    .font(.system(size: 11, weight: .bold))
+                                Text(isTestingSound ? "Stop Sound" : "Test Alert Sound")
+                                    .font(.system(size: 12, weight: .semibold))
+                            }
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(isTestingSound ? Color.red.opacity(0.8) : AppTheme.accent)
+                    }
+                }
+            }
+            .padding(12)
+        }
+    }
+
+    private func chooseCustomAudioFile() {
+        #if canImport(AppKit)
+        let panel = NSOpenPanel()
+        panel.title = "Select Notification Sound"
+        panel.prompt = "Choose Sound"
+        panel.allowsMultipleSelection = false
+        panel.canChooseDirectories = false
+        panel.canCreateDirectories = false
+        panel.canChooseFiles = true
+        panel.allowedContentTypes = [
+            .audio,
+            .aiff,
+            .wav,
+            .mp3,
+            .mpeg4Audio
+        ]
+
+        if panel.runModal() == .OK, let url = panel.url {
+            appState.reminderCustomSoundPath = url.path
+            appState.reminderCustomSoundName = url.lastPathComponent
+        }
+        #endif
+    }
+
+    private func toggleAudioPreview() {
+        if isTestingSound {
+            stopAudioPreview()
+        } else {
+            let soundName = appState.reminderSoundType.rawValue
+            let customPath = appState.reminderSoundType == .custom ? appState.reminderCustomSoundPath : nil
+            let count = appState.reminderSoundRepeatCount
+            let interval: TimeInterval = 0.85
+
+            isTestingSound = true
+            NotificationManager.shared.playReminderAlertChime(
+                soundName: soundName,
+                customFilePath: customPath,
+                repeatCount: count,
+                interval: interval
+            )
+
+            testingTask?.cancel()
+            let totalEstimatedDuration = Double(count) * interval + 0.5
+            testingTask = Task { @MainActor in
+                try? await Task.sleep(nanoseconds: UInt64(totalEstimatedDuration * 1_000_000_000))
+                if !Task.isCancelled {
+                    isTestingSound = false
+                }
+            }
+        }
+    }
+
+    private func stopAudioPreview() {
+        NotificationManager.shared.stopActiveSound()
+        testingTask?.cancel()
+        testingTask = nil
+        isTestingSound = false
     }
 
     // MARK: - Theme Picker Section

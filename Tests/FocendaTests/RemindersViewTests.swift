@@ -160,9 +160,10 @@ final class RemindersViewTests: XCTestCase {
         let calendar = Calendar.current
         let today = Date()
 
+        let noonToday = calendar.date(bySettingHour: 12, minute: 0, second: 0, of: today) ?? today
         let reminderToday = RecurringReminder(
             title: "Today Alert",
-            time: today,
+            time: noonToday,
             repeatFrequency: .daily,
             isEnabled: true
         )
@@ -173,7 +174,7 @@ final class RemindersViewTests: XCTestCase {
             TaskItem(
                 title: "Today Task",
                 status: .todo,
-                reminderDate: calendar.date(byAdding: .minute, value: 30, to: today)
+                reminderDate: noonToday
             )
         ]
 

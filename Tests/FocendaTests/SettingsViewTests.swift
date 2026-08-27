@@ -82,4 +82,65 @@ final class SettingsViewTests: XCTestCase {
         XCTAssertNotNil(settingsView)
         XCTAssertNotNil(settingsView.body)
     }
+
+    func testAppStateReminderSoundPreferencesSaveAndLoad() {
+        let appState = AppState()
+        appState.reminderSoundEnabled = true
+        appState.reminderSoundType = .glass
+        appState.reminderSoundRepeatCount = 4
+        appState.reminderCustomSoundPath = "/path/to/custom.mp3"
+        appState.reminderCustomSoundName = "custom.mp3"
+        appState.savePreferences()
+
+        XCTAssertTrue(UserDefaults.standard.bool(forKey: "reminderSoundEnabled"))
+        XCTAssertEqual(UserDefaults.standard.string(forKey: "reminderSoundType"), ReminderSoundType.glass.rawValue)
+        XCTAssertEqual(UserDefaults.standard.integer(forKey: "reminderSoundRepeatCount"), 4)
+        XCTAssertEqual(UserDefaults.standard.string(forKey: "reminderCustomSoundPath"), "/path/to/custom.mp3")
+        XCTAssertEqual(UserDefaults.standard.string(forKey: "reminderCustomSoundName"), "custom.mp3")
+
+        let reloadedAppState = AppState()
+        XCTAssertTrue(reloadedAppState.reminderSoundEnabled)
+        XCTAssertEqual(reloadedAppState.reminderSoundType, .glass)
+        XCTAssertEqual(reloadedAppState.reminderSoundRepeatCount, 4)
+        XCTAssertEqual(reloadedAppState.reminderCustomSoundPath, "/path/to/custom.mp3")
+        XCTAssertEqual(reloadedAppState.reminderCustomSoundName, "custom.mp3")
+
+        // Cleanup
+        UserDefaults.standard.removeObject(forKey: "reminderSoundEnabled")
+        UserDefaults.standard.removeObject(forKey: "reminderSoundType")
+        UserDefaults.standard.removeObject(forKey: "reminderSoundRepeatCount")
+        UserDefaults.standard.removeObject(forKey: "reminderCustomSoundPath")
+        UserDefaults.standard.removeObject(forKey: "reminderCustomSoundName")
+    }
+
+    func testAppStateReminderSoundRepeatClamping() {
+        let appState = AppState()
+        appState.reminderSoundRepeatCount = 10
+        XCTAssertEqual(appState.reminderSoundRepeatCount, ReminderSoundType.maxRepeatCount)
+
+        appState.reminderSoundRepeatCount = 0
+        XCTAssertEqual(appState.reminderSoundRepeatCount, ReminderSoundType.minRepeatCount)
+    }
+
+    func testSettingsViewWithCustomSoundSelected() {
+        let appState = AppState()
+        appState.reminderSoundType = .custom
+        appState.reminderCustomSoundName = "custom_bell.wav"
+        appState.reminderCustomSoundPath = "/Users/test/custom_bell.wav"
+        let timerVM = FocusTimerViewModel()
+        let settingsView = SettingsView(appState: appState, timerVM: timerVM)
+
+        XCTAssertNotNil(settingsView)
+        XCTAssertNotNil(settingsView.body)
+    }
+
+    func testSettingsViewWithReminderSoundDisabled() {
+        let appState = AppState()
+        appState.reminderSoundEnabled = false
+        let timerVM = FocusTimerViewModel()
+        let settingsView = SettingsView(appState: appState, timerVM: timerVM)
+
+        XCTAssertNotNil(settingsView)
+        XCTAssertNotNil(settingsView.body)
+    }
 }
