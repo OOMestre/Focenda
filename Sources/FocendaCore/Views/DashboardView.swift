@@ -32,52 +32,66 @@ public struct DashboardView: View {
 
     // MARK: - Header
     private var headerSection: some View {
-        HStack(alignment: .center) {
-            HStack(spacing: 16) {
-                // Subtle organic icon container
-                ZStack {
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(AppTheme.accent.opacity(0.12))
-                        .frame(width: 48, height: 48)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                .stroke(AppTheme.accent.opacity(0.25), lineWidth: 1)
-                        )
-
-                    Image(systemName: greetingIcon)
-                        .font(.title2)
-                        .foregroundStyle(AppTheme.accent)
-                }
-
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(greetingTitle)
-                        .font(.system(size: 26, weight: .bold, design: .rounded))
-                        .foregroundStyle(AppTheme.textPrimary)
-
-                    Text("Track your daily focus flow and accomplish your high-impact goals.")
-                        .font(.subheadline)
-                        .foregroundStyle(AppTheme.textSecondary)
-                }
+        ViewThatFits(in: .horizontal) {
+            HStack(alignment: .center) {
+                headerGreetingContent
+                Spacer(minLength: 12)
+                startFocusButton
             }
 
-            Spacer()
-
-            Button {
-                appState.selectedTab = .timer
-                if timerVM.status != .running {
-                    withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
-                        timerVM.start()
-                    }
-                }
-            } label: {
-                Label("Start Focus", systemImage: "play.circle.fill")
-                    .font(.headline)
+            VStack(alignment: .leading, spacing: 12) {
+                headerGreetingContent
+                startFocusButton
             }
-            .buttonStyle(.borderedProminent)
-            .tint(AppTheme.accent)
-            .controlSize(.large)
-            .shadow(color: Color.black.opacity(0.08), radius: 4, x: 0, y: 2)
         }
+    }
+
+    private var headerGreetingContent: some View {
+        HStack(spacing: 16) {
+            // Subtle organic icon container
+            ZStack {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(AppTheme.accent.opacity(0.12))
+                    .frame(width: 48, height: 48)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .stroke(AppTheme.accent.opacity(0.25), lineWidth: 1)
+                    )
+
+                Image(systemName: greetingIcon)
+                    .font(.title2)
+                    .foregroundStyle(AppTheme.accent)
+            }
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(greetingTitle)
+                    .font(.system(size: 26, weight: .bold, design: .rounded))
+                    .foregroundStyle(AppTheme.textPrimary)
+
+                Text("Track your daily focus flow and accomplish your high-impact goals.")
+                    .font(.subheadline)
+                    .foregroundStyle(AppTheme.textSecondary)
+            }
+        }
+    }
+
+    private var startFocusButton: some View {
+        Button {
+            appState.selectedTab = .timer
+            if timerVM.status != .running {
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
+                    timerVM.start()
+                }
+            }
+        } label: {
+            Label("Start Focus", systemImage: "play.circle.fill")
+                .font(.headline)
+        }
+        .buttonStyle(.borderedProminent)
+        .tint(AppTheme.accent)
+        .controlSize(.large)
+        .shadow(color: Color.black.opacity(0.08), radius: 4, x: 0, y: 2)
+        .fixedSize(horizontal: true, vertical: false)
     }
 
     private var greetingIcon: String {
@@ -110,7 +124,7 @@ public struct DashboardView: View {
 
     // MARK: - Stats Grid
     private var statsGridSection: some View {
-        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 125, maximum: .infinity), spacing: 16)], spacing: 16) {
             StatCard(
                 title: "Focus Time Today",
                 value: "\(timerVM.todayFocusMinutes) min",
@@ -267,7 +281,7 @@ public struct DashboardView: View {
             if upcomingDueTasks.isEmpty {
                 focusSummaryBannerView
             } else {
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 160, maximum: .infinity), spacing: 12)], spacing: 12) {
                     ForEach(upcomingDueTasks.prefix(3)) { task in
                         DashboardUpcomingTaskCard(task: task) {
                             withAnimation(.spring(response: 0.35, dampingFraction: 0.6)) {
@@ -285,47 +299,66 @@ public struct DashboardView: View {
         let progress = min(Double(timerVM.todayFocusMinutes) / Double(goal), 1.0)
         let percent = Int(progress * 100)
 
-        return HStack(spacing: 20) {
-            // Circular progress indicator
-            ZStack {
-                Circle()
-                    .stroke(AppTheme.accent.opacity(0.12), lineWidth: 6)
-                    .frame(width: 52, height: 52)
-
-                Circle()
-                    .trim(from: 0.0, to: CGFloat(progress))
-                    .stroke(AppTheme.accent, style: StrokeStyle(lineWidth: 6, lineCap: .round))
-                    .rotationEffect(.degrees(-90))
-                    .frame(width: 52, height: 52)
-
-                Text("\(percent)%")
-                    .font(.system(size: 11, weight: .bold, design: .rounded))
-                    .foregroundStyle(AppTheme.textPrimary)
+        return ViewThatFits(in: .horizontal) {
+            HStack(spacing: 20) {
+                focusSummaryProgressCircle(progress: progress, percent: percent)
+                focusSummaryText(percent: percent, goal: goal)
+                Spacer(minLength: 12)
+                focusTimerNavButton
             }
 
-            VStack(alignment: .leading, spacing: 3) {
-                Text(percent >= 100 ? "Daily Focus Goal Achieved!" : "Daily Focus Progress")
-                    .font(.headline)
-                    .foregroundStyle(AppTheme.textPrimary)
-
-                Text(percent >= 100
-                     ? "You completed \(timerVM.todayFocusMinutes) min of deep work today. Exceptional consistency!"
-                     : "\(timerVM.todayFocusMinutes) of \(goal) minutes completed. Keep your momentum going.")
-                    .font(.caption)
-                    .foregroundStyle(AppTheme.textSecondary)
-            }
-
-            Spacer()
-
-            Button("Focus Timer") {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
-                    appState.selectedTab = .timer
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(spacing: 16) {
+                    focusSummaryProgressCircle(progress: progress, percent: percent)
+                    focusSummaryText(percent: percent, goal: goal)
                 }
+                focusTimerNavButton
             }
-            .buttonStyle(.bordered)
         }
         .padding(16)
         .calmCard(cornerRadius: 12)
+    }
+
+    private func focusSummaryProgressCircle(progress: Double, percent: Int) -> some View {
+        ZStack {
+            Circle()
+                .stroke(AppTheme.accent.opacity(0.12), lineWidth: 6)
+                .frame(width: 52, height: 52)
+
+            Circle()
+                .trim(from: 0.0, to: CGFloat(progress))
+                .stroke(AppTheme.accent, style: StrokeStyle(lineWidth: 6, lineCap: .round))
+                .rotationEffect(.degrees(-90))
+                .frame(width: 52, height: 52)
+
+            Text("\(percent)%")
+                .font(.system(size: 11, weight: .bold, design: .rounded))
+                .foregroundStyle(AppTheme.textPrimary)
+        }
+    }
+
+    private func focusSummaryText(percent: Int, goal: Int) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(percent >= 100 ? "Daily Focus Goal Achieved!" : "Daily Focus Progress")
+                .font(.headline)
+                .foregroundStyle(AppTheme.textPrimary)
+
+            Text(percent >= 100
+                 ? "You completed \(timerVM.todayFocusMinutes) min of deep work today. Exceptional consistency!"
+                 : "\(timerVM.todayFocusMinutes) of \(goal) minutes completed. Keep your momentum going.")
+                .font(.caption)
+                .foregroundStyle(AppTheme.textSecondary)
+        }
+    }
+
+    private var focusTimerNavButton: some View {
+        Button("Focus Timer") {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+                appState.selectedTab = .timer
+            }
+        }
+        .buttonStyle(.bordered)
+        .fixedSize(horizontal: true, vertical: false)
     }
 
     // MARK: - Featured Tasks

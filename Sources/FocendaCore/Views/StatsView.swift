@@ -25,7 +25,7 @@ public struct StatsView: View {
                 }
 
                 // Summary Grid
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 140, maximum: .infinity), spacing: 16)], spacing: 16) {
                     StatCard(
                         title: "Total Sessions",
                         value: "\(timerVM.completedSessionsCount)",

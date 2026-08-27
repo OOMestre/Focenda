@@ -1,10 +1,12 @@
 import SwiftUI
 
 public struct MainView: View {
-    /// The app remains usable on compact Mac displays. Detail views are responsible for
-    /// adapting their controls and exposing overflow only when it is genuinely needed.
-    public static let minimumWindowWidth: CGFloat = 720
-    public static let minimumWindowHeight: CGFloat = 540
+    /// Enforced minimum dimensions for the macOS window to guarantee all views, controls,
+    /// and text remain 100% visible, fully functional, and visually balanced without breaking.
+    public static let minimumWindowWidth: CGFloat = 800
+    public static let minimumWindowHeight: CGFloat = 560
+    public static let defaultWindowWidth: CGFloat = 1060
+    public static let defaultWindowHeight: CGFloat = 720
 
     @Bindable var appState: AppState
     @State private var timerVM: FocusTimerViewModel
@@ -87,6 +89,10 @@ public struct MainView: View {
         .frame(
             minWidth: Self.minimumWindowWidth,
             minHeight: Self.minimumWindowHeight
+        )
+        .enforceMinimumWindowSize(
+            width: Self.minimumWindowWidth,
+            height: Self.minimumWindowHeight
         )
         .background(AppTheme.background)
         .preferredColorScheme(appState.selectedTheme.colorScheme)
