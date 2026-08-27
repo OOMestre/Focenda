@@ -258,8 +258,8 @@ final class KanbanBoardViewTests: XCTestCase {
         )
     }
 
-    func testKanbanLayoutKeepsHorizontalScrollingAsNarrowWidthFallback() {
-        let narrowDetailWidth: CGFloat = 600
+    func testKanbanLayoutKeepsHorizontalScrollingBelowSupportedWindowWidth() {
+        let narrowDetailWidth: CGFloat = 400
 
         XCTAssertEqual(
             KanbanBoardLayout.columnWidth(for: narrowDetailWidth),
@@ -268,7 +268,19 @@ final class KanbanBoardViewTests: XCTestCase {
         XCTAssertGreaterThan(
             KanbanBoardLayout.contentWidth(for: narrowDetailWidth),
             narrowDetailWidth,
-            "Columns should not become unusably narrow; the board scrolls horizontally instead."
+            "Columns should not become unusably narrow below the supported window minimum."
+        )
+    }
+
+    func testKanbanLayoutFitsAllColumnsInMinimumWindowDetailArea() {
+        // 800pt app minimum minus the 240pt sidebar and split divider leaves roughly 550pt.
+        let minimumDetailWidth: CGFloat = 550
+
+        XCTAssertEqual(
+            KanbanBoardLayout.contentWidth(for: minimumDetailWidth),
+            minimumDetailWidth,
+            accuracy: 0.001,
+            "The minimum app window must show all three Kanban columns without horizontal clipping."
         )
     }
 

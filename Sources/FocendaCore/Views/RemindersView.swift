@@ -296,48 +296,46 @@ public struct RemindersView: View {
 
     // MARK: - Minimal Filter Bar Section
     private var filterBarSection: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 6) {
-                ForEach(ReminderFilter.allCases) { filter in
-                    let isSelected = selectedFilter == filter
-                    let count = countForFilter(filter)
+        FlowLayout(spacing: 6, lineSpacing: 6) {
+            ForEach(ReminderFilter.allCases) { filter in
+                let isSelected = selectedFilter == filter
+                let count = countForFilter(filter)
 
-                    Button {
-                        withAnimation(.spring(response: 0.25)) {
-                            selectedFilter = filter
-                        }
-                    } label: {
-                        HStack(spacing: 5) {
-                            Text(filter.rawValue)
-                                .font(.system(size: 12, weight: isSelected ? .semibold : .regular))
-                                .foregroundStyle(isSelected ? AppTheme.accent : AppTheme.textPrimary)
-
-                            Text("\(count)")
-                                .font(.system(size: 10, weight: isSelected ? .bold : .medium).monospacedDigit())
-                                .foregroundStyle(isSelected ? AppTheme.accent : AppTheme.textTertiary)
-                                .padding(.horizontal, 5)
-                                .padding(.vertical, 1)
-                                .background(
-                                    Capsule()
-                                        .fill(isSelected ? AppTheme.accent.opacity(0.16) : AppTheme.cardBackgroundSubtle)
-                                )
-                        }
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 5)
-                        .background(
-                            RoundedRectangle(cornerRadius: 7, style: .continuous)
-                                .fill(isSelected ? AppTheme.accent.opacity(0.1) : AppTheme.cardBackground)
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 7, style: .continuous)
-                                .stroke(isSelected ? AppTheme.accent.opacity(0.35) : AppTheme.subtleBorder, lineWidth: 1)
-                        )
+                Button {
+                    withAnimation(.spring(response: 0.25)) {
+                        selectedFilter = filter
                     }
-                    .buttonStyle(.plain)
+                } label: {
+                    HStack(spacing: 5) {
+                        Text(filter.rawValue)
+                            .font(.system(size: 12, weight: isSelected ? .semibold : .regular))
+                            .foregroundStyle(isSelected ? AppTheme.accent : AppTheme.textPrimary)
+
+                        Text("\(count)")
+                            .font(.system(size: 10, weight: isSelected ? .bold : .medium).monospacedDigit())
+                            .foregroundStyle(isSelected ? AppTheme.accent : AppTheme.textTertiary)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 1)
+                            .background(
+                                Capsule()
+                                    .fill(isSelected ? AppTheme.accent.opacity(0.16) : AppTheme.cardBackgroundSubtle)
+                            )
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(
+                        RoundedRectangle(cornerRadius: 7, style: .continuous)
+                            .fill(isSelected ? AppTheme.accent.opacity(0.1) : AppTheme.cardBackground)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 7, style: .continuous)
+                            .stroke(isSelected ? AppTheme.accent.opacity(0.35) : AppTheme.subtleBorder, lineWidth: 1)
+                    )
                 }
+                .buttonStyle(.plain)
             }
-            .padding(.vertical, 2)
         }
+        .padding(.vertical, 2)
     }
 
     // MARK: - Recurring Reminders List Section

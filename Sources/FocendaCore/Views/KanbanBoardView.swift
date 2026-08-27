@@ -5,9 +5,12 @@ import SwiftUI
 enum KanbanBoardLayout {
     static let columnCount: CGFloat = 3
     static let preferredColumnWidth: CGFloat = 320
-    static let minimumColumnWidth: CGFloat = 200
-    static let columnSpacing: CGFloat = 14
-    static let horizontalPadding: CGFloat = 32
+    // At the app's minimum window width, the detail area is about 550pt wide.
+    // These values keep all three columns visible there; horizontal scrolling is
+    // reserved for widths below the supported window minimum.
+    static let minimumColumnWidth: CGFloat = 160
+    static let columnSpacing: CGFloat = 10
+    static let horizontalPadding: CGFloat = 24
 
     static func columnWidth(for availableWidth: CGFloat) -> CGFloat {
         let equalColumnWidth = (
@@ -327,7 +330,8 @@ public struct KanbanBoardView: View {
                         .frame(maxHeight: .infinity)
                     }
                 }
-                .padding(20)
+                .padding(.horizontal, KanbanBoardLayout.horizontalPadding / 2)
+                .padding(.vertical, 20)
                 .frame(
                     minWidth: totalWidth,
                     maxWidth: totalWidth,
@@ -576,6 +580,13 @@ public struct KanbanColumnView: View {
     }
 
     private var columnHeaderView: some View {
+        ViewThatFits(in: .horizontal) {
+            expandedColumnHeader
+            compactColumnHeader
+        }
+    }
+
+    private var expandedColumnHeader: some View {
         HStack(spacing: 8) {
             Circle()
                 .fill(status.color)
@@ -614,6 +625,53 @@ public struct KanbanColumnView: View {
             }
             .buttonStyle(.plain)
             .help(isShowingInlineAdd ? "Close inline add" : "Quick add task to \(status.rawValue)")
+        }
+    }
+
+    private var compactColumnHeader: some View {
+        HStack(spacing: 5) {
+            Circle()
+                .fill(status.color)
+                .frame(width: 7, height: 7)
+
+            Text(compactStatusTitle)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(AppTheme.textPrimary)
+                .lineLimit(1)
+
+            Text("\(tasks.count)")
+                .font(.caption.bold())
+                .monospacedDigit()
+                .foregroundStyle(AppTheme.textSecondary)
+                .padding(.horizontal, 5)
+                .padding(.vertical, 2)
+                .background(AppTheme.cardBackgroundSubtle)
+                .clipShape(Capsule())
+
+            Spacer(minLength: 0)
+
+            Button {
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+                    isShowingInlineAdd.toggle()
+                }
+            } label: {
+                Image(systemName: isShowingInlineAdd ? "xmark" : "plus")
+                    .font(.caption.bold())
+                    .foregroundStyle(AppTheme.textSecondary)
+                    .frame(width: 24, height: 24)
+                    .background(AppTheme.cardBackground)
+                    .clipShape(Circle())
+            }
+            .buttonStyle(.plain)
+            .help(isShowingInlineAdd ? "Close inline add" : "Quick add task to \(status.rawValue)")
+        }
+    }
+
+    private var compactStatusTitle: String {
+        switch status {
+        case .todo: return "To Do"
+        case .inProgress: return "Doing"
+        case .done: return "Done"
         }
     }
 

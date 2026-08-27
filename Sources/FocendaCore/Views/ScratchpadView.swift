@@ -24,13 +24,17 @@ public struct ScratchpadView: View {
             // Main 3-Pane Area (Folders Sidebar + Notes List + Editor)
             GeometryReader { geometry in
                 let availableWidth = geometry.size.width
-                let showFolders = viewModel.showFoldersSidebar
-
-                // Dynamically calculate responsive pane widths based on available width
-                let foldersWidth: CGFloat = showFolders ? min(200, max(140, availableWidth * 0.24)) : 0
-                let notesListWidth: CGFloat = showFolders
-                    ? min(280, max(165, (availableWidth - foldersWidth) * 0.40))
-                    : min(320, max(210, availableWidth * 0.38))
+                // The app's minimum window leaves roughly 550pt for the detail area.
+                // At that width a permanent three-pane layout makes the editor unusable,
+                // so the folder list becomes a menu in the notes pane instead.
+                let usesCompactWorkspace = availableWidth < 720
+                let showFolders = viewModel.showFoldersSidebar && !usesCompactWorkspace
+                let foldersWidth: CGFloat = showFolders ? min(200, max(150, availableWidth * 0.24)) : 0
+                let notesListWidth: CGFloat = usesCompactWorkspace
+                    ? min(220, max(170, availableWidth * 0.34))
+                    : showFolders
+                        ? min(280, max(180, (availableWidth - foldersWidth) * 0.40))
+                        : min(320, max(210, availableWidth * 0.38))
 
                 HStack(spacing: 0) {
                     // Folder / Notebook Sidebar (Leftmost Column)
@@ -42,14 +46,14 @@ public struct ScratchpadView: View {
                     }
 
                     // Notes List (Middle Master Column)
-                    notesListPane
+                    notesListPane(showFolderPicker: usesCompactWorkspace)
                         .frame(width: notesListWidth)
 
                     Divider()
 
                     // Editor Pane (Right Detail Column - always visible & directly accessible)
                     editorPane
-                        .frame(minWidth: 180, maxWidth: .infinity)
+                        .frame(minWidth: 240, maxWidth: .infinity)
                 }
                 .frame(width: availableWidth, height: geometry.size.height, alignment: .leading)
             }
@@ -175,15 +179,14 @@ public struct ScratchpadView: View {
     }
 
     private var categoryChipsView: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 6) {
-                categoryChip(title: "All", color: nil)
-                ForEach(ScratchpadColor.allCases) { color in
-                    categoryChip(title: color.rawValue, color: color)
-                }
+        FlowLayout(spacing: 6, lineSpacing: 6) {
+            categoryChip(title: "All", color: nil)
+            ForEach(ScratchpadColor.allCases) { color in
+                categoryChip(title: color.rawValue, color: color)
             }
-            .padding(.vertical, 2)
         }
+        .padding(.vertical, 2)
+        .frame(minWidth: 0, maxWidth: .infinity)
     }
 
     private var newNoteButton: some View {
@@ -386,20 +389,14 @@ public struct ScratchpadView: View {
     }
 
     // MARK: - Notes List (Middle Column)
-    private var notesListPane: some View {
+    private func notesListPane(showFolderPicker: Bool) -> some View {
         VStack(spacing: 0) {
             // Notes List Header info
             HStack {
-                HStack(spacing: 7) {
-                    Image(systemName: ScratchpadViewModel.iconForFolder(viewModel.selectedFolder))
-                        .font(.system(size: 13))
-                        .foregroundStyle(AppTheme.accent)
-
-                    Text(viewModel.selectedFolder)
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(AppTheme.textPrimary)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
+                if showFolderPicker {
+                    compactFolderPicker
+                } else {
+                    selectedFolderLabel
                 }
 
                 Spacer(minLength: 2)
@@ -465,6 +462,55 @@ public struct ScratchpadView: View {
         }
         .frame(minWidth: 0, maxWidth: .infinity)
         .background(AppTheme.background)
+    }
+
+    private var selectedFolderLabel: some View {
+        HStack(spacing: 7) {
+            Image(systemName: ScratchpadViewModel.iconForFolder(viewModel.selectedFolder))
+                .font(.system(size: 13))
+                .foregroundStyle(AppTheme.accent)
+
+            Text(viewModel.selectedFolder)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(AppTheme.textPrimary)
+                .lineLimit(1)
+                .truncationMode(.tail)
+        }
+    }
+
+    private var compactFolderPicker: some View {
+        Menu {
+            Button {
+                viewModel.selectFolder(ScratchpadViewModel.allNotesFolder)
+            } label: {
+                Label(ScratchpadViewModel.allNotesFolder, systemImage: "tray.full")
+            }
+
+            Divider()
+
+            ForEach(viewModel.folders, id: \.self) { folder in
+                Button {
+                    viewModel.selectFolder(folder)
+                } label: {
+                    Label(folder, systemImage: ScratchpadViewModel.iconForFolder(folder))
+                }
+            }
+        } label: {
+            HStack(spacing: 5) {
+                Image(systemName: ScratchpadViewModel.iconForFolder(viewModel.selectedFolder))
+                    .font(.system(size: 12))
+                    .foregroundStyle(AppTheme.accent)
+                Text(viewModel.selectedFolder)
+                    .font(.system(size: 13, weight: .semibold))
+                    .lineLimit(1)
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(AppTheme.textTertiary)
+            }
+            .foregroundStyle(AppTheme.textPrimary)
+        }
+        .menuStyle(.borderlessButton)
+        .help("Choose a folder")
     }
 
     // MARK: - Note Card Row
@@ -634,6 +680,20 @@ public struct ScratchpadView: View {
                     }
                     noteTitleField
                 }
+
+                // The editor can be narrow when the app is at its minimum width.
+                // Use icon-only controls before allowing any toolbar content to overlap.
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(spacing: 6) {
+                        noteFolderIconMenu
+                        noteColorIconMenu
+                        Spacer(minLength: 4)
+                        notePinButton
+                        noteCopyIconButton
+                        noteDeleteButton
+                    }
+                    noteTitleField
+                }
             }
             .padding(.horizontal, 14)
             .padding(.top, 10)
@@ -752,6 +812,60 @@ public struct ScratchpadView: View {
         .help("Change category color")
     }
 
+    private var noteFolderIconMenu: some View {
+        Menu {
+            ForEach(viewModel.folders, id: \.self) { folder in
+                Button {
+                    withAnimation(.spring(response: 0.25)) {
+                        viewModel.moveCurrentNote(to: folder)
+                    }
+                } label: {
+                    Label(folder, systemImage: ScratchpadViewModel.iconForFolder(folder))
+                }
+            }
+        } label: {
+            Image(systemName: ScratchpadViewModel.iconForFolder(viewModel.currentNote.folder))
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(AppTheme.accent)
+                .frame(width: 28, height: 28)
+                .background(AppTheme.cardBackground)
+                .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .stroke(AppTheme.border, lineWidth: 1)
+                )
+        }
+        .menuStyle(.borderlessButton)
+        .help("Move note to another folder")
+    }
+
+    private var noteColorIconMenu: some View {
+        Menu {
+            ForEach(ScratchpadColor.allCases) { color in
+                Button {
+                    withAnimation(.spring(response: 0.25)) {
+                        viewModel.updateColor(color)
+                    }
+                } label: {
+                    Label(color.rawValue, systemImage: color.iconName)
+                }
+            }
+        } label: {
+            Circle()
+                .fill(viewModel.currentNote.color.color)
+                .frame(width: 12, height: 12)
+                .frame(width: 28, height: 28)
+                .background(AppTheme.cardBackground)
+                .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .stroke(AppTheme.border, lineWidth: 1)
+                )
+        }
+        .menuStyle(.borderlessButton)
+        .help("Change category color")
+    }
+
     private var noteTitleField: some View {
         TextField("Untitled Note", text: $viewModel.currentTitle)
             .font(.system(size: 18, weight: .bold, design: .rounded))
@@ -787,15 +901,7 @@ public struct ScratchpadView: View {
 
     private var noteCopyButton: some View {
         Button {
-            viewModel.copyCurrentNoteToClipboard()
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                copiedFeedback = true
-            }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) {
-                withAnimation {
-                    copiedFeedback = false
-                }
-            }
+            copyCurrentNote()
         } label: {
             HStack(spacing: 4) {
                 Image(systemName: copiedFeedback ? "checkmark" : "doc.on.doc")
@@ -816,6 +922,37 @@ public struct ScratchpadView: View {
         .buttonStyle(.plain)
         .fixedSize(horizontal: true, vertical: false)
         .help("Copy note content")
+    }
+
+    private var noteCopyIconButton: some View {
+        Button {
+            copyCurrentNote()
+        } label: {
+            Image(systemName: copiedFeedback ? "checkmark" : "doc.on.doc")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(copiedFeedback ? AppTheme.success : AppTheme.textSecondary)
+                .frame(width: 28, height: 28)
+                .background(AppTheme.cardBackground)
+                .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .stroke(AppTheme.border, lineWidth: 1)
+                )
+        }
+        .buttonStyle(.plain)
+        .help("Copy note content")
+    }
+
+    private func copyCurrentNote() {
+        viewModel.copyCurrentNoteToClipboard()
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+            copiedFeedback = true
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) {
+            withAnimation {
+                copiedFeedback = false
+            }
+        }
     }
 
     private var noteDeleteButton: some View {
