@@ -271,4 +271,18 @@ final class RemindersViewTests: XCTestCase {
         )
         XCTAssertNotNil(sidebarView.body)
     }
+
+    func testSimplifiedRemindersViewFiltersAndEmptyState() {
+        recurringReminderVM.reminders = []
+        taskVM.tasks = []
+
+        let viewAll = RemindersView(recurringReminderVM: recurringReminderVM, taskVM: taskVM, initialFilter: .all)
+        XCTAssertNotNil(viewAll.body)
+
+        let viewTasks = RemindersView(recurringReminderVM: recurringReminderVM, taskVM: taskVM, initialFilter: .taskReminders)
+        XCTAssertNotNil(viewTasks.body)
+
+        let viewDaily = RemindersView(recurringReminderVM: recurringReminderVM, taskVM: taskVM, initialFilter: .daily)
+        XCTAssertNotNil(viewDaily.body)
+    }
 }
