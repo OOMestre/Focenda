@@ -82,6 +82,7 @@ public struct BookmarksView: View {
         GeometryReader { proxy in
             let availableWidth = proxy.size.width
             let horizontalPadding = BookmarksResponsiveLayout.horizontalPadding(for: availableWidth)
+            let contentWidth = max(0, availableWidth - (horizontalPadding * 2))
 
             VStack(spacing: 0) {
                 headerBar(availableWidth: availableWidth)
@@ -91,7 +92,7 @@ public struct BookmarksView: View {
                 // Keep the page vertically scrollable. The category filter wraps naturally with FlowLayout.
                 ScrollView(.vertical, showsIndicators: true) {
                     VStack(alignment: .leading, spacing: 20) {
-                        categoryFilterSection
+                        categoryFilterSection(contentWidth: contentWidth)
 
                         statsBannerSection(
                             availableWidth: availableWidth,
@@ -242,7 +243,7 @@ public struct BookmarksView: View {
     }
 
     // MARK: - Category Filters
-    private var categoryFilterSection: some View {
+    private func categoryFilterSection(contentWidth: CGFloat) -> some View {
         FlowLayout(spacing: 8, lineSpacing: 8) {
             ForEach(viewModel.allCategories, id: \.self) { category in
                 let isSelected = viewModel.selectedCategory.caseInsensitiveCompare(category) == .orderedSame
@@ -284,7 +285,7 @@ public struct BookmarksView: View {
                 .buttonStyle(.plain)
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(width: contentWidth, alignment: .leading)
     }
 
     // MARK: - Stats Banner

@@ -45,7 +45,7 @@ final class BookmarksViewTests: XCTestCase {
 
     func testBookmarksCategoryFilterChipsWrapInConstrainedWidth() {
         let viewModel = BookmarkViewModel(userDefaults: testDefaults)
-        // Approximate chip widths: [All: 65, Focus & Flow: 125, Development: 125, Documentation: 135, Design & UI: 120, Reference: 110, Utilities: 100]
+        // Approximate chip widths: [All: 64, Focus & Flow: 136, Development: 128, Documentation: 144, Design & UI: 128, Reference: 112, Utilities: 112]
         let estimatedChipSizes: [CGSize] = viewModel.allCategories.map { category in
             CGSize(width: CGFloat(category.count * 8 + 40), height: 32)
         }
@@ -60,6 +60,45 @@ final class BookmarksViewTests: XCTestCase {
         // All items are accounted for across the rows
         let totalItemsInRows = constrainedResult.rows.reduce(0) { $0 + $1.itemIndices.count }
         XCTAssertEqual(totalItemsInRows, viewModel.allCategories.count)
+    }
+
+    func testCategoryFilterWrappingAtSpecificContentWidths() {
+        let viewModel = BookmarkViewModel(userDefaults: testDefaults)
+        let estimatedChipSizes: [CGSize] = viewModel.allCategories.map { category in
+            CGSize(width: CGFloat(category.count * 8 + 40), height: 32)
+        }
+
+        let testWidths: [CGFloat] = [750, 640, 500, 360]
+
+        for width in testWidths {
+            let layoutResult = FlowLayout.calculateLayout(
+                itemSizes: estimatedChipSizes,
+                maxWidth: width,
+                spacing: 8,
+                lineSpacing: 8
+            )
+
+            // When content width is finite (<= 750pt), the 7 category chips (~872pt total) must wrap across multiple rows
+            XCTAssertGreaterThan(
+                layoutResult.rows.count,
+                1,
+                "Categories should wrap into multiple rows for content width \(width)pt"
+            )
+
+            // All category items must be preserved
+            let allIndices = layoutResult.rows.flatMap(\.itemIndices)
+            XCTAssertEqual(allIndices.count, viewModel.allCategories.count)
+            XCTAssertEqual(Set(allIndices), Set(0..<viewModel.allCategories.count))
+
+            // No row's width should exceed the given content width
+            for (rowIndex, row) in layoutResult.rows.enumerated() {
+                XCTAssertLessThanOrEqual(
+                    row.width,
+                    width,
+                    "Row \(rowIndex) width (\(row.width)pt) must not exceed container width (\(width)pt)"
+                )
+            }
+        }
     }
 
     func testBookmarksViewRendersInHostingView() {
