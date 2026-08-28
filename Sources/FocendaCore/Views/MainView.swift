@@ -85,6 +85,8 @@ public struct MainView: View {
                             timerVM: timerVM,
                             updateManager: updateManager
                         )
+                    case .support:
+                        SupportView()
                     }
                 }
                 .background(AppTheme.background)
