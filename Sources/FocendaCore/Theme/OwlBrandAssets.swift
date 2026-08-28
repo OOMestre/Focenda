@@ -5,6 +5,9 @@ import AppKit
 
 /// Centralized brand assets and helper utilities for the Focenda Owl identity.
 public enum OwlBrandAssets {
+    /// Leaves a small amount of transparent breathing room around the Dock artwork.
+    static let dockIconArtworkScale: CGFloat = 0.92
+
     /// Base64 encoded 2x PNG of the Menu Bar Owl Face Template icon (18x18pt / 36x36px @2x)
     private static let menuBarIconBase64 = "iVBORw0KGgoAAAANSUhEUgAAACQAAAAkCAYAAADhAJiYAAAAAXNSR0IArs4c6QAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAJKADAAQAAAABAAAAJAAAAAAJxsHGAAABdUlEQVRYCe1UO04DMRA1UShyhEgUCAnEKdKlASouEMQVgsQhaCiSIl0kxIkQgjoniJQyBYyJBz2Px971rjZJYUvW/N57M5q11phyygbKBsoGgg2cB5nmiYvmVGO+ifwDdwJib5BHDPpLwD8I/AfUPPfEi/zAind51N69Ljs20S4DVW0ttaFNFblFfR3jqg/LgQ/yqGMDdT0MLyjon/pkTNqr1Qa62+MEN3V64d9W+sy/JUfWZMzYswR2y6CUlcIcPzrSgmyf7gtdrkm7pJo97ztj7slKDMcOEjcMlFYyBokmdmB5pB7HHk57Qx4AghH41n0SMYayNsZirs+Taxa1uD6F5DP5nIf0f45raBFngv+AE/RAFYHUsM1yjsfXPtl1jhphcQD068hcSZA3HRRzhVfEPaU7BI06btA/SIBK7lBAreWqvdUkyHU1VLSv9oZgnr9HP8dES39G/OgwTbQvifRK94uu3V7qfjqs5ZRTNlA2cDQb+AXV3X2TTVtt0AAAAABJRU5ErkJggg=="
 
@@ -67,12 +70,46 @@ public enum OwlBrandAssets {
     /// Configures the macOS Dock icon to display the full body mascot
     public static func configureDockIcon() {
         #if os(macOS)
-        let icon = mascotImage
+        let icon = dockIconImage(from: mascotImage)
         if icon.isValid {
             NSApplication.shared.applicationIconImage = icon
         }
         #endif
     }
+
+    #if os(macOS)
+    /// Creates a Dock-specific image with transparent margins so the mascot's
+    /// visible footprint matches neighboring macOS app icons more closely.
+    static func dockIconImage(from image: NSImage) -> NSImage {
+        let canvasSize = image.size
+        guard canvasSize.width > 0, canvasSize.height > 0 else { return image }
+
+        let artworkSize = NSSize(
+            width: canvasSize.width * dockIconArtworkScale,
+            height: canvasSize.height * dockIconArtworkScale
+        )
+        let artworkRect = NSRect(
+            x: (canvasSize.width - artworkSize.width) / 2,
+            y: (canvasSize.height - artworkSize.height) / 2,
+            width: artworkSize.width,
+            height: artworkSize.height
+        )
+
+        let dockIcon = NSImage(size: canvasSize)
+        dockIcon.lockFocus()
+        NSColor.clear.setFill()
+        NSRect(origin: .zero, size: canvasSize).fill()
+        NSGraphicsContext.current?.imageInterpolation = .high
+        image.draw(
+            in: artworkRect,
+            from: NSRect(origin: .zero, size: image.size),
+            operation: .sourceOver,
+            fraction: 1
+        )
+        dockIcon.unlockFocus()
+        return dockIcon
+    }
+    #endif
 }
 
 /// SwiftUI View representation of the Owl Menu Bar Icon
