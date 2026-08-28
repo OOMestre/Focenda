@@ -2,6 +2,9 @@
 
 <div align="center">
 
+<img src="assets/focenda-mascot.png" alt="Focenda Owl Mascot" width="140" />
+<br/><br/>
+
 **The native macOS focus, task, and calendar productivity suite.**
 
 *100% Swift | Free & Open Source | Designed for Apple Silicon & Intel macOS*

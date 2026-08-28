@@ -93,7 +93,8 @@ public struct SettingsView: View {
                 // About Focenda
                 GroupBox(label: Label("About Focenda", systemImage: "info.circle").foregroundStyle(AppTheme.textPrimary)) {
                     VStack(alignment: .leading, spacing: 12) {
-                        HStack {
+                        HStack(spacing: 14) {
+                            OwlMascotView(size: 48)
                             VStack(alignment: .leading, spacing: 4) {
                                 Text("Focenda for Mac")
                                     .font(.headline)

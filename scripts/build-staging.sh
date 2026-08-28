@@ -61,6 +61,18 @@ trap cleanup EXIT INT TERM
 mkdir -p "$TEMP_APP/Contents/MacOS" "$TEMP_APP/Contents/Resources"
 install -m 755 "$APP_EXECUTABLE" "$TEMP_APP/Contents/MacOS/$PRODUCT_NAME"
 
+if [ -f "$REPOSITORY_ROOT/Resources/AppIcon.icns" ]; then
+  cp "$REPOSITORY_ROOT/Resources/AppIcon.icns" "$TEMP_APP/Contents/Resources/AppIcon.icns"
+fi
+
+if [ -f "$REPOSITORY_ROOT/Resources/focenda-mascot.png" ]; then
+  cp "$REPOSITORY_ROOT/Resources/focenda-mascot.png" "$TEMP_APP/Contents/Resources/focenda-mascot.png"
+fi
+
+if [ -f "$REPOSITORY_ROOT/Resources/focenda-icon.png" ]; then
+  cp "$REPOSITORY_ROOT/Resources/focenda-icon.png" "$TEMP_APP/Contents/Resources/focenda-icon.png"
+fi
+
 cat > "$TEMP_APP/Contents/Info.plist" <<PLIST_EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "https://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -72,6 +84,8 @@ cat > "$TEMP_APP/Contents/Info.plist" <<PLIST_EOF
   <string>$APP_NAME</string>
   <key>CFBundleExecutable</key>
   <string>$PRODUCT_NAME</string>
+  <key>CFBundleIconFile</key>
+  <string>AppIcon</string>
   <key>CFBundleIdentifier</key>
   <string>$BUNDLE_IDENTIFIER</string>
   <key>CFBundleInfoDictionaryVersion</key>

@@ -13,6 +13,7 @@ struct FocendaApp: App {
     @State private var isReminderAlertActive: Bool = false
 
     init() {
+        OwlBrandAssets.configureDockIcon()
         NotificationManager.shared.requestAuthorization()
     }
 
@@ -134,7 +135,7 @@ struct FocendaApp: App {
                     Image(systemName: "bell.badge.fill")
                         .symbolRenderingMode(.multicolor)
                 } else {
-                    Image(systemName: "timer")
+                    OwlMenuBarIconView()
                 }
                 if timerVM.status == .running {
                     Text(timerVM.formattedTimeRemaining)

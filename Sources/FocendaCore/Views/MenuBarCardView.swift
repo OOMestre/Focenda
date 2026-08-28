@@ -297,10 +297,8 @@ public struct MenuBarCardView: View {
     // MARK: - Header
     private var headerSection: some View {
         HStack(alignment: .center) {
-            HStack(spacing: 6) {
-                Image(systemName: "timer")
-                    .foregroundStyle(AppTheme.accent)
-                    .font(.headline)
+            HStack(spacing: 8) {
+                OwlFaceView(size: 20)
                 Text("Focenda")
                     .font(.headline.bold())
                     .foregroundStyle(AppTheme.textPrimary)
