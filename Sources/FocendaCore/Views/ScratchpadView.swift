@@ -279,8 +279,7 @@ public struct ScratchpadView: View {
                 Spacer()
 
                 Button {
-                    newFolderName = ""
-                    showingNewFolderSheet = true
+                    presentNewFolderSheet()
                 } label: {
                     Image(systemName: "plus")
                         .font(.system(size: 12, weight: .bold))
@@ -326,8 +325,7 @@ public struct ScratchpadView: View {
 
             // Bottom Add Folder Button
             Button {
-                newFolderName = ""
-                showingNewFolderSheet = true
+                presentNewFolderSheet()
             } label: {
                 HStack(spacing: 7) {
                     Image(systemName: "folder.badge.plus")
@@ -549,6 +547,23 @@ public struct ScratchpadView: View {
                 }
                 .padding(6)
             }
+
+            Divider()
+
+            // Keep folder creation available when the full sidebar is replaced by this picker.
+            Button {
+                presentNewFolderSheet()
+            } label: {
+                Label("New Folder", systemImage: "folder.badge.plus")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(AppTheme.accent)
+                    .lineLimit(1)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 9)
+            }
+            .buttonStyle(.plain)
+            .background(AppTheme.cardBackgroundSubtle)
         }
         .frame(width: 220, height: 260)
         .background(AppTheme.cardBackground)
@@ -1175,6 +1190,13 @@ public struct ScratchpadView: View {
     }
 
     // MARK: - New Folder Sheet
+    private func presentNewFolderSheet() {
+        newFolderName = ""
+        showingCompactFolderPicker = false
+        showingSidebarFolderPicker = false
+        showingNewFolderSheet = true
+    }
+
     private var newFolderSheet: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Create New Folder")
