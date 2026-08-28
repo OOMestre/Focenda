@@ -121,8 +121,11 @@ public struct ReminderAlertHUDView: View {
     public var onOpenApp: (() -> Void)?
     public var onClose: (() -> Void)?
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isHovered: Bool = false
     @State private var timeRemainingRatio: CGFloat = 1.0
+    @State private var isCardPresented: Bool = false
+    @State private var isCardPulseActive: Bool = false
 
     public init(
         title: String,
@@ -289,19 +292,64 @@ public struct ReminderAlertHUDView: View {
         .overlay(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .stroke(
-                    isHovered ? AppTheme.border : AppTheme.subtleBorder,
-                    lineWidth: 1.2
+                    isCardPulseActive
+                        ? AppTheme.accent.opacity(0.75)
+                        : (isHovered ? AppTheme.border : AppTheme.subtleBorder),
+                    lineWidth: isCardPulseActive ? 1.6 : 1.2
                 )
         )
         .shadow(color: Color.black.opacity(0.25), radius: 14, x: 0, y: 6)
+        // Give the entire notification a brief entrance and attention pulse.
+        .opacity(reduceMotion || isCardPresented ? 1 : 0)
+        .scaleEffect(reduceMotion || isCardPresented ? 1 : 0.94, anchor: .topTrailing)
+        .offset(y: reduceMotion || isCardPresented ? 0 : -8)
         .preferredColorScheme(AppTheme.current.colorScheme)
         .onHover { hovering in
             isHovered = hovering
         }
         .onAppear {
+            presentCard()
+
             timeRemainingRatio = 1.0
             withAnimation(.linear(duration: timeoutSeconds)) {
                 timeRemainingRatio = 0.0
+            }
+        }
+        .onChange(of: reduceMotion) { _, shouldReduceMotion in
+            if shouldReduceMotion {
+                isCardPresented = true
+                isCardPulseActive = false
+            } else if !isCardPresented {
+                presentCard()
+            }
+        }
+    }
+
+    private func presentCard() {
+        guard !reduceMotion else {
+            isCardPresented = true
+            isCardPulseActive = false
+            return
+        }
+
+        withAnimation(.spring(response: 0.42, dampingFraction: 0.78)) {
+            isCardPresented = true
+        }
+
+        // Schedule the pulse after the entrance so both animations remain visible.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.16) {
+            guard !reduceMotion else { return }
+
+            withAnimation(.easeOut(duration: 0.18)) {
+                isCardPulseActive = true
+            }
+
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) {
+                guard !reduceMotion else { return }
+
+                withAnimation(.easeInOut(duration: 0.35)) {
+                    isCardPulseActive = false
+                }
             }
         }
     }
