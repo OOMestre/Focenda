@@ -4,6 +4,16 @@ import SwiftUI
 
 final class MenuBarCardViewTests: XCTestCase {
 
+    override func setUp() {
+        super.setUp()
+        UserDefaults.standard.removeObject(forKey: FocusTimerViewModel.userDefaultsKey)
+    }
+
+    override func tearDown() {
+        UserDefaults.standard.removeObject(forKey: FocusTimerViewModel.userDefaultsKey)
+        super.tearDown()
+    }
+
     func testMenuBarCardViewInitialization() {
         let timerVM = FocusTimerViewModel()
         let appState = AppState()

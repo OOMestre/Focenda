@@ -4,10 +4,14 @@ import XCTest
 final class FocusTimerViewModelTests: XCTestCase {
 
     var viewModel: FocusTimerViewModel!
+    private var testDefaults: UserDefaults!
+    private var testSuiteName: String!
 
     override func setUp() {
         super.setUp()
-        viewModel = FocusTimerViewModel()
+        testSuiteName = "Focenda.FocusTimerViewModelTests.\(UUID().uuidString)"
+        testDefaults = UserDefaults(suiteName: testSuiteName)
+        viewModel = FocusTimerViewModel(userDefaults: testDefaults)
     }
 
     override func tearDown() {
@@ -15,6 +19,9 @@ final class FocusTimerViewModelTests: XCTestCase {
         viewModel?.reset()
         ReminderAlertHUDPanel.shared.dismiss()
         viewModel = nil
+        testDefaults.removePersistentDomain(forName: testSuiteName)
+        testDefaults = nil
+        testSuiteName = nil
         super.tearDown()
     }
 
@@ -110,6 +117,38 @@ final class FocusTimerViewModelTests: XCTestCase {
         viewModel.completeCurrentSession()
 
         XCTAssertEqual(viewModel.todayFocusMinutes, 25)
+    }
+
+    func testCompletedSessionsPersistAcrossViewModelInstances() {
+        viewModel.currentMode = .work
+        viewModel.completeCurrentSession()
+
+        viewModel.currentMode = .shortBreak
+        viewModel.resetToCurrentMode()
+        viewModel.completeCurrentSession()
+
+        let reloadedViewModel = FocusTimerViewModel(userDefaults: testDefaults)
+
+        XCTAssertEqual(reloadedViewModel.completedSessions, viewModel.completedSessions)
+        XCTAssertEqual(reloadedViewModel.completedSessionsCount, 2)
+        XCTAssertEqual(reloadedViewModel.completedWorkSessionsCount, 1)
+        XCTAssertEqual(reloadedViewModel.todayFocusMinutes, 25)
+        XCTAssertNotNil(testDefaults.data(forKey: FocusTimerViewModel.userDefaultsKey))
+    }
+
+    func testLoadingHistoryRebuildsCountersFromStoredSessions() throws {
+        let sessions = [
+            FocusSession(mode: .work, durationSeconds: 30 * 60),
+            FocusSession(mode: .shortBreak, durationSeconds: 5 * 60),
+            FocusSession(mode: .work, durationSeconds: 45 * 60)
+        ]
+        testDefaults.set(try JSONEncoder().encode(sessions), forKey: FocusTimerViewModel.userDefaultsKey)
+
+        let reloadedViewModel = FocusTimerViewModel(userDefaults: testDefaults)
+
+        XCTAssertEqual(reloadedViewModel.completedSessions, sessions)
+        XCTAssertEqual(reloadedViewModel.completedSessionsCount, 3)
+        XCTAssertEqual(reloadedViewModel.completedWorkSessionsCount, 2)
     }
 
     func testCompleteCurrentSessionPostsNotificationAndTriggersCallback() {

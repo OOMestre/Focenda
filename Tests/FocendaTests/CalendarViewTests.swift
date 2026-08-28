@@ -4,6 +4,16 @@ import SwiftUI
 
 final class CalendarViewTests: XCTestCase {
 
+    override func setUp() {
+        super.setUp()
+        UserDefaults.standard.removeObject(forKey: FocusTimerViewModel.userDefaultsKey)
+    }
+
+    override func tearDown() {
+        UserDefaults.standard.removeObject(forKey: FocusTimerViewModel.userDefaultsKey)
+        super.tearDown()
+    }
+
     func testCalendarViewInitialization() {
         let timerVM = FocusTimerViewModel()
         let taskVM = TaskListViewModel()

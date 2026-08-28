@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 - **Private GitHub Updates:** Added manual and daily automatic release checks in Settings, native macOS update notifications, release-archive validation, and local app replacement/relaunch without uploading user data.
 
 ### Fixed
+- **Focus History Persistence:** Completed timer sessions and their counters now persist locally and are restored for dashboard metrics and calendar history after relaunching Focenda.
 - **Pomodoro Completion Alert:** Timer completion now uses the floating alert HUD without activating the app, and plays the configured alert chime (Hero by default) only once.
 - **Pomodoro Alert Motion:** Completion alerts animate the timer badge with a subtle pulse that respects Reduce Motion.
 
