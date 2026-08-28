@@ -17,6 +17,7 @@ public struct MainView: View {
     @State private var scratchpadVM: ScratchpadViewModel
     @State private var bookmarkVM: BookmarkViewModel
     @State private var recurringReminderVM: RecurringReminderViewModel
+    @State private var productivityProfileVM: ProductivityProfileViewModel
     var updateManager: AppUpdateManager
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
     @State private var activeInAppReminder: (title: String, subtitle: String, time: String)?
@@ -29,6 +30,7 @@ public struct MainView: View {
         scratchpadVM: ScratchpadViewModel = ScratchpadViewModel(),
         bookmarkVM: BookmarkViewModel = BookmarkViewModel(),
         recurringReminderVM: RecurringReminderViewModel = RecurringReminderViewModel(),
+        productivityProfileVM: ProductivityProfileViewModel = ProductivityProfileViewModel(),
         updateManager: AppUpdateManager = AppUpdateManager()
     ) {
         self.appState = appState
@@ -38,6 +40,7 @@ public struct MainView: View {
         _scratchpadVM = State(initialValue: scratchpadVM)
         _bookmarkVM = State(initialValue: bookmarkVM)
         _recurringReminderVM = State(initialValue: recurringReminderVM)
+        _productivityProfileVM = State(initialValue: productivityProfileVM)
     }
 
     public var body: some View {
@@ -80,6 +83,8 @@ public struct MainView: View {
                         ScratchpadView(viewModel: scratchpadVM)
                     case .bookmarks:
                         BookmarksView(viewModel: bookmarkVM)
+                    case .profiles:
+                        ProductivityProfilesView(viewModel: productivityProfileVM)
                     case .settings:
                         SettingsView(
                             appState: appState,

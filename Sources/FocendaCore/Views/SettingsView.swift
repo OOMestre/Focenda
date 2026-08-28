@@ -253,7 +253,7 @@ public struct SettingsView: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
-                Text("Privacy: Tasks, notes, reminders, bookmarks, and preferences stay on this Mac in encrypted local storage. Focenda contacts only GitHub's public release service for update metadata and the selected app archive. macOS may display reminder content in its notification system. See docs/PRIVACY.md for details.")
+                Text("Privacy: Tasks, notes, reminders, bookmarks, productivity profiles, and preferences stay on this Mac in encrypted local storage. Focenda contacts only GitHub's public release service for update metadata and the selected app archive. macOS may display reminder content in its notification system. See docs/PRIVACY.md for details.")
                     .font(.system(size: 10))
                     .foregroundStyle(AppTheme.textTertiary)
                     .fixedSize(horizontal: false, vertical: true)
