@@ -18,9 +18,13 @@ public final class TaskListViewModel {
     private let storageKey = "focenda_saved_tasks"
 
     public init() {
-        loadTasks()
-        if tasks.isEmpty {
+        // An empty array is a valid persisted state. Only seed sample tasks
+        // when no value has ever been stored; a failed decode must not replace
+        // the user's data with samples.
+        if UserDefaults.standard.object(forKey: storageKey) == nil {
             loadSampleTasks()
+        } else {
+            loadTasks()
         }
     }
 

@@ -21,7 +21,6 @@ final class RecurringReminderTests: XCTestCase {
         XCTAssertTrue(viewModel.activeReminders.isEmpty)
         XCTAssertNil(UserDefaults.standard.data(forKey: "focenda_saved_recurring_reminders"))
     }
-
     func testRecurringReminderInitialization() {
         let reminderTime = Date()
         let reminder = RecurringReminder(
@@ -334,5 +333,31 @@ final class RecurringReminderTests: XCTestCase {
         XCTAssertTrue(title.contains("Daily"))
         XCTAssertTrue(title.contains("Focus Block"))
         XCTAssertTrue(body.contains("Deep work session"))
+    }
+
+    func testCorruptedSavedRemindersAreNotReplacedWithSamples() {
+        let corruptedData = Data("not valid reminder JSON".utf8)
+        UserDefaults.standard.set(corruptedData, forKey: "focenda_saved_recurring_reminders")
+
+        let reloadedViewModel = RecurringReminderViewModel()
+
+        XCTAssertTrue(reloadedViewModel.reminders.isEmpty)
+        XCTAssertEqual(
+            UserDefaults.standard.data(forKey: "focenda_saved_recurring_reminders"),
+            corruptedData
+        )
+    }
+
+    func testEmptySavedRemindersRemainEmpty() throws {
+        let emptyRemindersData = try JSONEncoder().encode([RecurringReminder]())
+        UserDefaults.standard.set(emptyRemindersData, forKey: "focenda_saved_recurring_reminders")
+
+        let reloadedViewModel = RecurringReminderViewModel()
+
+        XCTAssertTrue(reloadedViewModel.reminders.isEmpty)
+        XCTAssertEqual(
+            UserDefaults.standard.data(forKey: "focenda_saved_recurring_reminders"),
+            emptyRemindersData
+        )
     }
 }
