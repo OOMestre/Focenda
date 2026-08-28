@@ -120,6 +120,8 @@ cat > "$TEMP_APP/Contents/Info.plist" <<PLIST_EOF
 PLIST_EOF
 
 # Sign every generated bundle with the Focenda entitlements and hardened runtime.
+# The bundle is intentionally not sandboxed so the updater can replace the
+# installed app in place without asking the user to select its containing folder.
 # A Developer ID identity should be supplied for distributable builds through
 # FOCENDA_SIGNING_IDENTITY; ad-hoc signing remains useful for local staging.
 if [ "$SIGNING_IDENTITY" = "-" ]; then

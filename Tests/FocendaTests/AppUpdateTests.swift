@@ -22,6 +22,10 @@ final class AppUpdateTests: XCTestCase {
         XCTAssertNil(AppVersion("1.2.3-"))
     }
 
+    func testOfficialConfigurationAlwaysUsesStableReleaseChannel() {
+        XCTAssertFalse(AppUpdateConfiguration.focenda.includePrerelease)
+    }
+
     func testGitHubClientRejectsInsecureDownloadURL() async throws {
         let client = GitHubReleaseClient(
             configuration: AppUpdateConfiguration(repositoryOwner: "OOMestre", repositoryName: "Focenda")
@@ -68,6 +72,26 @@ final class AppUpdateTests: XCTestCase {
         XCTAssertEqual(update.version.description, "1.2.0")
         XCTAssertEqual(update.asset.name, "focenda-macos.zip")
         XCTAssertEqual(client.fetchCount, 1)
+    }
+
+    func testServiceRejectsPrereleaseTagEvenWhenReleaseMetadataIsMarkedStable() async throws {
+        let betaAsset = AppUpdateAsset(
+            name: "Focenda-macOS.zip",
+            downloadURL: try XCTUnwrap(URL(string: "https://github.com/OOMestre/Focenda/releases/download/v9.0.0-beta.1/Focenda-macOS.zip"))
+        )
+        let release = AppUpdateRelease(
+            tagName: "v9.0.0-beta.1",
+            assets: [betaAsset]
+        )
+        let service = AppUpdateService(
+            configuration: AppUpdateConfiguration(repositoryOwner: "OOMestre", repositoryName: "Focenda"),
+            client: StubUpdateClient(releases: [release]),
+            installer: RecordingUpdateInstaller()
+        )
+
+        let result = try await service.checkForUpdates(currentReleaseIdentifier: "1.0.0")
+
+        XCTAssertNil(result)
     }
 
     func testServiceCanOptIntoPrereleaseUpdates() async throws {

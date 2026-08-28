@@ -45,7 +45,7 @@ Focenda follows a **two-tier release cadence**:
 | **Bundle ID** | `com.oomestre.focenda.staging` | `com.oomestre.focenda` |
 | **Target Audience** | Core team, QA, beta testers | All macOS users |
 | **GitHub Release Status** | `Prerelease: true` | `Prerelease: false` (Latest Stable) |
-| **Required Gates** | • `make test` passing<br>• Validated `VERSION`<br>• Clean local/CI build<br>• Sandbox + hardened runtime verified | • All staging beta criteria met<br>• Approved PR into `main`<br>• Updated `CHANGELOG.md`<br>• Clean CI run on `main`<br>• Developer ID signing + notarization |
+| **Required Gates** | • `make test` passing<br>• Validated `VERSION`<br>• Clean local/CI build<br>• Hardened runtime verified | • All staging beta criteria met<br>• Approved PR into `main`<br>• Updated `CHANGELOG.md`<br>• Clean CI run on `main`<br>• Developer ID signing + notarization |
 
 ---
 
@@ -98,7 +98,9 @@ This command automatically:
 4. Creates an annotated git tag (`v0.1.0-beta.N`).
 5. Builds the local bundle `dist/Focenda Staging.app`.
 
-The bundle is signed with the App Sandbox entitlement and hardened runtime.
+The bundle is signed with the hardened runtime. It is intentionally not
+sandboxed so the in-app updater can replace the installed app automatically,
+without asking the user to select its containing folder.
 For a distributable artifact, set `FOCENDA_SIGNING_IDENTITY` to a Developer ID
 Application identity; without it, the script intentionally uses an ad-hoc
 signature for local/CI staging only.
@@ -172,7 +174,7 @@ Focenda includes a set of Makefile convenience commands:
 | :--- | :--- | :--- |
 | `make test` | `swift test` | Runs the full XCTest unit test suite. |
 | `make build` | `swift build -c release` | Builds release binary executable. |
-| `make staging` | `./scripts/build-staging.sh` | Builds and signs `dist/Focenda Staging.app` with App Sandbox and hardened runtime. |
+| `make staging` | `./scripts/build-staging.sh` | Builds and signs `dist/Focenda Staging.app` with hardened runtime and automatic in-place update support. |
 | `make release-beta` | `./scripts/release-staging-beta.sh` | Runs tests, increments beta tag, creates git tag, and builds staging bundle. |
 | `make release-notes` | `./scripts/generate-release-notes.sh` | Extracts commit changes into formatted markdown release notes. |
 | `make clean` | `rm -rf .build dist` | Cleans build caches and output artifacts. |
@@ -232,8 +234,8 @@ Focenda's release workflows are automated via GitHub Actions:
 Focenda checks the public GitHub Releases API from the Mac. The client sends no tasks, notes, preferences, identifiers, or telemetry; the only downloaded content is the public release metadata and the selected `Focenda-macOS.zip` archive.
 
 - The Settings page provides **Check Now** and an enabled-by-default **Check for updates automatically** preference. Automatic checks run at most once every 24 hours while the app is open.
-- Staging builds accept prerelease tags; production builds accept stable tags only. The release tag is embedded as `FocendaReleaseTag` so beta builds do not offer the same beta repeatedly.
-- Before installation, Focenda requires HTTPS GitHub download URLs, the expected Focenda bundle identifier, and a matching release version. It then replaces only the running `.app` bundle and relaunches it; local user data remains in macOS storage.
+- The distributed Focenda app checks official stable releases only. Releases marked as prerelease or carrying a prerelease tag are ignored, even if their GitHub metadata is inconsistent.
+- Before installation, Focenda requires HTTPS GitHub download URLs, the expected Focenda bundle identifier, and a matching release version. It automatically replaces only the running `.app` bundle and relaunches it; local user data remains in macOS storage.
 - If the app is running from a development executable or the installed app directory is not writable, the update remains available and Settings shows the reason so the user can install manually from GitHub Releases.
 
 ---
@@ -245,7 +247,7 @@ Focenda checks the public GitHub Releases API from the Mac. The client sends no 
 - [ ] `VERSION` matches intended target release number.
 - [ ] `CHANGELOG.md` reflects all notable user-facing changes.
 - [ ] Local staging app builds and launches cleanly (`make staging`).
-- [ ] `codesign --verify --deep --strict` passes and the bundle contains App Sandbox + hardened runtime.
+- [ ] `codesign --verify --deep --strict` passes and the bundle contains the hardened runtime.
 - [ ] Public artifacts use Developer ID signing and notarization (`FOCENDA_SIGNING_IDENTITY` configured).
 - [ ] UI appearance verified in both Light and Dark macOS system appearance.
 

@@ -30,17 +30,16 @@ public struct AppUpdateConfiguration: Equatable, Sendable {
         URL(string: "https://api.github.com/repos/\(repositoryOwner)/\(repositoryName)/releases")!
     }
 
-    /// Staging builds can receive beta releases, while production builds stay on stable releases.
+    /// The distributed Focenda app follows the official stable release channel.
+    ///
+    /// `includePrerelease` remains configurable for isolated development tooling,
+    /// but the app itself must never switch channels based on its bundle name or
+    /// embedded release tag.
     public static var focenda: AppUpdateConfiguration {
-        let bundleIdentifier = Bundle.main.bundleIdentifier ?? ""
-        let embeddedReleaseTag = Bundle.main.object(forInfoDictionaryKey: "FocendaReleaseTag") as? String
-        let hasBetaTag = embeddedReleaseTag.flatMap(AppVersion.init)?.isPrerelease == true
-        let includePrerelease = embeddedReleaseTag?.isEmpty == false ? hasBetaTag : bundleIdentifier.hasSuffix(".staging")
-
         return AppUpdateConfiguration(
             repositoryOwner: "OOMestre",
             repositoryName: "Focenda",
-            includePrerelease: includePrerelease
+            includePrerelease: false
         )
     }
 }
@@ -700,8 +699,8 @@ public final class AppUpdateService: AppUpdateProviding {
 
         let candidates = releases.compactMap { release -> AppUpdate? in
             guard !release.draft,
-                  (configuration.includePrerelease || !release.prerelease),
                   let version = release.version,
+                  (configuration.includePrerelease || (!release.prerelease && !version.isPrerelease)),
                   version > currentVersion,
                   let asset = preferredAsset(for: release) else {
                 return nil
@@ -817,15 +816,13 @@ public final class AppUpdateInstaller: AppUpdateInstalling {
             let replacementURL = targetURL.deletingLastPathComponent()
                 .appendingPathComponent(".\(targetURL.lastPathComponent).update-\(UUID().uuidString)", isDirectory: true)
             do {
-                try withApplicationDirectoryWriteAccess(for: targetURL) {
-                    try fileManager.copyItem(at: candidateAppURL, to: replacementURL)
-                    _ = try fileManager.replaceItemAt(
-                        targetURL,
-                        withItemAt: replacementURL,
-                        backupItemName: nil,
-                        options: .usingNewMetadataOnly
-                    )
-                }
+                try fileManager.copyItem(at: candidateAppURL, to: replacementURL)
+                _ = try fileManager.replaceItemAt(
+                    targetURL,
+                    withItemAt: replacementURL,
+                    backupItemName: nil,
+                    options: .usingNewMetadataOnly
+                )
             } catch let error as AppUpdateError {
                 try? fileManager.removeItem(at: replacementURL)
                 throw error
@@ -1198,66 +1195,6 @@ public final class AppUpdateInstaller: AppUpdateInstalling {
             }
         }
     }
-
-    private func withApplicationDirectoryWriteAccess<Result>(
-        for targetURL: URL,
-        operation: () throws -> Result
-    ) throws -> Result {
-        #if canImport(AppKit)
-        guard Self.isRunningInAppSandbox else {
-            return try operation()
-        }
-
-        if Thread.isMainThread {
-            return try performApplicationDirectoryWriteAccess(for: targetURL, operation: operation)
-        }
-
-        return try DispatchQueue.main.sync {
-            try performApplicationDirectoryWriteAccess(for: targetURL, operation: operation)
-        }
-        #else
-        return try operation()
-        #endif
-    }
-
-    #if canImport(AppKit)
-    private func performApplicationDirectoryWriteAccess<Result>(
-        for targetURL: URL,
-        operation: () throws -> Result
-    ) throws -> Result {
-        precondition(Thread.isMainThread)
-
-        let applicationDirectory = targetURL.deletingLastPathComponent().standardizedFileURL
-        let panel = NSOpenPanel()
-        panel.title = "Allow Focenda to Install the Update"
-        panel.message = "Choose the folder containing Focenda.app to allow this update to replace the current app."
-        panel.prompt = "Allow Update"
-        panel.allowsMultipleSelection = false
-        panel.canChooseFiles = false
-        panel.canChooseDirectories = true
-        panel.directoryURL = applicationDirectory
-
-        guard panel.runModal() == .OK,
-              let selectedDirectory = panel.url?.standardizedFileURL,
-              selectedDirectory == applicationDirectory else {
-            throw AppUpdateError.installationFailed("Update access was not granted for the Focenda application folder.")
-        }
-
-        let didStartAccessing = selectedDirectory.startAccessingSecurityScopedResource()
-        defer {
-            if didStartAccessing {
-                selectedDirectory.stopAccessingSecurityScopedResource()
-            }
-        }
-        return try operation()
-    }
-    #endif
-
-    #if canImport(AppKit)
-    private static var isRunningInAppSandbox: Bool {
-        ProcessInfo.processInfo.environment["APP_SANDBOX_CONTAINER_ID"] != nil
-    }
-    #endif
 
     private func extract(_ archiveURL: URL, to destinationURL: URL) throws {
         #if os(macOS)

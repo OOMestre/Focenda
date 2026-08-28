@@ -103,8 +103,8 @@ Contributions are welcome. Please consult [CONTRIBUTING.md](CONTRIBUTING.md) for
 ## Privacy & Security
 
 See the [Focenda Privacy and Security Policy](docs/PRIVACY.md) for local
-encryption, macOS sandbox and hardened-runtime behavior, notification handling,
-and update-service details.
+encryption, hardened-runtime behavior, notification handling, and update-service
+details.
 
 ---
 

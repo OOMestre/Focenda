@@ -53,11 +53,11 @@ applications.
 
 ## Runtime protections
 
-Generated Focenda app bundles enable the macOS App Sandbox and hardened runtime.
-The sandbox grants network-client access for update checks, read access to files
-explicitly selected for custom sounds and productivity profiles, and write
-access only to a folder the user explicitly selects when installing an update.
-Window organization also
+Generated Focenda app bundles use the hardened runtime and are intentionally not
+App Sandbox restricted. This allows the updater to replace the installed app in
+place automatically, without asking the user to select its containing folder.
+Focenda still only uses files selected by the user for custom sounds and
+productivity profiles. Window organization also
 requires the user to approve Focenda under System Settings > Privacy & Security
 > Accessibility. For public distribution,
 the bundle should also be signed with a Developer ID identity and notarized;
