@@ -311,7 +311,7 @@ public struct SettingsView: View {
 
     // MARK: - Reminder Sounds Section
     private var reminderSoundSection: some View {
-        GroupBox(label: Label("Reminder Alerts & Sound Chimes", systemImage: "bell.and.waves.left.and.right").foregroundStyle(AppTheme.textPrimary)) {
+        GroupBox(label: Label("Reminder & Pomodoro Sound Chimes", systemImage: "bell.and.waves.left.and.right").foregroundStyle(AppTheme.textPrimary)) {
             VStack(alignment: .leading, spacing: 16) {
                 // Master Toggle
                 Toggle(isOn: $appState.reminderSoundEnabled) {
@@ -336,7 +336,7 @@ public struct SettingsView: View {
                             Text("Alert Chime Sound:")
                                 .font(.subheadline.weight(.medium))
                                 .foregroundStyle(AppTheme.textPrimary)
-                            Text("Select a built-in macOS alert sound or upload your own audio file.")
+                            Text("Choose the chime for reminders and Pomodoro completions, or upload your own audio file.")
                                 .font(.caption)
                                 .foregroundStyle(AppTheme.textSecondary)
                         }
@@ -416,7 +416,7 @@ public struct SettingsView: View {
                             Text("Chime Repetitions:")
                                 .font(.subheadline.weight(.medium))
                                 .foregroundStyle(AppTheme.textPrimary)
-                            Text("Repeat the chime 3 to 5 times so you don't miss notifications.")
+                            Text("Repeat the chime 1 to 5 times so you don't miss reminders or Pomodoro alerts.")
                                 .font(.caption)
                                 .foregroundStyle(AppTheme.textSecondary)
                         }

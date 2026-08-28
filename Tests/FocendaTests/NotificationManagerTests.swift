@@ -34,22 +34,44 @@ final class NotificationManagerTests: XCTestCase {
         )
     }
 
-    func testSessionCompletionNotificationUsesSystemSoundWhenEnabled() {
+    func testConfiguredAlertSoundUsesSavedBuiltInSoundAndRepetitions() {
+        let suiteName = "Focenda.NotificationManagerTests.builtInSound"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        defaults.set(ReminderSoundType.glass.rawValue, forKey: "reminderSoundType")
+        defaults.set(4, forKey: "reminderSoundRepeatCount")
+
+        let configuration = NotificationManager.configuredAlertSound(from: defaults)
+
+        XCTAssertEqual(configuration.soundName, ReminderSoundType.glass.rawValue)
+        XCTAssertNil(configuration.customFilePath)
+        XCTAssertEqual(configuration.repeatCount, 4)
+    }
+
+    func testConfiguredAlertSoundUsesCustomFileAndDefaultRepetitions() {
+        let suiteName = "Focenda.NotificationManagerTests.customSound"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        defaults.set(ReminderSoundType.custom.rawValue, forKey: "reminderSoundType")
+        defaults.set("/tmp/focenda-alert.wav", forKey: "reminderCustomSoundPath")
+
+        let configuration = NotificationManager.configuredAlertSound(from: defaults)
+
+        XCTAssertEqual(configuration.soundName, ReminderSoundType.defaultSound.rawValue)
+        XCTAssertEqual(configuration.customFilePath, "/tmp/focenda-alert.wav")
+        XCTAssertEqual(configuration.repeatCount, ReminderSoundType.defaultRepeatCount)
+    }
+
+    func testSessionCompletionNotificationKeepsSystemSoundOffForSelectedInAppChime() {
         let content = NotificationManager.sessionCompletionNotificationContent(
-            for: .shortBreak,
-            soundEnabled: true
+            for: .shortBreak
         )
 
         XCTAssertEqual(content.title, "Short Break Finished")
-        XCTAssertNotNil(content.sound)
-    }
-
-    func testSessionCompletionNotificationHonorsDisabledSoundPreference() {
-        let content = NotificationManager.sessionCompletionNotificationContent(
-            for: .longBreak,
-            soundEnabled: false
-        )
-
         XCTAssertNil(content.sound)
     }
 

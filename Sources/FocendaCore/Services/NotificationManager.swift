@@ -25,6 +25,12 @@ public extension NotificationManagerProtocol {
     func snoozeReminder(title: String, subtitle: String = "Snoozed Reminder", notes: String = "", minutes: Int = 5) {}
 }
 
+struct AlertSoundConfiguration: Equatable {
+    let soundName: String
+    let customFilePath: String?
+    let repeatCount: Int
+}
+
 /// Service managing native macOS system notifications, rich audible alerts, and in-app banner broadcasts
 public final class NotificationManager: NSObject, UNUserNotificationCenterDelegate, NotificationManagerProtocol {
     public static let shared = NotificationManager()
@@ -162,21 +168,45 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
         isPlayingSound = false
     }
 
-    /// Plays user-configured reminder sound with configured repetition count
+    static func configuredAlertSound(from defaults: UserDefaults = .standard) -> AlertSoundConfiguration {
+        let soundTypeRaw = defaults.string(forKey: "reminderSoundType") ?? Self.standardNotificationSoundName
+        let customPath = defaults.string(forKey: "reminderCustomSoundPath")
+        let savedRepeatCount = defaults.integer(forKey: "reminderSoundRepeatCount")
+        let repeatCount = savedRepeatCount == 0
+            ? ReminderSoundType.defaultRepeatCount
+            : max(ReminderSoundType.minRepeatCount, min(ReminderSoundType.maxRepeatCount, savedRepeatCount))
+
+        if soundTypeRaw == ReminderSoundType.custom.rawValue {
+            return AlertSoundConfiguration(
+                soundName: Self.standardNotificationSoundName,
+                customFilePath: customPath,
+                repeatCount: repeatCount
+            )
+        } else {
+            return AlertSoundConfiguration(
+                soundName: soundTypeRaw,
+                customFilePath: nil,
+                repeatCount: repeatCount
+            )
+        }
+    }
+
+    /// Plays the sound selected in Settings with the configured repetition count.
+    private func playConfiguredAlertSound() {
+        let configuration = Self.configuredAlertSound()
+        playReminderAlertChime(
+            soundName: configuration.soundName,
+            customFilePath: configuration.customFilePath,
+            repeatCount: configuration.repeatCount
+        )
+    }
+
+    /// Plays the user-configured reminder sound when audible reminders are enabled.
     public func playUserReminderSound() {
         let isEnabled = UserDefaults.standard.object(forKey: "reminderSoundEnabled") == nil ? true : UserDefaults.standard.bool(forKey: "reminderSoundEnabled")
         guard isEnabled else { return }
 
-        let soundTypeRaw = UserDefaults.standard.string(forKey: "reminderSoundType") ?? "Hero"
-        let customPath = UserDefaults.standard.string(forKey: "reminderCustomSoundPath")
-        let savedRepeatCount = UserDefaults.standard.integer(forKey: "reminderSoundRepeatCount")
-        let repeatCount = savedRepeatCount == 0 ? 3 : max(1, min(5, savedRepeatCount))
-
-        if soundTypeRaw == ReminderSoundType.custom.rawValue, let customPath = customPath, !customPath.isEmpty {
-            playReminderAlertChime(soundName: "Hero", customFilePath: customPath, repeatCount: repeatCount)
-        } else {
-            playReminderAlertChime(soundName: soundTypeRaw, customFilePath: nil, repeatCount: repeatCount)
-        }
+        playConfiguredAlertSound()
     }
 
     private func playSoundOnce(soundName: String, customFilePath: String?) {
@@ -287,22 +317,19 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
     }
 
     /// Builds the local notification content for a completed Pomodoro session.
-    /// The system notification owns playback when a notification center is available,
-    /// which keeps the banner and its sound in sync without playing the alert twice.
-    static func sessionCompletionNotificationContent(
-        for mode: FocusMode,
-        soundEnabled: Bool
-    ) -> UNMutableNotificationContent {
+    /// The in-app player owns playback so the selected Settings sound can be used
+    /// without adding a second, different system sound to the notification.
+    static func sessionCompletionNotificationContent(for mode: FocusMode) -> UNMutableNotificationContent {
         let content = UNMutableNotificationContent()
         content.title = Self.notificationTitle(for: mode)
         content.body = Self.notificationBody(for: mode)
-        content.sound = soundEnabled ? .default : nil
+        content.sound = nil
         return content
     }
 
     // MARK: - Focus Session Completed
 
-    /// Presents the focus completion alert without activating Focenda in front of the user's current app.
+    /// Presents the focus completion alert and plays the selected Settings chime without activating Focenda in front of the user's current app.
     public func notifySessionCompleted(mode: FocusMode) {
         self.lastNotifiedMode = mode
 
@@ -310,10 +337,10 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
             ? true
             : UserDefaults.standard.bool(forKey: "soundEnabled")
 
-        // The native notification owns playback when available. If it is unavailable,
-        // retain an in-app fallback so a standalone executable still produces a chime.
-        if center == nil && soundEnabled {
-            playRichAlertChime(soundName: Self.standardNotificationSoundName)
+        // Keep the Pomodoro toggle separate from the Reminder toggle, while sharing
+        // the selected sound, custom file, and repetition count from Settings.
+        if soundEnabled {
+            playConfiguredAlertSound()
         }
 
         #if canImport(AppKit)
@@ -339,7 +366,7 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
             return
         }
 
-        let content = Self.sessionCompletionNotificationContent(for: mode, soundEnabled: soundEnabled)
+        let content = Self.sessionCompletionNotificationContent(for: mode)
 
         let request = UNNotificationRequest(
             identifier: UUID().uuidString,
