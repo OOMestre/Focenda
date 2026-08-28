@@ -276,7 +276,7 @@ final class TaskListViewModelTests: XCTestCase {
         let reloadedViewModel = TaskListViewModel()
 
         XCTAssertTrue(reloadedViewModel.tasks.isEmpty)
-        XCTAssertEqual(UserDefaults.standard.data(forKey: "focenda_saved_tasks"), corruptedData)
+        XCTAssertEqual(SecureStore.shared.data(forKey: "focenda_saved_tasks"), corruptedData)
     }
 
     func testEmptySavedTasksRemainEmpty() throws {
@@ -286,6 +286,6 @@ final class TaskListViewModelTests: XCTestCase {
         let reloadedViewModel = TaskListViewModel()
 
         XCTAssertTrue(reloadedViewModel.tasks.isEmpty)
-        XCTAssertEqual(UserDefaults.standard.data(forKey: "focenda_saved_tasks"), emptyTasksData)
+        XCTAssertEqual(SecureStore.shared.data(forKey: "focenda_saved_tasks"), emptyTasksData)
     }
 }

@@ -343,7 +343,7 @@ final class RecurringReminderTests: XCTestCase {
 
         XCTAssertTrue(reloadedViewModel.reminders.isEmpty)
         XCTAssertEqual(
-            UserDefaults.standard.data(forKey: "focenda_saved_recurring_reminders"),
+            SecureStore.shared.data(forKey: "focenda_saved_recurring_reminders"),
             corruptedData
         )
     }
@@ -356,7 +356,7 @@ final class RecurringReminderTests: XCTestCase {
 
         XCTAssertTrue(reloadedViewModel.reminders.isEmpty)
         XCTAssertEqual(
-            UserDefaults.standard.data(forKey: "focenda_saved_recurring_reminders"),
+            SecureStore.shared.data(forKey: "focenda_saved_recurring_reminders"),
             emptyRemindersData
         )
     }

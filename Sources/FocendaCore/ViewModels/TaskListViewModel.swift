@@ -23,7 +23,7 @@ public final class TaskListViewModel {
         // An empty array is a valid persisted state. Only seed sample tasks
         // when no value has ever been stored; a failed decode must not replace
         // the user's data with samples.
-        if secureStore.data(forKey: storageKey) == nil {
+        if !secureStore.containsValue(forKey: storageKey) {
             loadSampleTasks()
         } else {
             loadTasks()
