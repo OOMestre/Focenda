@@ -11,13 +11,21 @@ public enum TimerStatus: String, Equatable {
 
 @Observable
 public final class FocusTimerViewModel {
+    public static let userDefaultsKey = "focenda_saved_focus_sessions"
+
     public var currentMode: FocusMode = .work
     public var status: TimerStatus = .idle
     public var timeRemainingSeconds: Int = 25 * 60
     public var totalDurationSeconds: Int = 25 * 60
     public var completedSessionsCount: Int = 0
     public var completedWorkSessionsCount: Int = 0
-    public var completedSessions: [FocusSession] = []
+    public var completedSessions: [FocusSession] = [] {
+        didSet {
+            completedSessionsCount = completedSessions.count
+            completedWorkSessionsCount = completedSessions.filter { $0.mode == .work }.count
+            saveToUserDefaults()
+        }
+    }
     public var onSessionCompleted: ((FocusMode) -> Void)?
     /// Optional explicit opt-in for callers that want to open Focenda after completion.
     /// The app leaves this disabled so the completion HUD can notify without stealing focus.
@@ -35,19 +43,20 @@ public final class FocusTimerViewModel {
         didSet { if status == .idle && currentMode == .longBreak { resetToCurrentMode() } }
     }
 
+    private let userDefaults: UserDefaults
     private var timer: Timer?
     // Timer callbacks refresh the UI; ContinuousClock is the source of truth for elapsed time.
     private var runningSegmentStartedAt: ContinuousClock.Instant?
     private var timeRemainingAtSegmentStart = 0
     private let now: () -> ContinuousClock.Instant
 
-    public init() {
-        self.now = { ContinuousClock.now }
-        resetToCurrentMode()
-    }
-
-    init(now: @escaping () -> ContinuousClock.Instant) {
+    public init(
+        userDefaults: UserDefaults = .standard,
+        now: @escaping () -> ContinuousClock.Instant = { ContinuousClock.now }
+    ) {
+        self.userDefaults = userDefaults
         self.now = now
+        loadFromUserDefaults()
         resetToCurrentMode()
     }
 
@@ -178,11 +187,6 @@ public final class FocusTimerViewModel {
             completedAt: Date()
         )
         completedSessions.append(session)
-        completedSessionsCount += 1
-
-        if finishedMode == .work {
-            completedWorkSessionsCount += 1
-        }
 
         NotificationManager.shared.notifySessionCompleted(mode: finishedMode)
 
@@ -246,6 +250,22 @@ public final class FocusTimerViewModel {
         }
         totalDurationSeconds = durationMinutes * 60
         timeRemainingSeconds = totalDurationSeconds
+    }
+
+    /// Saves completed sessions to the device so history survives app restarts.
+    public func saveToUserDefaults() {
+        guard let encoded = try? JSONEncoder().encode(completedSessions) else { return }
+        userDefaults.set(encoded, forKey: Self.userDefaultsKey)
+    }
+
+    /// Restores completed sessions and rebuilds counters used by the dashboard and calendar.
+    public func loadFromUserDefaults() {
+        guard let data = userDefaults.data(forKey: Self.userDefaultsKey),
+              let decoded = try? JSONDecoder().decode([FocusSession].self, from: data) else {
+            return
+        }
+
+        completedSessions = decoded
     }
 
     deinit {
