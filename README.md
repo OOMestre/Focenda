@@ -1,7 +1,7 @@
 <div align="center">
 
-<img src="assets/focenda-mascot.png" alt="Focenda Owl Mascot" width="220" />
-<br/><br/>
+<img src="assets/focenda-mascot.png" alt="Focenda Owl Mascot" width="160" />
+<br/>
 
 <h1>Focenda</h1>
 
