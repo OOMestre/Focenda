@@ -43,6 +43,7 @@ Combining structured focus cycles (Pomodoro and deep work timers), visual Kanban
 - **Focus Hub & Bookmarks:** Responsive quick-launch directory for essential development references, tools, and documentation with 1-click browser integration.
 - **Menu Bar Control Center:** Floating, top-down animated macOS menu bar utility providing timer controls, quick note capture into user folders, instant task addition, and bookmarks access.
 - **Customizable Visual Themes:** Five refined aesthetic themes selectable in Settings (Zen Calm Light, Obsidian Minimal Dark, Warm Sandstone, Nordic Frost, Forest Matcha) without disruptive automatic color shifts.
+- **Private In-App Updates:** Settings can check GitHub Releases manually or once a day, show native macOS update notifications, and install validated Focenda archives locally without sending personal data or app content anywhere.
 - **100% Local & Private:** All state persists strictly on device via macOS storage primitives. Zero telemetry, no third-party accounts, and zero cloud tracking.
 
 ---

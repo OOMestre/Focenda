@@ -87,6 +87,11 @@ public final class AppState {
             savePreferences()
         }
     }
+    public var automaticUpdateChecksEnabled: Bool = true {
+        didSet {
+            savePreferences()
+        }
+    }
     public var selectedTheme: AppThemeOption {
         didSet {
             UserDefaults.standard.set(selectedTheme.rawValue, forKey: AppTheme.storageKey)
@@ -129,6 +134,7 @@ public final class AppState {
             self.shortcutPreset = .standard
         }
         self.showShortcutFeedback = UserDefaults.standard.object(forKey: "showShortcutFeedback") == nil ? true : UserDefaults.standard.bool(forKey: "showShortcutFeedback")
+        self.automaticUpdateChecksEnabled = UserDefaults.standard.object(forKey: AppUpdatePreferences.automaticChecksEnabledKey) == nil ? true : UserDefaults.standard.bool(forKey: AppUpdatePreferences.automaticChecksEnabledKey)
 
         let storedTheme = UserDefaults.standard.string(forKey: AppTheme.storageKey)
         let resolvedTheme = AppThemeOption.from(storedValue: storedTheme)
@@ -147,6 +153,7 @@ public final class AppState {
         UserDefaults.standard.set(globalShortcutsEnabled, forKey: "globalShortcutsEnabled")
         UserDefaults.standard.set(shortcutPreset.rawValue, forKey: "shortcutPreset")
         UserDefaults.standard.set(showShortcutFeedback, forKey: "showShortcutFeedback")
+        UserDefaults.standard.set(automaticUpdateChecksEnabled, forKey: AppUpdatePreferences.automaticChecksEnabledKey)
         UserDefaults.standard.set(selectedTheme.rawValue, forKey: AppTheme.storageKey)
         AppTheme.current = selectedTheme
     }

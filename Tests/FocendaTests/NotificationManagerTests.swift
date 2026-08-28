@@ -34,6 +34,14 @@ final class NotificationManagerTests: XCTestCase {
         )
     }
 
+    func testUpdateNotificationTracksVersion() {
+        let manager = NotificationManager()
+
+        manager.notifyUpdateAvailable(version: "1.2.0")
+
+        XCTAssertEqual(manager.lastNotifiedUpdateVersion, "1.2.0")
+    }
+
     func testTaskReminderTitlesAndBodies() {
         let taskWithNotes = TaskItem(
             title: "Write documentation",

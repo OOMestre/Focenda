@@ -4,11 +4,12 @@ set -eu
 
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 REPOSITORY_ROOT=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)
-APP_NAME="Focenda Staging"
+APP_NAME="${FOCENDA_APP_NAME:-Focenda Staging}"
 PRODUCT_NAME="FocendaApp"
-BUNDLE_IDENTIFIER="com.oomestre.focenda.staging"
+BUNDLE_IDENTIFIER="${FOCENDA_BUNDLE_IDENTIFIER:-com.oomestre.focenda.staging}"
 VERSION_FILE="$REPOSITORY_ROOT/VERSION"
 BUILD_CONFIGURATION="${FOCENDA_BUILD_CONFIGURATION:-release}"
+RELEASE_TAG="${FOCENDA_RELEASE_TAG:-}"
 DIST_DIRECTORY="$REPOSITORY_ROOT/dist"
 APP_BUNDLE="$DIST_DIRECTORY/$APP_NAME.app"
 
@@ -29,6 +30,10 @@ fi
 VERSION=$(sed -n "1p" "$VERSION_FILE")
 if ! printf "%s\n" "$VERSION" | grep -Eq "^[0-9]+\.[0-9]+\.[0-9]+$"; then
   fail "VERSION must contain MAJOR.MINOR.PATCH."
+fi
+
+if [ -n "$RELEASE_TAG" ] && ! printf "%s\n" "$RELEASE_TAG" | grep -Eq "^v?[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$"; then
+  fail "FOCENDA_RELEASE_TAG must contain a valid release tag."
 fi
 
 case "$BUILD_CONFIGURATION" in
@@ -98,6 +103,8 @@ cat > "$TEMP_APP/Contents/Info.plist" <<PLIST_EOF
   <string>$VERSION</string>
   <key>CFBundleVersion</key>
   <string>$VERSION</string>
+  <key>FocendaReleaseTag</key>
+  <string>$RELEASE_TAG</string>
   <key>LSMinimumSystemVersion</key>
   <string>14.0</string>
   <key>NSPrincipalClass</key>
