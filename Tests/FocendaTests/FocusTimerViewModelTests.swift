@@ -13,6 +13,7 @@ final class FocusTimerViewModelTests: XCTestCase {
     override func tearDown() {
         viewModel?.pause()
         viewModel?.reset()
+        ReminderAlertHUDPanel.shared.dismiss()
         viewModel = nil
         super.tearDown()
     }
@@ -150,10 +151,8 @@ final class FocusTimerViewModelTests: XCTestCase {
         XCTAssertEqual(NotificationManager.shared.lastNotifiedMode, .shortBreak)
     }
 
-    func testBringAppToFrontMethodSafe() {
-        // bringAppToFront should run cleanly and safely in test environment without crashes
-        viewModel.bringAppToFront()
-        XCTAssertTrue(viewModel.autoOpenOnCompletion)
+    func testSessionCompletionDoesNotAutoOpenByDefault() {
+        XCTAssertFalse(viewModel.autoOpenOnCompletion)
     }
 
     func testFocusTimerViewRendersAcrossAllThemesAndFocusModes() {

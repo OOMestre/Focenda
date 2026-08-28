@@ -12,6 +12,7 @@ public final class ReminderAlertHUDPanel: NSPanel {
     public private(set) var currentTitle: String = ""
     public private(set) var currentSubtitle: String = ""
     public private(set) var currentNotes: String = ""
+    public private(set) var currentType: String = ""
 
     public init() {
         super.init(
@@ -48,6 +49,7 @@ public final class ReminderAlertHUDPanel: NSPanel {
         self.currentTitle = title
         self.currentSubtitle = subtitle
         self.currentNotes = notes
+        self.currentType = type
         self.isShowingAlert = true
 
         autoDismissTimer?.invalidate()
@@ -57,6 +59,7 @@ public final class ReminderAlertHUDPanel: NSPanel {
             title: title,
             subtitle: subtitle,
             notes: notes,
+            type: type,
             timeoutSeconds: timeoutSeconds,
             onSnooze: { [weak self] in
                 self?.dismiss()
@@ -115,6 +118,7 @@ public struct ReminderAlertHUDView: View {
     public var title: String
     public var subtitle: String
     public var notes: String
+    public var type: String
     public var timeoutSeconds: TimeInterval
     public var onSnooze: (() -> Void)?
     public var onComplete: (() -> Void)?
@@ -131,6 +135,7 @@ public struct ReminderAlertHUDView: View {
         title: String,
         subtitle: String = "",
         notes: String = "",
+        type: String = "reminder",
         timeoutSeconds: TimeInterval = 25.0,
         onSnooze: (() -> Void)? = nil,
         onComplete: (() -> Void)? = nil,
@@ -140,11 +145,28 @@ public struct ReminderAlertHUDView: View {
         self.title = title
         self.subtitle = subtitle
         self.notes = notes
+        self.type = type
         self.timeoutSeconds = timeoutSeconds
         self.onSnooze = onSnooze
         self.onComplete = onComplete
         self.onOpenApp = onOpenApp
         self.onClose = onClose
+    }
+
+    private var alertLabel: String {
+        type.lowercased() == "pomodoro" ? "Pomodoro" : "Reminder"
+    }
+
+    private var alertIconName: String {
+        type.lowercased() == "pomodoro" ? "timer" : "bell.badge.fill"
+    }
+
+    private var openButtonTitle: String {
+        type.lowercased() == "pomodoro" ? "Open Focus" : "Open"
+    }
+
+    private var openButtonHelp: String {
+        type.lowercased() == "pomodoro" ? "Open Focenda Focus Timer" : "Open Focenda Reminders"
     }
 
     public var body: some View {
@@ -153,9 +175,14 @@ public struct ReminderAlertHUDView: View {
             HStack(spacing: 8) {
                 // Animated notification badge
                 HStack(spacing: 4) {
-                    ReminderNotificationBell()
+                    if type.lowercased() == "pomodoro" {
+                        Image(systemName: alertIconName)
+                            .font(.system(size: 10, weight: .bold))
+                    } else {
+                        ReminderNotificationBell()
+                    }
 
-                    Text("Reminder")
+                    Text(alertLabel)
                         .font(.system(size: 10, weight: .bold, design: .rounded))
                 }
                 .foregroundStyle(AppTheme.accent)
@@ -226,28 +253,30 @@ public struct ReminderAlertHUDView: View {
                 .buttonStyle(.plain)
                 .help("Mark reminder as done and dismiss")
 
-                // Snooze 5 Min Button
-                Button {
-                    onSnooze?()
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: "clock.arrow.circlepath")
-                            .font(.system(size: 10, weight: .medium))
-                        Text("Snooze 5m")
-                            .font(.system(size: 11, weight: .medium))
+                if onSnooze != nil {
+                    // Snooze 5 Min Button
+                    Button {
+                        onSnooze?()
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "clock.arrow.circlepath")
+                                .font(.system(size: 10, weight: .medium))
+                            Text("Snooze 5m")
+                                .font(.system(size: 11, weight: .medium))
+                        }
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 4.5)
+                        .background(AppTheme.cardBackgroundSubtle)
+                        .foregroundStyle(AppTheme.textPrimary)
+                        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                .stroke(AppTheme.subtleBorder, lineWidth: 1)
+                        )
                     }
-                    .padding(.horizontal, 9)
-                    .padding(.vertical, 4.5)
-                    .background(AppTheme.cardBackgroundSubtle)
-                    .foregroundStyle(AppTheme.textPrimary)
-                    .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 6, style: .continuous)
-                            .stroke(AppTheme.subtleBorder, lineWidth: 1)
-                    )
+                    .buttonStyle(.plain)
+                    .help("Snooze reminder for 5 minutes")
                 }
-                .buttonStyle(.plain)
-                .help("Snooze reminder for 5 minutes")
 
                 Spacer()
 
@@ -256,7 +285,7 @@ public struct ReminderAlertHUDView: View {
                     onOpenApp?()
                 } label: {
                     HStack(spacing: 3) {
-                        Text("Open")
+                        Text(openButtonTitle)
                             .font(.system(size: 11, weight: .medium))
                         Image(systemName: "arrow.up.forward.app")
                             .font(.system(size: 9))
@@ -264,7 +293,7 @@ public struct ReminderAlertHUDView: View {
                     .foregroundStyle(AppTheme.accent)
                 }
                 .buttonStyle(.plain)
-                .help("Open Focenda Reminders")
+                .help(openButtonHelp)
             }
 
             // Countdown Progress Bar
