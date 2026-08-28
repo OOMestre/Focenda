@@ -63,6 +63,18 @@ public struct CalendarDay: Identifiable, Equatable {
 
 /// Interactive monthly calendar, hover popover previews, and timebox agenda view with recurring reminders
 public struct CalendarView: View {
+    private enum CalendarQuickAction: String, Identifiable {
+        case task
+        case reminder
+
+        var id: String { rawValue }
+    }
+
+    private enum QuickActionField: Hashable {
+        case taskTitle
+        case reminderTitle
+    }
+
     public var timerVM: FocusTimerViewModel
     public var taskVM: TaskListViewModel
     public var recurringReminderVM: RecurringReminderViewModel
@@ -71,6 +83,8 @@ public struct CalendarView: View {
     @State public var displayedMonth: Date
     @State private var quickTaskTitle: String = ""
     @State private var quickTaskPriority: TaskPriority = .medium
+    @State private var activeQuickAction: CalendarQuickAction? = nil
+    @FocusState private var focusedQuickActionField: QuickActionField?
     @State private var hoveredDate: Date? = nil
     @State private var hoveredPopoverDay: CalendarDay? = nil
     @State private var hoverDebounceTask: Task<Void, Never>? = nil
@@ -159,6 +173,9 @@ public struct CalendarView: View {
         .onDisappear {
             hoverDebounceTask?.cancel()
             hoverDebounceTask = nil
+        }
+        .sheet(item: $activeQuickAction) { action in
+            quickActionForm(for: action)
         }
     }
 
@@ -644,6 +661,36 @@ public struct CalendarView: View {
                     }
                 }
             }
+
+            Divider()
+
+            HStack(spacing: 6) {
+                Label("Quick add", systemImage: "bolt.fill")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(AppTheme.textSecondary)
+
+                Spacer(minLength: 4)
+
+                Button {
+                    openQuickAction(.task, for: day.date)
+                } label: {
+                    Label("Task", systemImage: "checklist")
+                        .font(.system(size: 9, weight: .semibold))
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .tint(AppTheme.accent)
+
+                Button {
+                    openQuickAction(.reminder, for: day.date)
+                } label: {
+                    Label("Reminder", systemImage: "bell.badge")
+                        .font(.system(size: 9, weight: .semibold))
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .tint(AppTheme.sandstone)
+            }
         }
         .padding(12)
         .frame(width: 280)
@@ -814,6 +861,9 @@ public struct CalendarView: View {
             // Selected Day Header Banner
             selectedDayHeaderBanner
 
+            // Quick actions for the selected calendar day
+            selectedDayQuickActions
+
             // Recurring Reminders for Day
             recurringRemindersSection
 
@@ -896,6 +946,209 @@ public struct CalendarView: View {
         )
     }
 
+    // MARK: - Selected Day Quick Actions
+    private var selectedDayQuickActions: some View {
+        HStack(spacing: 8) {
+            Label("Quick actions", systemImage: "bolt.fill")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(AppTheme.textSecondary)
+
+            Spacer(minLength: 8)
+
+            Button {
+                openQuickAction(.task)
+            } label: {
+                Label("New Task", systemImage: "checklist")
+                    .font(.system(size: 10, weight: .semibold))
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+            .tint(AppTheme.accent)
+            .help("Create a task due on \(formattedFullDate(selectedDate))")
+
+            Button {
+                openQuickAction(.reminder)
+            } label: {
+                Label("New Reminder", systemImage: "bell.badge")
+                    .font(.system(size: 10, weight: .semibold))
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+            .tint(AppTheme.sandstone)
+            .help("Create a reminder for \(formattedFullDate(selectedDate))")
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .background(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(AppTheme.cardBackgroundSubtle.opacity(0.5))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .stroke(AppTheme.subtleBorder, lineWidth: 1)
+        )
+    }
+
+    @ViewBuilder
+    private func quickActionForm(for action: CalendarQuickAction) -> some View {
+        switch action {
+        case .task:
+            quickTaskForm
+        case .reminder:
+            quickReminderForm
+        }
+    }
+
+    private var quickTaskForm: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            quickPopoverHeader(
+                title: "New Task",
+                subtitle: "Due \(formattedFullDate(selectedDate))",
+                icon: "checklist",
+                color: AppTheme.accent
+            )
+
+            TextField("Task title", text: $quickTaskTitle)
+                .textFieldStyle(.roundedBorder)
+                .focused($focusedQuickActionField, equals: .taskTitle)
+                .onSubmit {
+                    saveQuickTask()
+                }
+
+            Picker("Priority", selection: $quickTaskPriority) {
+                ForEach(TaskPriority.allCases) { priority in
+                    Text(priority.rawValue).tag(priority)
+                }
+            }
+
+            HStack {
+                Spacer()
+
+                Button("Cancel") {
+                    closeQuickAction()
+                }
+                .buttonStyle(.bordered)
+
+                Button("Create Task") {
+                    saveQuickTask()
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(AppTheme.accent)
+                .foregroundStyle(Color.white)
+                .keyboardShortcut(.defaultAction)
+                .disabled(quickTaskTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+        }
+        .padding(16)
+        .frame(width: 300)
+        .background(AppTheme.cardBackground)
+        .onAppear {
+            DispatchQueue.main.async {
+                focusedQuickActionField = .taskTitle
+            }
+        }
+        .onDisappear {
+            focusedQuickActionField = nil
+        }
+    }
+
+    private var quickReminderForm: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            quickPopoverHeader(
+                title: "New Reminder",
+                subtitle: "Anchor date: \(formattedFullDate(selectedDate))",
+                icon: "bell.badge",
+                color: AppTheme.sandstone
+            )
+
+            TextField("Reminder title", text: $newReminderTitle)
+                .textFieldStyle(.roundedBorder)
+                .focused($focusedQuickActionField, equals: .reminderTitle)
+                .onSubmit {
+                    saveNewRecurringReminder()
+                }
+
+            HStack(alignment: .top, spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Time")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(AppTheme.textSecondary)
+
+                    IntuitiveTimePicker("Reminder Time", selection: $newReminderTime, style: .compact)
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Repeat")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(AppTheme.textSecondary)
+
+                    Picker("Frequency", selection: $newReminderFrequency) {
+                        ForEach(RepeatFrequency.allCases) { frequency in
+                            Text(frequency.rawValue).tag(frequency)
+                        }
+                    }
+                    .labelsHidden()
+                }
+            }
+
+            Text("Choose how often this reminder repeats.")
+                .font(.caption2)
+                .foregroundStyle(AppTheme.textTertiary)
+
+            HStack {
+                Spacer()
+
+                Button("Cancel") {
+                    closeQuickAction()
+                }
+                .buttonStyle(.bordered)
+
+                Button("Create Reminder") {
+                    saveNewRecurringReminder()
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(AppTheme.sandstone)
+                .foregroundStyle(Color.white)
+                .keyboardShortcut(.defaultAction)
+                .disabled(newReminderTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+        }
+        .padding(16)
+        .frame(width: 330)
+        .background(AppTheme.cardBackground)
+        .onAppear {
+            DispatchQueue.main.async {
+                focusedQuickActionField = .reminderTitle
+            }
+        }
+        .onDisappear {
+            focusedQuickActionField = nil
+        }
+    }
+
+    private func quickPopoverHeader(title: String, subtitle: String, icon: String, color: Color) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: icon)
+                .font(.system(size: 13, weight: .bold))
+                .foregroundStyle(color)
+                .frame(width: 28, height: 28)
+                .background(color.opacity(0.14))
+                .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                    .foregroundStyle(AppTheme.textPrimary)
+
+                Text(subtitle)
+                    .font(.caption2)
+                    .foregroundStyle(AppTheme.textSecondary)
+            }
+
+            Spacer(minLength: 0)
+        }
+    }
+
     private func agendaChip(icon: String, label: String, color: Color) -> some View {
         HStack(spacing: 3) {
             Image(systemName: icon)
@@ -922,9 +1175,7 @@ public struct CalendarView: View {
                 Spacer()
 
                 Button {
-                    withAnimation(.spring(response: 0.28, dampingFraction: 0.75)) {
-                        isAddingRecurringReminder.toggle()
-                    }
+                    toggleRecurringReminderForm()
                 } label: {
                     HStack(spacing: 3) {
                         Image(systemName: isAddingRecurringReminder ? "xmark" : "plus")
@@ -1076,6 +1327,7 @@ public struct CalendarView: View {
         newReminderTitle = ""
         newReminderNotes = ""
         isAddingRecurringReminder = false
+        closeQuickAction()
     }
 
     // MARK: - ⏱️ Focus Sessions Log Section
@@ -1308,6 +1560,68 @@ public struct CalendarView: View {
         quickTaskTitle = ""
     }
 
+    private func openQuickAction(_ action: CalendarQuickAction) {
+        switch action {
+        case .task:
+            quickTaskTitle = ""
+            quickTaskPriority = .medium
+        case .reminder:
+            prepareNewRecurringReminder()
+        }
+
+        activeQuickAction = action
+    }
+
+    private func openQuickAction(_ action: CalendarQuickAction, for date: Date) {
+        selectedDate = calendar.startOfDay(for: date)
+        if !calendar.isDate(selectedDate, equalTo: displayedMonth, toGranularity: .month) {
+            displayedMonth = calendar.date(
+                from: calendar.dateComponents([.year, .month], from: selectedDate)
+            ) ?? displayedMonth
+        }
+        hoveredPopoverDay = nil
+        openQuickAction(action)
+    }
+
+    private func closeQuickAction() {
+        activeQuickAction = nil
+        focusedQuickActionField = nil
+    }
+
+    private func saveQuickTask() {
+        let trimmed = quickTaskTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+
+        taskVM.addTask(
+            title: trimmed,
+            priority: quickTaskPriority,
+            dueDate: calendar.startOfDay(for: selectedDate)
+        )
+        quickTaskTitle = ""
+        closeQuickAction()
+    }
+
+    private func toggleRecurringReminderForm() {
+        if isAddingRecurringReminder {
+            withAnimation(.spring(response: 0.28, dampingFraction: 0.75)) {
+                isAddingRecurringReminder = false
+            }
+            focusedQuickActionField = nil
+        } else {
+            prepareNewRecurringReminder()
+            withAnimation(.spring(response: 0.28, dampingFraction: 0.75)) {
+                isAddingRecurringReminder = true
+            }
+        }
+    }
+
+    private func prepareNewRecurringReminder() {
+        newReminderTitle = ""
+        newReminderNotes = ""
+        newReminderTime = defaultReminderDate(for: selectedDate, preservingTimeFrom: Date())
+        newReminderFrequency = .daily
+    }
+
     private func emptyAgendaCard(icon: String, title: String, subtitle: String) -> some View {
         HStack(spacing: 10) {
             Image(systemName: icon)
@@ -1463,6 +1777,17 @@ public struct CalendarView: View {
         let formatter = DateFormatter()
         formatter.dateFormat = "HH:mm"
         return "🔔 \(formatter.string(from: reminderDate))"
+    }
+
+    /// Builds the initial reminder date from the selected day while preserving a useful time of day.
+    /// The selected date is important for weekly and monthly recurrence matching.
+    public func defaultReminderDate(for day: Date, preservingTimeFrom sourceDate: Date) -> Date {
+        var components = calendar.dateComponents([.year, .month, .day], from: day)
+        let timeComponents = calendar.dateComponents([.hour, .minute], from: sourceDate)
+        components.hour = timeComponents.hour ?? 9
+        components.minute = timeComponents.minute ?? 0
+        components.second = 0
+        return calendar.date(from: components) ?? calendar.startOfDay(for: day)
     }
 
     public func calculateMonthlyStats(for month: Date) -> (totalFocusMinutes: Int, sessionsCount: Int, tasksCompleted: Int, activeDays: Int) {

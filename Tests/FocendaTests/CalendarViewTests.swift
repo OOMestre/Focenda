@@ -455,6 +455,37 @@ final class CalendarViewTests: XCTestCase {
         }
     }
 
+    func testDefaultReminderDateUsesSelectedDayAndSourceTime() {
+        let timerVM = FocusTimerViewModel()
+        let taskVM = TaskListViewModel()
+        let calendarView = CalendarView(timerVM: timerVM, taskVM: taskVM)
+
+        var selectedDayComponents = DateComponents()
+        selectedDayComponents.year = 2026
+        selectedDayComponents.month = 8
+        selectedDayComponents.day = 28
+        let selectedDay = Calendar.current.date(from: selectedDayComponents)!
+
+        var sourceTimeComponents = DateComponents()
+        sourceTimeComponents.year = 2026
+        sourceTimeComponents.month = 8
+        sourceTimeComponents.day = 27
+        sourceTimeComponents.hour = 16
+        sourceTimeComponents.minute = 45
+        sourceTimeComponents.second = 30
+        let sourceTime = Calendar.current.date(from: sourceTimeComponents)!
+
+        let reminderDate = calendarView.defaultReminderDate(
+            for: selectedDay,
+            preservingTimeFrom: sourceTime
+        )
+
+        XCTAssertTrue(Calendar.current.isDate(reminderDate, inSameDayAs: selectedDay))
+        XCTAssertEqual(Calendar.current.component(.hour, from: reminderDate), 16)
+        XCTAssertEqual(Calendar.current.component(.minute, from: reminderDate), 45)
+        XCTAssertEqual(Calendar.current.component(.second, from: reminderDate), 0)
+    }
+
     func testCalendarViewBodyRendering() {
         let timerVM = FocusTimerViewModel()
         let taskVM = TaskListViewModel()
