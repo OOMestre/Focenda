@@ -2,11 +2,15 @@ import SwiftUI
 import AppKit
 
 public struct ScratchpadView: View {
+    private static let compactWorkspaceThreshold: CGFloat = 720
+
     @Bindable var viewModel: ScratchpadViewModel
     @State private var showingDeleteConfirmation = false
     @State private var copiedFeedback = false
     @State private var showingNewFolderSheet = false
     @State private var showingCompactFolderPicker = false
+    @State private var showingSidebarFolderPicker = false
+    @State private var isCompactWorkspace = false
     @State private var newFolderName = ""
     @FocusState private var isEditorFocused: Bool
     @FocusState private var isTitleFocused: Bool
@@ -28,7 +32,7 @@ public struct ScratchpadView: View {
                 // The app's minimum window leaves roughly 550pt for the detail area.
                 // At that width a permanent three-pane layout makes the editor unusable,
                 // so the folder list becomes a menu in the notes pane instead.
-                let usesCompactWorkspace = availableWidth < 720
+                let usesCompactWorkspace = availableWidth < Self.compactWorkspaceThreshold
                 let showFolders = viewModel.showFoldersSidebar && !usesCompactWorkspace
                 let foldersWidth: CGFloat = showFolders ? min(200, max(150, availableWidth * 0.24)) : 0
                 let notesListWidth: CGFloat = usesCompactWorkspace
@@ -47,7 +51,7 @@ public struct ScratchpadView: View {
                     }
 
                     // Notes List (Middle Master Column)
-                    notesListPane(showFolderPicker: usesCompactWorkspace)
+                    notesListPane(showFolderPicker: !showFolders)
                         .frame(width: notesListWidth)
 
                     Divider()
@@ -57,6 +61,12 @@ public struct ScratchpadView: View {
                         .frame(minWidth: 240, maxWidth: .infinity)
                 }
                 .frame(width: availableWidth, height: geometry.size.height, alignment: .leading)
+                .onAppear {
+                    isCompactWorkspace = usesCompactWorkspace
+                }
+                .onChange(of: availableWidth) { _, newWidth in
+                    isCompactWorkspace = newWidth < Self.compactWorkspaceThreshold
+                }
             }
             .frame(minWidth: 0, maxWidth: .infinity, maxHeight: .infinity)
         }
@@ -118,24 +128,31 @@ public struct ScratchpadView: View {
 
     private var sidebarToggleButton: some View {
         Button {
-            withAnimation(.spring(response: 0.25)) {
-                viewModel.showFoldersSidebar.toggle()
+            if isCompactWorkspace {
+                showingSidebarFolderPicker = true
+            } else {
+                withAnimation(.spring(response: 0.25)) {
+                    viewModel.showFoldersSidebar.toggle()
+                }
             }
         } label: {
             Image(systemName: "sidebar.left")
                 .font(.system(size: 14, weight: .medium))
-                .foregroundStyle(viewModel.showFoldersSidebar ? AppTheme.accent : AppTheme.textSecondary)
+                .foregroundStyle(isCompactWorkspace || viewModel.showFoldersSidebar ? AppTheme.accent : AppTheme.textSecondary)
                 .padding(7)
-                .background(viewModel.showFoldersSidebar ? AppTheme.accent.opacity(0.12) : AppTheme.cardBackground)
+                .background(isCompactWorkspace || viewModel.showFoldersSidebar ? AppTheme.accent.opacity(0.12) : AppTheme.cardBackground)
                 .clipShape(RoundedRectangle(cornerRadius: 7))
                 .overlay(
                     RoundedRectangle(cornerRadius: 7)
-                        .stroke(viewModel.showFoldersSidebar ? AppTheme.accent.opacity(0.3) : AppTheme.border, lineWidth: 1)
+                        .stroke(isCompactWorkspace || viewModel.showFoldersSidebar ? AppTheme.accent.opacity(0.3) : AppTheme.border, lineWidth: 1)
                 )
         }
         .buttonStyle(.plain)
         .fixedSize(horizontal: true, vertical: false)
-        .help(viewModel.showFoldersSidebar ? "Hide Folders Sidebar" : "Show Folders Sidebar")
+        .popover(isPresented: $showingSidebarFolderPicker, arrowEdge: .bottom) {
+            compactFolderPickerPopover
+        }
+        .help(isCompactWorkspace ? "Choose a folder" : (viewModel.showFoldersSidebar ? "Hide Folders Sidebar" : "Show Folders Sidebar"))
     }
 
     private var titleView: some View {
@@ -545,6 +562,7 @@ public struct ScratchpadView: View {
                 viewModel.selectFolder(name)
             }
             showingCompactFolderPicker = false
+            showingSidebarFolderPicker = false
         } label: {
             HStack(spacing: 9) {
                 Image(systemName: icon)
