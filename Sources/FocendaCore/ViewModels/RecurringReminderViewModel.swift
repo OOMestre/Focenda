@@ -12,9 +12,6 @@ public final class RecurringReminderViewModel {
 
     public init() {
         loadReminders()
-        if reminders.isEmpty {
-            loadSampleReminders()
-        }
     }
 
     public var activeReminders: [RecurringReminder] {
@@ -119,46 +116,5 @@ public final class RecurringReminderViewModel {
            let decoded = try? JSONDecoder().decode([RecurringReminder].self, from: data) {
             self.reminders = decoded
         }
-    }
-
-    private func loadSampleReminders() {
-        var comp = DateComponents()
-        comp.hour = 9
-        comp.minute = 0
-        let morningStandupTime = Calendar.current.date(from: comp) ?? Date()
-
-        comp.hour = 14
-        comp.minute = 30
-        let hydrationCheckTime = Calendar.current.date(from: comp) ?? Date()
-
-        comp.hour = 17
-        comp.minute = 0
-        let dailyReviewTime = Calendar.current.date(from: comp) ?? Date()
-
-        self.reminders = [
-            RecurringReminder(
-                title: "Daily Standup & Focus Goals",
-                time: morningStandupTime,
-                repeatFrequency: .weekdays,
-                isEnabled: true,
-                notes: "Review daily task backlog and block focus time"
-            ),
-            RecurringReminder(
-                title: "Afternoon Hydration & Movement",
-                time: hydrationCheckTime,
-                repeatFrequency: .daily,
-                isEnabled: true,
-                notes: "Step away from screen, stretch and drink water"
-            ),
-            RecurringReminder(
-                title: "Daily Wrap-up & Reflection",
-                time: dailyReviewTime,
-                repeatFrequency: .weekdays,
-                isEnabled: true,
-                notes: "Log completed sessions and set tomorrow's top 3 tasks"
-            )
-        ]
-        saveReminders()
-        rescheduleAllNotifications()
     }
 }

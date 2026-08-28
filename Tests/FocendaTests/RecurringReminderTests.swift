@@ -4,6 +4,24 @@ import SwiftUI
 
 final class RecurringReminderTests: XCTestCase {
 
+    override func setUp() {
+        super.setUp()
+        UserDefaults.standard.removeObject(forKey: "focenda_saved_recurring_reminders")
+    }
+
+    override func tearDown() {
+        UserDefaults.standard.removeObject(forKey: "focenda_saved_recurring_reminders")
+        super.tearDown()
+    }
+
+    func testFirstLaunchStartsWithoutRecurringReminders() {
+        let viewModel = RecurringReminderViewModel()
+
+        XCTAssertTrue(viewModel.reminders.isEmpty)
+        XCTAssertTrue(viewModel.activeReminders.isEmpty)
+        XCTAssertNil(UserDefaults.standard.data(forKey: "focenda_saved_recurring_reminders"))
+    }
+
     func testRecurringReminderInitialization() {
         let reminderTime = Date()
         let reminder = RecurringReminder(
