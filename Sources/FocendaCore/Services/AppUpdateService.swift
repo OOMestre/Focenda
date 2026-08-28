@@ -799,7 +799,6 @@ public final class AppUpdateInstaller: AppUpdateInstalling {
         try? fileManager.removeItem(at: temporaryDirectory)
     }
 
-<<<<<<< HEAD
     private struct ArchiveMetadata {
         let entryCount: UInt64
         let uncompressedBytes: UInt64
