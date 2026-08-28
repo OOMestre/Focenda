@@ -574,7 +574,7 @@ public struct BookmarksView: View {
                         .lineLimit(1)
                 }
             }
-            .foregroundStyle(.white)
+            .foregroundStyle(AppTheme.textOnAccent)
             .padding(.horizontal, usesIconOnlyLabel ? 8 : 12)
             .padding(.vertical, 6)
             .background(AppTheme.deepFocus)

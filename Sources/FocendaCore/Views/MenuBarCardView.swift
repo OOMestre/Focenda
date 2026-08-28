@@ -566,7 +566,7 @@ public struct MenuBarCardView: View {
             } label: {
                 Image(systemName: timerVM.status == .running ? "pause.fill" : "play.fill")
                     .font(.system(size: 16, weight: .bold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(AppTheme.textOnAccent)
                     .frame(width: 44, height: 44)
             }
             .buttonStyle(.borderedProminent)
@@ -1087,7 +1087,7 @@ public struct MenuBarCardView: View {
                 } label: {
                     Image(systemName: "plus")
                         .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(AppTheme.textOnAccent)
                         .frame(width: 30, height: 30)
                         .background(
                             Circle()

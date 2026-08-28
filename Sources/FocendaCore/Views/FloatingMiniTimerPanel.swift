@@ -221,7 +221,7 @@ public struct FloatingControlCenterView: View {
                 } label: {
                     Image(systemName: timerVM.status == .running ? "pause.fill" : "play.fill")
                         .font(.system(size: 11, weight: .bold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(AppTheme.textOnAccent)
                         .frame(width: 28, height: 28)
                         .background(
                             Circle()
@@ -371,7 +371,7 @@ public struct FloatingControlCenterView: View {
                 } label: {
                     Image(systemName: timerVM.status == .running ? "pause.fill" : "play.fill")
                         .font(.system(size: 15, weight: .bold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(AppTheme.textOnAccent)
                         .frame(width: 40, height: 40)
                         .background(Circle().fill(AppTheme.accent))
                 }
@@ -447,7 +447,7 @@ public struct FloatingControlCenterView: View {
                         .font(.caption.bold())
                         .padding(6)
                         .background(AppTheme.accent)
-                        .foregroundStyle(.white)
+                        .foregroundStyle(AppTheme.textOnAccent)
                         .clipShape(Circle())
                 }
                 .buttonStyle(.plain)

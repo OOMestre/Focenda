@@ -91,7 +91,7 @@ public struct SidebarView: View {
                 } label: {
                     Image(systemName: timerVM.status == .running ? "pause.fill" : "play.fill")
                         .font(.system(size: 10, weight: .bold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(AppTheme.textOnAccent)
                         .frame(width: 26, height: 26)
                         .background(
                             Circle()

@@ -18,7 +18,7 @@ public enum AppThemeOption: String, CaseIterable, Identifiable, Codable {
         case .zenCalm:
             return "Warm linen / cream paper with charcoal typography."
         case .obsidianMinimal:
-            return "Quiet matte obsidian charcoal (#18181B) with warm subtle borders."
+            return "Quiet matte obsidian charcoal (#18181B) with crisp mascot white accents."
         case .warmSandstone:
             return "Earthy warm neutral palette with sunlit accents."
         case .nordicFrost:
@@ -54,8 +54,8 @@ public enum AppThemeOption: String, CaseIterable, Identifiable, Codable {
             return [
                 Color(red: 0.094, green: 0.094, blue: 0.106), // #18181B obsidian
                 Color(red: 0.133, green: 0.133, blue: 0.149), // card
-                Color(red: 0.420, green: 0.557, blue: 0.490), // sage accent
-                Color(red: 0.957, green: 0.957, blue: 0.965), // light text
+                Color(red: 0.957, green: 0.957, blue: 0.965), // crisp mascot white accent
+                Color(red: 0.631, green: 0.631, blue: 0.667), // silver secondary
                 Color(red: 0.180, green: 0.180, blue: 0.212)  // border
             ]
         case .warmSandstone:
@@ -184,11 +184,11 @@ public enum AppTheme {
 
     // MARK: - Focus Mode Colors (Calm, Sophisticated & Organic)
 
-    /// Deep Focus: Calm Forest Slate / Deep Warm Slate
+    /// Deep Focus: Calm Forest Slate / Mascot Off-White
     public static var deepFocus: Color {
         dynamicThemeColor(
             zenLight: (0.204, 0.306, 0.255, 1.0),
-            obsidianDark: (0.420, 0.557, 0.490, 1.0),
+            obsidianDark: (0.957, 0.957, 0.965, 1.0), // Crisp Mascot Off-White
             sandstoneLight: (0.612, 0.388, 0.188, 1.0),
             sandstoneDark: (0.780, 0.533, 0.314, 1.0),
             nordicLight: (0.231, 0.431, 0.549, 1.0),
@@ -198,11 +198,11 @@ public enum AppTheme {
         )
     }
 
-    /// Short Break: Soft Sage / Matcha
+    /// Short Break: Soft Sage / Cool Slate Silver
     public static var shortBreak: Color {
         dynamicThemeColor(
             zenLight: (0.302, 0.416, 0.325, 1.0),
-            obsidianDark: (0.494, 0.624, 0.522, 1.0),
+            obsidianDark: (0.700, 0.740, 0.800, 1.0), // Cool Slate Silver
             sandstoneLight: (0.478, 0.522, 0.314, 1.0),
             sandstoneDark: (0.620, 0.659, 0.447, 1.0),
             nordicLight: (0.294, 0.518, 0.467, 1.0),
@@ -378,13 +378,27 @@ public enum AppTheme {
     public static var accent: Color {
         dynamicThemeColor(
             zenLight: (0.204, 0.306, 0.255, 1.0), // Calm Sage Forest (#344E41)
-            obsidianDark: (0.420, 0.557, 0.490, 1.0), // Calm Sage (#6B8E7D)
+            obsidianDark: (0.957, 0.957, 0.965, 1.0), // Crisp Mascot Off-White (#F4F4F6)
             sandstoneLight: (0.722, 0.451, 0.200, 1.0), // Warm Sandstone Amber
             sandstoneDark: (0.851, 0.580, 0.333, 1.0),
             nordicLight: (0.231, 0.431, 0.549, 1.0), // Arctic Muted Blue
             nordicDark: (0.365, 0.588, 0.722, 1.0),
             matchaLight: (0.180, 0.357, 0.239, 1.0), // Evergreen
             matchaDark: (0.322, 0.600, 0.431, 1.0)
+        )
+    }
+
+    /// Adaptive text / icon foreground color on top of Accent or filled Primary buttons
+    public static var textOnAccent: Color {
+        dynamicThemeColor(
+            zenLight: (1.000, 1.000, 1.000, 1.0), // White text on dark green accent
+            obsidianDark: (0.094, 0.094, 0.106, 1.0), // Deep obsidian charcoal on mascot white accent
+            sandstoneLight: (1.000, 1.000, 1.000, 1.0),
+            sandstoneDark: (0.094, 0.094, 0.106, 1.0),
+            nordicLight: (1.000, 1.000, 1.000, 1.0),
+            nordicDark: (0.078, 0.094, 0.114, 1.0),
+            matchaLight: (1.000, 1.000, 1.000, 1.0),
+            matchaDark: (0.075, 0.102, 0.082, 1.0)
         )
     }
 
@@ -434,7 +448,7 @@ public enum AppTheme {
     public static var riverSlate: Color {
         dynamicThemeColor(
             zenLight: (0.329, 0.435, 0.490, 1.0),
-            obsidianDark: (0.518, 0.635, 0.698, 1.0),
+            obsidianDark: (0.580, 0.650, 0.720, 1.0),
             sandstoneLight: (0.345, 0.459, 0.522, 1.0),
             sandstoneDark: (0.490, 0.608, 0.667, 1.0),
             nordicLight: (0.231, 0.431, 0.549, 1.0),

@@ -137,7 +137,7 @@ private struct ModeSelectorButton: View {
             )
             .foregroundStyle(
                 isSelected
-                    ? .white
+                    ? AppTheme.textOnAccent
                     : (isHovered ? AppTheme.textPrimary : AppTheme.textSecondary)
             )
             .clipShape(Capsule())
@@ -173,7 +173,7 @@ private struct PrimaryPlayPauseButton: View {
         Button(action: action) {
             Image(systemName: isRunning ? "pause.fill" : "play.fill")
                 .font(.system(size: 24, weight: .bold))
-                .foregroundStyle(.white)
+                .foregroundStyle(AppTheme.textOnAccent)
                 .frame(width: 68, height: 68)
                 .background(
                     Circle()

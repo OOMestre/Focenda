@@ -86,11 +86,22 @@ final class AppThemeTests: XCTestCase {
             XCTAssertNotNil(AppTheme.textSecondary)
             XCTAssertNotNil(AppTheme.textTertiary)
             XCTAssertNotNil(AppTheme.accent)
+            XCTAssertNotNil(AppTheme.textOnAccent)
             XCTAssertNotNil(AppTheme.sandstone)
             XCTAssertNotNil(AppTheme.success)
             XCTAssertNotNil(AppTheme.terracotta)
             XCTAssertNotNil(AppTheme.riverSlate)
         }
+    }
+
+    func testObsidianMinimalMascotPalette() {
+        AppTheme.current = .obsidianMinimal
+        XCTAssertEqual(AppThemeOption.obsidianMinimal.subtitle, "Quiet matte obsidian charcoal (#18181B) with crisp mascot white accents.")
+        XCTAssertEqual(AppThemeOption.obsidianMinimal.previewSwatches.count, 5)
+        XCTAssertNotNil(AppTheme.deepFocus)
+        XCTAssertNotNil(AppTheme.shortBreak)
+        XCTAssertNotNil(AppTheme.accent)
+        XCTAssertNotNil(AppTheme.textOnAccent)
     }
 
     func testFocusModeThemeColors() {

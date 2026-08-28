@@ -378,7 +378,7 @@ public struct CalendarView: View {
                         .font(.system(size: 12, weight: day.isToday ? .heavy : (day.isSelected ? .bold : .medium), design: .rounded))
                         .foregroundStyle(
                             day.isSelected
-                                ? .white
+                                ? AppTheme.textOnAccent
                                 : (day.isCurrentMonth ? AppTheme.textPrimary : AppTheme.textTertiary.opacity(0.5))
                         )
 
@@ -393,11 +393,11 @@ public struct CalendarView: View {
                     if day.hasRecurringReminders {
                         Image(systemName: "repeat")
                             .font(.system(size: 7, weight: .bold))
-                            .foregroundStyle(day.isSelected ? .white.opacity(0.9) : AppTheme.accent)
+                            .foregroundStyle(day.isSelected ? AppTheme.textOnAccent.opacity(0.9) : AppTheme.accent)
                     } else if day.hasReminders {
                         Image(systemName: "bell.fill")
                             .font(.system(size: 7))
-                            .foregroundStyle(day.isSelected ? .white.opacity(0.9) : AppTheme.sandstone)
+                            .foregroundStyle(day.isSelected ? AppTheme.textOnAccent.opacity(0.9) : AppTheme.sandstone)
                     }
                 }
 
@@ -1517,7 +1517,7 @@ public struct CalendarView: View {
                 } label: {
                     Image(systemName: "plus")
                         .font(.system(size: 10, weight: .bold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(AppTheme.textOnAccent)
                         .frame(width: 24, height: 24)
                         .background(AppTheme.accent)
                         .clipShape(Circle())

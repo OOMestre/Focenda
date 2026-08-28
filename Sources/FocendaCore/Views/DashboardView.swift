@@ -198,7 +198,7 @@ public struct DashboardView: View {
                 } label: {
                     Image(systemName: timerVM.status == .running ? "pause.fill" : "play.fill")
                         .font(.title3.bold())
-                        .foregroundStyle(.white)
+                        .foregroundStyle(AppTheme.textOnAccent)
                         .frame(width: 44, height: 44)
                         .background(
                             Circle()
