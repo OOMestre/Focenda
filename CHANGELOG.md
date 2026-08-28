@@ -11,8 +11,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 - **Global Shortcuts Settings & Custom Presets:** Added a dedicated Keyboard Shortcuts preferences section in Settings with Apple-style keycap badges, scheme presets (Standard `⌥ ⌘`, Power User `⌃ ⌥ ⌘`, Compact `⌃ ⌥`), and audio feedback options.
 - **macOS Menu Bar Focus Commands:** Integrated a native `CommandMenu("Focus")` with standard keyboard shortcuts in the macOS menu bar.
 
-### Fixed & Changed
 - **Calendar Day Preview:** Clicking a calendar date now pins its preview while the cursor moves to the quick actions, and the preview has been simplified to reduce visual density.
+- **Simplified Scratchpad Notes:** Removed the generic color categories and their filter controls. The Scratchpad now starts empty, allows the final note to be deleted, uses neutral untitled notes, and migrates old category placeholders without losing user-written content.
 
 ---
 
