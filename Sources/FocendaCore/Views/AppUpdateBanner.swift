@@ -21,8 +21,11 @@ public struct AppUpdateBanner: View {
     public var body: some View {
         HStack(spacing: 12) {
             Image(systemName: "arrow.down.circle.fill")
-                .font(.system(size: 20, weight: .semibold))
-                .foregroundStyle(AppTheme.accent)
+                .font(.system(size: 16, weight: .bold))
+                .foregroundStyle(AppTheme.textOnAccent)
+                .frame(width: 34, height: 34)
+                .background(AppTheme.accent)
+                .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
 
             VStack(alignment: .leading, spacing: 2) {
                 Text("Focenda update available")
@@ -39,18 +42,25 @@ public struct AppUpdateBanner: View {
             Button {
                 onInstall()
             } label: {
-                if isInstalling {
-                    ProgressView()
-                        .controlSize(.small)
-                        .frame(width: 70)
-                } else {
-                    Text("Update Now")
-                        .font(.system(size: 11, weight: .semibold))
-                        .frame(width: 70)
+                Group {
+                    if isInstalling {
+                        ProgressView()
+                            .controlSize(.small)
+                            .tint(AppTheme.textOnAccent)
+                            .frame(minWidth: 86)
+                    } else {
+                        Text("Update Now")
+                            .font(.system(size: 11, weight: .semibold))
+                            .frame(minWidth: 86)
+                    }
                 }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 7)
+                .foregroundStyle(AppTheme.textOnAccent)
+                .background(AppTheme.accent)
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
             }
-            .buttonStyle(.borderedProminent)
-            .tint(AppTheme.accent)
+            .buttonStyle(.plain)
             .disabled(isInstalling)
 
             Button {
@@ -58,7 +68,7 @@ public struct AppUpdateBanner: View {
             } label: {
                 Image(systemName: "xmark")
                     .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(AppTheme.textTertiary)
+                    .foregroundStyle(AppTheme.textSecondary)
                     .frame(width: 22, height: 22)
             }
             .buttonStyle(.plain)
@@ -66,15 +76,15 @@ public struct AppUpdateBanner: View {
             .help("Remind me later")
         }
         .padding(.horizontal, 14)
-        .padding(.vertical, 10)
+        .padding(.vertical, 12)
         .background(
-            VisualEffectBackground(material: .hudWindow, blendingMode: .behindWindow)
-                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(AppTheme.cardBackground)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .stroke(AppTheme.accent.opacity(0.45), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(AppTheme.accent.opacity(0.55), lineWidth: 1)
         )
-        .shadow(color: Color.black.opacity(0.18), radius: 10, x: 0, y: 4)
+        .shadow(color: Color.black.opacity(0.14), radius: 12, x: 0, y: 4)
     }
 }

@@ -55,168 +55,177 @@ public struct MainView: View {
             .navigationSplitViewColumnWidth(min: 220, ideal: 240, max: 300)
             .background(AppTheme.sidebarBackground)
         } detail: {
-            ZStack(alignment: .top) {
-                Group {
-                    switch appState.selectedTab {
-                    case .dashboard:
-                        DashboardView(
-                            appState: appState,
-                            timerVM: timerVM,
-                            taskVM: taskVM
-                        )
-                    case .timer:
-                        FocusTimerView(timerVM: timerVM)
-                    case .kanban:
-                        KanbanBoardView(taskVM: taskVM)
-                    case .calendar:
-                        CalendarView(
-                            timerVM: timerVM,
-                            taskVM: taskVM,
-                            recurringReminderVM: recurringReminderVM
-                        )
-                    case .reminders:
-                        RemindersView(
-                            recurringReminderVM: recurringReminderVM,
-                            taskVM: taskVM
-                        )
-                    case .scratchpad:
-                        ScratchpadView(viewModel: scratchpadVM)
-                    case .bookmarks:
-                        BookmarksView(viewModel: bookmarkVM)
-                    case .profiles:
-                        ProductivityProfilesView(viewModel: productivityProfileVM)
-                    case .settings:
-                        SettingsView(
-                            appState: appState,
-                            timerVM: timerVM,
-                            updateManager: updateManager
-                        )
-                    case .support:
-                        SupportView()
-                    }
-                }
-                .background(AppTheme.background)
-
-                VStack(alignment: .trailing, spacing: 10) {
-                    if let update = updateManager.availableUpdate {
+            VStack(spacing: 0) {
+                // Keep update notices in the layout so they never cover page content.
+                if let update = updateManager.availableUpdate {
+                    HStack {
+                        Spacer(minLength: 0)
                         AppUpdateBanner(
                             update: update,
                             isInstalling: updateManager.status == .installing,
                             onInstall: updateManager.installAvailableUpdate,
                             onDismiss: updateManager.dismissAvailableUpdate
                         )
+                        .frame(maxWidth: 760)
+                    }
+                    .padding(.top, 12)
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 12)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                }
+
+                ZStack(alignment: .top) {
+                    Group {
+                        switch appState.selectedTab {
+                        case .dashboard:
+                            DashboardView(
+                                appState: appState,
+                                timerVM: timerVM,
+                                taskVM: taskVM
+                            )
+                        case .timer:
+                            FocusTimerView(timerVM: timerVM)
+                        case .kanban:
+                            KanbanBoardView(taskVM: taskVM)
+                        case .calendar:
+                            CalendarView(
+                                timerVM: timerVM,
+                                taskVM: taskVM,
+                                recurringReminderVM: recurringReminderVM
+                            )
+                        case .reminders:
+                            RemindersView(
+                                recurringReminderVM: recurringReminderVM,
+                                taskVM: taskVM
+                            )
+                        case .scratchpad:
+                            ScratchpadView(viewModel: scratchpadVM)
+                        case .bookmarks:
+                            BookmarksView(viewModel: bookmarkVM)
+                        case .profiles:
+                            ProductivityProfilesView(viewModel: productivityProfileVM)
+                        case .settings:
+                            SettingsView(
+                                appState: appState,
+                                timerVM: timerVM,
+                                updateManager: updateManager
+                            )
+                        case .support:
+                            SupportView()
+                        }
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(AppTheme.background)
+
+                    // Floating In-App Reminder Toast Banner
+                    if let reminderAlert = activeInAppReminder {
+                        HStack(spacing: 12) {
+                            HStack(spacing: 5) {
+                                Image(systemName: "bell.badge.fill")
+                                    .font(.system(size: 11, weight: .bold))
+                                Text("Reminder")
+                                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                            }
+                            .foregroundStyle(AppTheme.accent)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(AppTheme.accent.opacity(0.15))
+                            .clipShape(Capsule())
+
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(reminderAlert.title)
+                                    .font(.system(size: 13, weight: .bold))
+                                    .foregroundStyle(AppTheme.textPrimary)
+                                    .lineLimit(1)
+                                Text("\(reminderAlert.subtitle) • \(reminderAlert.time)")
+                                    .font(.system(size: 11))
+                                    .foregroundStyle(AppTheme.textSecondary)
+                                    .lineLimit(1)
+                            }
+
+                            Spacer()
+
+                            Button {
+                                NotificationManager.shared.snoozeReminder(
+                                    title: reminderAlert.title,
+                                    subtitle: reminderAlert.subtitle,
+                                    notes: "",
+                                    minutes: 5
+                                )
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+                                    activeInAppReminder = nil
+                                }
+                            } label: {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "clock.arrow.circlepath")
+                                        .font(.system(size: 10))
+                                    Text("Snooze 5m")
+                                        .font(.system(size: 11, weight: .semibold))
+                                }
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(AppTheme.cardBackgroundSubtle)
+                                .foregroundStyle(AppTheme.textPrimary)
+                                .clipShape(RoundedRectangle(cornerRadius: 6))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 6)
+                                        .stroke(AppTheme.subtleBorder, lineWidth: 1)
+                                )
+                            }
+                            .buttonStyle(.plain)
+
+                            Button {
+                                NotificationManager.shared.stopActiveSound()
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+                                    activeInAppReminder = nil
+                                }
+                            } label: {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "checkmark")
+                                        .font(.system(size: 10, weight: .bold))
+                                    Text("Done")
+                                        .font(.system(size: 11, weight: .bold))
+                                }
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 4)
+                                .background(AppTheme.accent)
+                                .foregroundStyle(AppTheme.textOnAccent)
+                                .clipShape(RoundedRectangle(cornerRadius: 6))
+                            }
+                            .buttonStyle(.plain)
+
+                            Button {
+                                NotificationManager.shared.stopActiveSound()
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+                                    activeInAppReminder = nil
+                                }
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .font(.system(size: 14))
+                                    .foregroundStyle(AppTheme.textTertiary)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
+                        .background(
+                            VisualEffectBackground(material: .hudWindow, blendingMode: .behindWindow)
+                                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .stroke(AppTheme.border, lineWidth: 1.0)
+                        )
+                        .shadow(color: Color.black.opacity(0.18), radius: 10, x: 0, y: 4)
                         .padding(.top, 10)
                         .padding(.horizontal, 20)
                         .transition(.move(edge: .top).combined(with: .opacity))
                     }
-
-                    // Floating In-App Reminder Toast Banner
-                    if let reminderAlert = activeInAppReminder {
-                    HStack(spacing: 12) {
-                        HStack(spacing: 5) {
-                            Image(systemName: "bell.badge.fill")
-                                .font(.system(size: 11, weight: .bold))
-                            Text("Reminder")
-                                .font(.system(size: 11, weight: .bold, design: .rounded))
-                        }
-                        .foregroundStyle(AppTheme.accent)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(AppTheme.accent.opacity(0.15))
-                        .clipShape(Capsule())
-
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(reminderAlert.title)
-                                .font(.system(size: 13, weight: .bold))
-                                .foregroundStyle(AppTheme.textPrimary)
-                                .lineLimit(1)
-                            Text("\(reminderAlert.subtitle) • \(reminderAlert.time)")
-                                .font(.system(size: 11))
-                                .foregroundStyle(AppTheme.textSecondary)
-                                .lineLimit(1)
-                        }
-
-                        Spacer()
-
-                        Button {
-                            NotificationManager.shared.snoozeReminder(
-                                title: reminderAlert.title,
-                                subtitle: reminderAlert.subtitle,
-                                notes: "",
-                                minutes: 5
-                            )
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
-                                activeInAppReminder = nil
-                            }
-                        } label: {
-                            HStack(spacing: 4) {
-                                Image(systemName: "clock.arrow.circlepath")
-                                    .font(.system(size: 10))
-                                Text("Snooze 5m")
-                                    .font(.system(size: 11, weight: .semibold))
-                            }
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(AppTheme.cardBackgroundSubtle)
-                            .foregroundStyle(AppTheme.textPrimary)
-                            .clipShape(RoundedRectangle(cornerRadius: 6))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 6)
-                                    .stroke(AppTheme.subtleBorder, lineWidth: 1)
-                            )
-                        }
-                        .buttonStyle(.plain)
-
-                        Button {
-                            NotificationManager.shared.stopActiveSound()
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
-                                activeInAppReminder = nil
-                            }
-                        } label: {
-                            HStack(spacing: 4) {
-                                Image(systemName: "checkmark")
-                                    .font(.system(size: 10, weight: .bold))
-                            Text("Done")
-                                .font(.system(size: 11, weight: .bold))
-                            }
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 4)
-                            .background(AppTheme.accent)
-                            .foregroundStyle(AppTheme.textOnAccent)
-                            .clipShape(RoundedRectangle(cornerRadius: 6))
-                        }
-                        .buttonStyle(.plain)
-
-                        Button {
-                            NotificationManager.shared.stopActiveSound()
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
-                                activeInAppReminder = nil
-                            }
-                        } label: {
-                            Image(systemName: "xmark.circle.fill")
-                                .font(.system(size: 14))
-                                .foregroundStyle(AppTheme.textTertiary)
-                        }
-                        .buttonStyle(.plain)
-                    }
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 8)
-                    .background(
-                        VisualEffectBackground(material: .hudWindow, blendingMode: .behindWindow)
-                            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .stroke(AppTheme.border, lineWidth: 1.0)
-                    )
-                    .shadow(color: Color.black.opacity(0.18), radius: 10, x: 0, y: 4)
-                    .padding(.top, 10)
-                    .padding(.horizontal, 20)
-                    .transition(.move(edge: .top).combined(with: .opacity))
-                    }
                 }
-                .frame(maxWidth: .infinity, alignment: .topTrailing)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
+            .background(AppTheme.background)
         }
         .navigationSplitViewStyle(.balanced)
         .frame(
