@@ -178,6 +178,110 @@ final class AppUpdateTests: XCTestCase {
         XCTAssertEqual(secureStore.string(forKey: AppUpdatePreferences.pendingUpdateTagKey), "v1.2.0")
     }
 
+    func testUpdateGuideGroupsReleaseNotesAndSkipsInstallationDetails() throws {
+        let asset = AppUpdateAsset(
+            name: "Focenda-macOS.zip",
+            downloadURL: try XCTUnwrap(URL(string: "https://github.com/OOMestre/Focenda/releases/download/v1.2.0/Focenda-macOS.zip"))
+        )
+        let release = AppUpdateRelease(
+            tagName: "v1.2.0",
+            name: "A calmer way to focus",
+            body: """
+            # Focenda v1.2.0 Release Notes
+
+            - **Release Date:** `2026-08-28`
+            - **Target OS:** macOS 14.0+
+
+            ---
+
+            ## What's Changed
+
+            ### Enhancements & Features
+            - **Focus history:** See your completed sessions in the dashboard. (`abc123`)
+            - Added a [quick calendar preview](https://example.com) for each day.
+
+            ### Bug Fixes & Stability
+            - Fixed reminder delivery when the app is already open. (`def456`)
+
+            ---
+
+            ### Installation & Verification
+            1. Download the archive.
+            2. Run the test suite.
+
+            ### Full Changelog: `v1.1.0...v1.2.0`
+            """,
+            assets: [asset]
+        )
+        let update = try XCTUnwrap(AppUpdate(release: release, asset: asset))
+
+        let guide = AppUpdateGuide(update: update)
+
+        XCTAssertEqual(guide.title, "A calmer way to focus")
+        XCTAssertEqual(guide.sections.map(\.title), ["Enhancements & Features", "Bug Fixes & Stability"])
+        XCTAssertEqual(guide.sections[0].items, [
+            "Focus history: See your completed sessions in the dashboard.",
+            "Added a quick calendar preview for each day."
+        ])
+        XCTAssertEqual(guide.sections[1].items, [
+            "Fixed reminder delivery when the app is already open."
+        ])
+    }
+
+    @MainActor
+    func testUpdateManagerShowsGuideOnlyAfterMatchingVersionRelaunches() async throws {
+        let suiteName = "Focenda.AppUpdateGuideTests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let secureStore = SecureStore(defaults: defaults)
+        let asset = AppUpdateAsset(
+            name: "Focenda-macOS.zip",
+            downloadURL: try XCTUnwrap(URL(string: "https://github.com/OOMestre/Focenda/releases/download/v1.2.0/Focenda-macOS.zip"))
+        )
+        let release = AppUpdateRelease(
+            tagName: "v1.2.0",
+            body: """
+            ## What's Changed
+            ### New
+            - A guided tour appears after updating.
+            """,
+            assets: [asset]
+        )
+        let update = try XCTUnwrap(AppUpdate(release: release, asset: asset))
+        let provider = StubUpdateProvider(update: update)
+        let manager = AppUpdateManager(
+            provider: provider,
+            currentReleaseIdentifier: "1.0.0",
+            secureStore: secureStore
+        )
+
+        XCTAssertNil(manager.completedUpdateGuide)
+        _ = await manager.checkForUpdatesNow()
+        manager.installAvailableUpdate()
+
+        for _ in 0..<100 where manager.status.isBusy {
+            await Task.yield()
+        }
+
+        XCTAssertEqual(manager.status, .idle)
+        XCTAssertNil(manager.completedUpdateGuide)
+
+        let relaunchedManager = AppUpdateManager(
+            provider: provider,
+            currentReleaseIdentifier: "v1.2.0",
+            secureStore: secureStore
+        )
+        XCTAssertEqual(relaunchedManager.completedUpdateGuide?.releaseTag, "v1.2.0")
+        XCTAssertEqual(relaunchedManager.completedUpdateGuide?.sections.first?.items, [
+            "A guided tour appears after updating."
+        ])
+
+        relaunchedManager.dismissCompletedUpdateGuide()
+        XCTAssertNil(relaunchedManager.completedUpdateGuide)
+        XCTAssertNil(secureStore.value(AppUpdateGuide.self, forKey: AppUpdatePreferences.pendingUpdateGuideKey))
+    }
+
     func testInstallerReplacesOnlyTheCompatibleAppBundle() throws {
         let fileManager = FileManager.default
         let root = fileManager.temporaryDirectory.appendingPathComponent("FocendaInstallerTests-\(UUID().uuidString)", isDirectory: true)

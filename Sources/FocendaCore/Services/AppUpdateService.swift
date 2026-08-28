@@ -243,6 +243,7 @@ public enum AppUpdatePreferences {
     public static let lastAutomaticCheckDateKey = "appUpdateLastAutomaticCheckDate"
     public static let lastNotifiedVersionKey = "appUpdateLastNotifiedVersion"
     public static let pendingUpdateTagKey = "appUpdatePendingTag"
+    public static let pendingUpdateGuideKey = "appUpdatePendingGuide"
 }
 
 public enum AppRuntime {
@@ -453,6 +454,7 @@ public final class AppUpdateManager {
     public private(set) var availableUpdate: AppUpdate?
     public private(set) var lastCheckedAt: Date?
     public private(set) var errorMessage: String?
+    public private(set) var completedUpdateGuide: AppUpdateGuide?
 
     private let provider: AppUpdateProviding
     private let currentReleaseIdentifier: String
@@ -472,9 +474,14 @@ public final class AppUpdateManager {
     ) {
         self.provider = provider
         self.currentReleaseIdentifier = currentReleaseIdentifier
-        self.secureStore = secureStore ?? SecureStore(defaults: userDefaults)
+        let resolvedSecureStore = secureStore ?? SecureStore(defaults: userDefaults)
+        self.secureStore = resolvedSecureStore
         self.notificationManager = notificationManager
-        self.lastCheckedAt = self.secureStore.date(forKey: AppUpdatePreferences.lastCheckDateKey)
+        self.lastCheckedAt = resolvedSecureStore.date(forKey: AppUpdatePreferences.lastCheckDateKey)
+        self.completedUpdateGuide = Self.loadCompletedUpdateGuide(
+            currentReleaseIdentifier: currentReleaseIdentifier,
+            secureStore: resolvedSecureStore
+        )
     }
 
     /// Starts a manual check without blocking the Settings view.
@@ -529,6 +536,10 @@ public final class AppUpdateManager {
         guard let update = availableUpdate, !status.isBusy else { return }
 
         checkTask?.cancel()
+        secureStore.set(
+            AppUpdateGuide(update: update),
+            forKey: AppUpdatePreferences.pendingUpdateGuideKey
+        )
         status = .installing
         errorMessage = nil
 
@@ -541,12 +552,20 @@ public final class AppUpdateManager {
                 self.status = .idle
                 self.secureStore.removeObject(forKey: AppUpdatePreferences.pendingUpdateTagKey)
             } catch is CancellationError {
+                self.secureStore.removeObject(forKey: AppUpdatePreferences.pendingUpdateGuideKey)
                 self.status = .available
             } catch {
+                self.secureStore.removeObject(forKey: AppUpdatePreferences.pendingUpdateGuideKey)
                 self.errorMessage = error.localizedDescription
                 self.status = .failed(error.localizedDescription)
             }
         }
+    }
+
+    /// Closes the post-update guide and prevents it from appearing again.
+    public func dismissCompletedUpdateGuide() {
+        completedUpdateGuide = nil
+        secureStore.removeObject(forKey: AppUpdatePreferences.pendingUpdateGuideKey)
     }
 
     public func dismissAvailableUpdate() {
@@ -604,6 +623,36 @@ public final class AppUpdateManager {
 
         notificationManager.notifyUpdateAvailable(version: update.version.description)
         secureStore.set(update.release.tagName, forKey: AppUpdatePreferences.lastNotifiedVersionKey)
+    }
+
+    private static func loadCompletedUpdateGuide(
+        currentReleaseIdentifier: String,
+        secureStore: SecureStore
+    ) -> AppUpdateGuide? {
+        guard let guide = secureStore.value(
+            AppUpdateGuide.self,
+            forKey: AppUpdatePreferences.pendingUpdateGuideKey
+        ) else {
+            return nil
+        }
+
+        guard let installedVersion = AppVersion(currentReleaseIdentifier),
+              let guideVersion = AppVersion(guide.releaseTag) else {
+            secureStore.removeObject(forKey: AppUpdatePreferences.pendingUpdateGuideKey)
+            return nil
+        }
+
+        if installedVersion == guideVersion {
+            return guide
+        }
+
+        // A newer manual update may have superseded this guide. Do not show
+        // notes for an older release, but keep a guide for a not-yet-installed
+        // update so an in-progress relaunch can still complete normally.
+        if installedVersion > guideVersion {
+            secureStore.removeObject(forKey: AppUpdatePreferences.pendingUpdateGuideKey)
+        }
+        return nil
     }
 
     private var isAutomaticCheckDue: Bool {

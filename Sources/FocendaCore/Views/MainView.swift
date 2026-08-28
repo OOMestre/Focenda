@@ -20,6 +20,7 @@ public struct MainView: View {
     var updateManager: AppUpdateManager
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
     @State private var activeInAppReminder: (title: String, subtitle: String, time: String)?
+    @State private var isShowingUpdateGuide = false
 
     public init(
         appState: AppState = AppState(),
@@ -226,6 +227,22 @@ public struct MainView: View {
         )
         .background(AppTheme.background)
         .preferredColorScheme(appState.selectedTheme.colorScheme)
+        .onAppear {
+            if updateManager.completedUpdateGuide != nil {
+                isShowingUpdateGuide = true
+            }
+        }
+        .sheet(isPresented: $isShowingUpdateGuide, onDismiss: {
+            updateManager.dismissCompletedUpdateGuide()
+        }) {
+            if let guide = updateManager.completedUpdateGuide {
+                AppUpdateGuideView(guide: guide) {
+                    isShowingUpdateGuide = false
+                }
+            } else {
+                EmptyView()
+            }
+        }
         .onReceive(NotificationCenter.default.publisher(for: NotificationManager.reminderAlertBannerNotification)) { notif in
             let title = notif.userInfo?["title"] as? String ?? "Reminder"
             let subtitle = notif.userInfo?["subtitle"] as? String ?? "Focenda Alert"
