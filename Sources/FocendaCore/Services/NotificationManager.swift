@@ -36,6 +36,8 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
     public static let reminderSnoozedNotification = Notification.Name("FocendaReminderSnoozed")
     public static let reminderAlertDismissedNotification = Notification.Name("FocendaReminderAlertDismissed")
     public static let openSettingsNotification = Notification.Name("FocendaOpenSettings")
+    public static let openFocusTabNotification = Notification.Name("FocendaOpenFocusTab")
+    public static let standardNotificationSoundName = ReminderSoundType.defaultSound.rawValue
 
     private let center: UNUserNotificationCenter?
     public private(set) var lastNotifiedMode: FocusMode?
@@ -267,11 +269,36 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
 
     // MARK: - Focus Session Completed
 
-    /// Posts a native macOS banner alert and plays a rich chime sequence when a focus session or break completes
+    /// Presents the focus completion alert without activating Focenda in front of the user's current app.
     public func notifySessionCompleted(mode: FocusMode) {
         self.lastNotifiedMode = mode
 
-        playRichAlertChime(soundName: "Hero")
+        let soundEnabled = UserDefaults.standard.object(forKey: "soundEnabled") == nil
+            ? true
+            : UserDefaults.standard.bool(forKey: "soundEnabled")
+        if soundEnabled {
+            // The HUD owns the completion alert, so play the shared sound exactly once.
+            playRichAlertChime(soundName: Self.standardNotificationSoundName)
+        }
+
+        #if canImport(AppKit)
+        DispatchQueue.main.async { [weak self] in
+            ReminderAlertHUDPanel.shared.show(
+                title: Self.notificationTitle(for: mode),
+                subtitle: "Pomodoro • \(mode.rawValue)",
+                notes: Self.notificationBody(for: mode),
+                type: "pomodoro",
+                timeoutSeconds: 25.0,
+                onComplete: {
+                    self?.stopActiveSound()
+                },
+                onOpenApp: {
+                    self?.stopActiveSound()
+                    NotificationCenter.default.post(name: Self.openFocusTabNotification, object: mode)
+                }
+            )
+        }
+        #endif
 
         guard let center = center else {
             return
@@ -280,7 +307,8 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
         let content = UNMutableNotificationContent()
         content.title = Self.notificationTitle(for: mode)
         content.body = Self.notificationBody(for: mode)
-        content.sound = .default
+        // Avoid a second system sound. The shared Hero chime above is the only completion sound.
+        content.sound = nil
 
         let request = UNNotificationRequest(
             identifier: UUID().uuidString,

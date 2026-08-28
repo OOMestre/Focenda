@@ -40,7 +40,8 @@ struct FocendaApp: App {
             .onReceive(NotificationCenter.default.publisher(for: .focusShortcutTriggered)) { _ in
                 // Visual feedback or state synchronization handled reactively
             }
-            .onReceive(NotificationCenter.default.publisher(for: .focusSessionCompleted)) { _ in
+            .onReceive(NotificationCenter.default.publisher(for: NotificationManager.openFocusTabNotification)) { _ in
+                appState.selectedTab = .timer
                 NSApp.activate(ignoringOtherApps: true)
                 if let window = NSApp.windows.first(where: { $0.canBecomeKey && $0.isVisible }) ?? NSApp.windows.first {
                     window.makeKeyAndOrderFront(nil)

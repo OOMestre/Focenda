@@ -47,6 +47,7 @@ final class ReminderAlertHUDTests: XCTestCase {
         XCTAssertEqual(panel.currentTitle, "Team Standup")
         XCTAssertEqual(panel.currentSubtitle, "6:00 PM • Daily")
         XCTAssertEqual(panel.currentNotes, "Review progress and align on daily goals.")
+        XCTAssertEqual(panel.currentType, "recurring")
 
         // Verify callbacks directly
         let hudView = ReminderAlertHUDView(
@@ -100,6 +101,26 @@ final class ReminderAlertHUDTests: XCTestCase {
 
         view.onClose?()
         XCTAssertTrue(closeCalled)
+    }
+
+    func testFocusSessionCompletionShowsPomodoroHUD() {
+        let manager = NotificationManager()
+        let expectation = expectation(description: "Pomodoro completion HUD shown")
+
+        manager.notifySessionCompleted(mode: .work)
+
+        DispatchQueue.main.async {
+            let panel = ReminderAlertHUDPanel.shared
+            XCTAssertTrue(panel.isShowingAlert)
+            XCTAssertEqual(panel.currentType, "pomodoro")
+            XCTAssertEqual(panel.currentTitle, "Focus Session Completed")
+            XCTAssertTrue(panel.currentSubtitle.contains("Pomodoro"))
+            XCTAssertEqual(panel.currentNotes, "Great job! Time to take a well-deserved break.")
+            panel.dismiss()
+            expectation.fulfill()
+        }
+
+        wait(for: [expectation], timeout: 2.0)
     }
 
     func testNotificationManagerSnoozeReminder() {

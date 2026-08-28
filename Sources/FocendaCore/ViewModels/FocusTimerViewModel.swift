@@ -19,7 +19,9 @@ public final class FocusTimerViewModel {
     public var completedWorkSessionsCount: Int = 0
     public var completedSessions: [FocusSession] = []
     public var onSessionCompleted: ((FocusMode) -> Void)?
-    public var autoOpenOnCompletion: Bool = true
+    /// Optional explicit opt-in for callers that want to open Focenda after completion.
+    /// The app leaves this disabled so the completion HUD can notify without stealing focus.
+    public var autoOpenOnCompletion: Bool = false
 
 
     // Interval durations (in minutes)
@@ -158,7 +160,6 @@ public final class FocusTimerViewModel {
         }
 
         NotificationManager.shared.notifySessionCompleted(mode: finishedMode)
-        playCompletionSound()
 
         if autoOpenOnCompletion {
             bringAppToFront()
@@ -217,17 +218,6 @@ public final class FocusTimerViewModel {
         }
         totalDurationSeconds = durationMinutes * 60
         timeRemainingSeconds = totalDurationSeconds
-    }
-
-    private func playCompletionSound() {
-        let isRunningInTest = NSClassFromString("XCTestCase") != nil ||
-                              NSClassFromString("XCTest") != nil ||
-                              ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil ||
-                              ProcessInfo.processInfo.environment["XCTestBundlePath"] != nil ||
-                              ProcessInfo.processInfo.arguments.contains(where: { $0.contains("xctest") || $0.contains("test") })
-
-        guard !isRunningInTest else { return }
-        NSSound(named: "Glass")?.play()
     }
 
     deinit {
