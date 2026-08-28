@@ -88,7 +88,7 @@ public struct MenuBarCardView: View {
             .overlay(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .stroke(
-                        timerVM.currentMode.themeColor.opacity(isHovered ? 0.45 : 0.20),
+                        isHovered ? AppTheme.border : AppTheme.subtleBorder,
                         lineWidth: 1.0
                     )
             )
@@ -102,6 +102,7 @@ public struct MenuBarCardView: View {
             .opacity(isPresented ? 1.0 : 0.0)
             .animation(.spring(response: 0.28, dampingFraction: 0.75), value: isHovered)
             .animation(.spring(response: 0.32, dampingFraction: 0.76), value: isPresented)
+            .preferredColorScheme(appState?.selectedTheme.colorScheme ?? AppTheme.current.colorScheme)
             .onHover { hovering in
                 isHovered = hovering
             }
@@ -195,7 +196,7 @@ public struct MenuBarCardView: View {
                 HStack(spacing: 6) {
                     Image(systemName: "bell.badge.fill")
                         .font(.caption)
-                        .foregroundStyle(timerVM.currentMode.themeColor)
+                        .foregroundStyle(AppTheme.accent)
                     Text(alertMsg)
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(AppTheme.textPrimary)
@@ -206,7 +207,7 @@ public struct MenuBarCardView: View {
                 .padding(.vertical, 6)
                 .background(
                     RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(timerVM.currentMode.themeColor.opacity(0.15))
+                        .fill(AppTheme.accent.opacity(0.15))
                 )
                 .transition(.asymmetric(
                     insertion: .scale(scale: 0.95).combined(with: .opacity),
@@ -245,7 +246,7 @@ public struct MenuBarCardView: View {
         HStack(alignment: .center) {
             HStack(spacing: 6) {
                 Image(systemName: "timer")
-                    .foregroundStyle(timerVM.currentMode.themeColor)
+                    .foregroundStyle(AppTheme.accent)
                     .font(.headline)
                 Text("Focenda")
                     .font(.headline.bold())
@@ -263,8 +264,8 @@ public struct MenuBarCardView: View {
             }
             .padding(.horizontal, 8)
             .padding(.vertical, 3)
-            .background(timerVM.currentMode.themeColor.opacity(0.12))
-            .foregroundStyle(timerVM.currentMode.themeColor)
+            .background(AppTheme.accent.opacity(0.12))
+            .foregroundStyle(AppTheme.accent)
             .clipShape(Capsule())
         }
     }
@@ -340,7 +341,7 @@ public struct MenuBarCardView: View {
                         .frame(maxWidth: .infinity)
                         .background(
                             timerVM.currentMode == mode
-                                ? mode.themeColor
+                                ? AppTheme.accent
                                 : AppTheme.cardBackgroundSubtle
                         )
                         .foregroundStyle(
@@ -367,14 +368,14 @@ public struct MenuBarCardView: View {
         ZStack {
             Circle()
                 .stroke(
-                    timerVM.currentMode.themeColor.opacity(0.12),
+                    AppTheme.accent.opacity(0.15),
                     lineWidth: 9
                 )
 
             Circle()
                 .trim(from: 0.0, to: CGFloat(min(timerVM.progress, 1.0)))
                 .stroke(
-                    timerVM.currentMode.themeColor,
+                    AppTheme.accent,
                     style: StrokeStyle(lineWidth: 9, lineCap: .round, lineJoin: .round)
                 )
                 .rotationEffect(.degrees(-90))
@@ -388,7 +389,7 @@ public struct MenuBarCardView: View {
 
                 Text(statusText)
                     .font(.caption2.weight(.semibold))
-                    .foregroundStyle(timerVM.currentMode.themeColor)
+                    .foregroundStyle(AppTheme.accent)
             }
         }
         .frame(width: 124, height: 124)
@@ -481,7 +482,7 @@ public struct MenuBarCardView: View {
                 Circle()
                     .fill(
                         (timerVM.completedWorkSessionsCount % 4) > index
-                            ? timerVM.currentMode.themeColor
+                            ? AppTheme.accent
                             : AppTheme.border
                     )
                     .frame(width: 6, height: 6)
@@ -518,7 +519,7 @@ public struct MenuBarCardView: View {
                     .frame(width: 44, height: 44)
             }
             .buttonStyle(.borderedProminent)
-            .tint(timerVM.currentMode.themeColor)
+            .tint(AppTheme.accent)
             .clipShape(Circle())
             .shadow(color: Color.black.opacity(0.12), radius: 4, x: 0, y: 2)
             .help(timerVM.status == .running ? "Pause timer" : "Start timer")

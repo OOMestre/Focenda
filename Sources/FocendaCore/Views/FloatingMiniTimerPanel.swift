@@ -110,10 +110,10 @@ public struct FloatingControlCenterView: View {
                     Text("Drag Anywhere")
                         .font(.system(size: 10, weight: .bold))
                 }
-                .foregroundStyle(timerVM.currentMode.themeColor)
+                .foregroundStyle(AppTheme.accent)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 3)
-                .background(timerVM.currentMode.themeColor.opacity(0.15))
+                .background(AppTheme.accent.opacity(0.15))
                 .clipShape(Capsule())
 
                 Spacer()
@@ -161,11 +161,12 @@ public struct FloatingControlCenterView: View {
         .overlay(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .stroke(
-                    timerVM.currentMode.themeColor.opacity(isHovered ? 0.6 : 0.3),
+                    isHovered ? AppTheme.border : AppTheme.subtleBorder,
                     lineWidth: 1.2
                 )
         )
         .shadow(color: Color.black.opacity(0.25), radius: 16, x: 0, y: 8)
+        .preferredColorScheme(AppTheme.current.colorScheme)
         .onHover { hovering in
             isHovered = hovering
         }
@@ -180,16 +181,16 @@ public struct FloatingControlCenterView: View {
             // Mini Circular Progress
             ZStack {
                 Circle()
-                    .stroke(timerVM.currentMode.themeColor.opacity(0.18), lineWidth: 4.5)
+                    .stroke(AppTheme.accent.opacity(0.18), lineWidth: 4.5)
                 Circle()
                     .trim(from: 0, to: CGFloat(min(timerVM.progress, 1.0)))
-                    .stroke(timerVM.currentMode.themeColor, style: StrokeStyle(lineWidth: 4.5, lineCap: .round))
+                    .stroke(AppTheme.accent, style: StrokeStyle(lineWidth: 4.5, lineCap: .round))
                     .rotationEffect(.degrees(-90))
                     .animation(.easeInOut(duration: 0.3), value: timerVM.progress)
 
                 Image(systemName: timerVM.status == .running ? "flame.fill" : "timer")
                     .font(.system(size: 10, weight: .bold))
-                    .foregroundStyle(timerVM.currentMode.themeColor)
+                    .foregroundStyle(AppTheme.accent)
             }
             .frame(width: 32, height: 32)
 
@@ -202,7 +203,7 @@ public struct FloatingControlCenterView: View {
 
                 Text(timerVM.status == .running ? "FOCUSING" : (timerVM.status == .paused ? "PAUSED" : "READY"))
                     .font(.system(size: 8, weight: .heavy))
-                    .foregroundStyle(timerVM.currentMode.themeColor)
+                    .foregroundStyle(AppTheme.accent)
             }
 
             Spacer()
@@ -224,7 +225,7 @@ public struct FloatingControlCenterView: View {
                         .frame(width: 28, height: 28)
                         .background(
                             Circle()
-                                .fill(timerVM.currentMode.themeColor)
+                                .fill(AppTheme.accent)
                         )
                 }
                 .buttonStyle(.plain)
@@ -315,7 +316,7 @@ public struct FloatingControlCenterView: View {
                             .padding(.horizontal, 8)
                             .padding(.vertical, 4)
                             .frame(maxWidth: .infinity)
-                            .background(timerVM.currentMode == mode ? mode.themeColor : AppTheme.cardBackgroundSubtle)
+                            .background(timerVM.currentMode == mode ? AppTheme.accent : AppTheme.cardBackgroundSubtle)
                             .foregroundStyle(timerVM.currentMode == mode ? .white : AppTheme.textSecondary)
                             .clipShape(Capsule())
                     }
@@ -326,10 +327,10 @@ public struct FloatingControlCenterView: View {
             // Countdown Readout & Ring
             ZStack {
                 Circle()
-                    .stroke(timerVM.currentMode.themeColor.opacity(0.15), lineWidth: 8)
+                    .stroke(AppTheme.accent.opacity(0.15), lineWidth: 8)
                 Circle()
                     .trim(from: 0, to: CGFloat(min(timerVM.progress, 1.0)))
-                    .stroke(timerVM.currentMode.themeColor, style: StrokeStyle(lineWidth: 8, lineCap: .round))
+                    .stroke(AppTheme.accent, style: StrokeStyle(lineWidth: 8, lineCap: .round))
                     .rotationEffect(.degrees(-90))
                     .animation(.easeInOut(duration: 0.3), value: timerVM.progress)
 
@@ -340,7 +341,7 @@ public struct FloatingControlCenterView: View {
                         .foregroundStyle(AppTheme.textPrimary)
                     Text(timerVM.status == .running ? "RUNNING" : (timerVM.status == .paused ? "PAUSED" : "READY"))
                         .font(.system(size: 9, weight: .heavy))
-                        .foregroundStyle(timerVM.currentMode.themeColor)
+                        .foregroundStyle(AppTheme.accent)
                 }
             }
             .frame(width: 110, height: 110)
@@ -372,7 +373,7 @@ public struct FloatingControlCenterView: View {
                         .font(.system(size: 15, weight: .bold))
                         .foregroundStyle(.white)
                         .frame(width: 40, height: 40)
-                        .background(Circle().fill(timerVM.currentMode.themeColor))
+                        .background(Circle().fill(AppTheme.accent))
                 }
                 .buttonStyle(.plain)
 

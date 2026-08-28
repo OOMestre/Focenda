@@ -325,4 +325,46 @@ final class MenuBarCardViewTests: XCTestCase {
 
         XCTAssertNotNil(cardView.body)
     }
+
+    func testMenuBarThemeConsistencyAcrossFocusModes() {
+        for theme in AppThemeOption.allCases {
+            AppTheme.current = theme
+            let appState = AppState()
+            appState.selectedTheme = theme
+
+            for mode in FocusMode.allCases {
+                let timerVM = FocusTimerViewModel()
+                timerVM.switchMode(to: mode)
+
+                let cardView = MenuBarCardView(
+                    timerVM: timerVM,
+                    appState: appState,
+                    initialSection: .focus
+                )
+
+                XCTAssertNotNil(cardView.body)
+                XCTAssertEqual(cardView.timerVM.currentMode, mode)
+                XCTAssertEqual(appState.selectedTheme, theme)
+            }
+        }
+    }
+
+    func testMenuBarThemePreservedInObsidianMinimalDarkTheme() {
+        AppTheme.current = .obsidianMinimal
+        let appState = AppState()
+        appState.selectedTheme = .obsidianMinimal
+
+        let timerVM = FocusTimerViewModel()
+        timerVM.switchMode(to: .longBreak)
+
+        let cardView = MenuBarCardView(
+            timerVM: timerVM,
+            appState: appState,
+            initialSection: .focus
+        )
+
+        XCTAssertNotNil(cardView.body)
+        XCTAssertEqual(cardView.timerVM.currentMode, .longBreak)
+        XCTAssertEqual(appState.selectedTheme.colorScheme, .dark)
+    }
 }
