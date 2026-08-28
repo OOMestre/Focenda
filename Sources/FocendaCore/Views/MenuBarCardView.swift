@@ -196,7 +196,7 @@ public struct MenuBarCardView: View {
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 3)
                                 .background(AppTheme.accent)
-                                .foregroundStyle(Color.white)
+                                .foregroundStyle(AppTheme.textOnAccent)
                                 .clipShape(RoundedRectangle(cornerRadius: 4))
                         }
                         .buttonStyle(.plain)
@@ -351,7 +351,7 @@ public struct MenuBarCardView: View {
                     )
                     .foregroundStyle(
                         selectedSection == section
-                            ? .white
+                            ? AppTheme.textOnAccent
                             : AppTheme.textSecondary
                     )
                     .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
@@ -397,7 +397,7 @@ public struct MenuBarCardView: View {
                         )
                         .foregroundStyle(
                             timerVM.currentMode == mode
-                                ? .white
+                                ? AppTheme.textOnAccent
                                 : AppTheme.textSecondary
                         )
                         .clipShape(Capsule())
@@ -651,7 +651,7 @@ public struct MenuBarCardView: View {
                         }
                         .buttonStyle(.borderedProminent)
                         .tint(AppTheme.accent)
-                        .foregroundStyle(Color.white)
+                        .foregroundStyle(AppTheme.textOnAccent)
                         .controlSize(.small)
                         .disabled(newReminderTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                     }
@@ -868,7 +868,7 @@ public struct MenuBarCardView: View {
                     }
                     .buttonStyle(.borderedProminent)
                     .tint(AppTheme.accent)
-                    .foregroundStyle(Color.white)
+                    .foregroundStyle(AppTheme.textOnAccent)
                     .controlSize(.small)
                     .disabled(newNoteFolderName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
@@ -938,7 +938,7 @@ public struct MenuBarCardView: View {
                 } label: {
                     Label("Save Note", systemImage: "plus.circle")
                         .font(.caption2.weight(.medium))
-                        .foregroundStyle(Color.white)
+                        .foregroundStyle(AppTheme.textOnAccent)
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(AppTheme.deepFocus)
@@ -1258,7 +1258,7 @@ public struct MenuBarCardView: View {
                     }
                     .buttonStyle(.borderedProminent)
                     .tint(AppTheme.accent)
-                    .foregroundStyle(Color.white)
+                    .foregroundStyle(AppTheme.textOnAccent)
                     .controlSize(.small)
                     .disabled(newLinkTitle.isEmpty || newLinkUrl.isEmpty)
                 }

@@ -409,7 +409,7 @@ public struct IntuitiveTimePicker: View {
         } label: {
             Text(label)
                 .font(.system(size: 10, weight: isSelected ? .bold : .medium, design: .monospaced))
-                .foregroundStyle(isSelected ? Color.white : AppTheme.textPrimary)
+                .foregroundStyle(isSelected ? AppTheme.textOnAccent : AppTheme.textPrimary)
                 .padding(.horizontal, 5)
                 .padding(.vertical, 3)
                 .background(isSelected ? AppTheme.accent : AppTheme.cardBackgroundSubtle)
@@ -453,7 +453,7 @@ public struct IntuitiveTimePicker: View {
                                 } label: {
                                     Text(String(format: "%02d", hour))
                                         .font(.system(size: 12, weight: isSelected ? .bold : .regular, design: .monospaced))
-                                        .foregroundStyle(isSelected ? Color.white : AppTheme.textPrimary)
+                                        .foregroundStyle(isSelected ? AppTheme.textOnAccent : AppTheme.textPrimary)
                                         .frame(maxWidth: .infinity)
                                         .frame(height: 24)
                                         .background(isSelected ? AppTheme.accent : Color.clear)
@@ -494,7 +494,7 @@ public struct IntuitiveTimePicker: View {
                                 } label: {
                                     Text(String(format: "%02d", minute))
                                         .font(.system(size: 12, weight: isSelected ? .bold : .regular, design: .monospaced))
-                                        .foregroundStyle(isSelected ? Color.white : AppTheme.textPrimary)
+                                        .foregroundStyle(isSelected ? AppTheme.textOnAccent : AppTheme.textPrimary)
                                         .frame(maxWidth: .infinity)
                                         .frame(height: 24)
                                         .background(isSelected ? AppTheme.accent : Color.clear)

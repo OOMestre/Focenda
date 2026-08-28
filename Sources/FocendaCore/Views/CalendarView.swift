@@ -415,21 +415,21 @@ public struct CalendarView: View {
                     // Due Tasks indicator (amber / sandstone dot)
                     if day.hasDueTasks {
                         Circle()
-                            .fill(day.isSelected ? Color.white : AppTheme.sandstone)
+                            .fill(day.isSelected ? AppTheme.textOnAccent : AppTheme.sandstone)
                             .frame(width: 4, height: 4)
                     }
 
                     // Recurring Reminders indicator
                     if day.hasRecurringReminders {
                         Circle()
-                            .fill(day.isSelected ? Color.white : AppTheme.deepFocus)
+                            .fill(day.isSelected ? AppTheme.textOnAccent : AppTheme.deepFocus)
                             .frame(width: 4, height: 4)
                     }
 
                     // Tasks indicator
                     if day.tasksCount > day.dueTasksCount || (!day.hasDueTasks && day.tasksCount > 0) {
                         Circle()
-                            .fill(day.isSelected ? Color.white.opacity(0.85) : AppTheme.riverSlate)
+                            .fill(day.isSelected ? AppTheme.textOnAccent.opacity(0.85) : AppTheme.riverSlate)
                             .frame(width: 4, height: 4)
                     }
                 }
@@ -766,7 +766,7 @@ public struct CalendarView: View {
 
     private func heatmapDotColor(level: Int, isSelected: Bool) -> Color {
         if isSelected {
-            return .white
+            return AppTheme.textOnAccent
         }
         switch level {
         case 1:
@@ -1101,7 +1101,7 @@ public struct CalendarView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(AppTheme.accent)
-                .foregroundStyle(Color.white)
+                .foregroundStyle(AppTheme.textOnAccent)
                 .keyboardShortcut(.defaultAction)
                 .disabled(quickTaskTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
@@ -1175,7 +1175,7 @@ public struct CalendarView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(AppTheme.sandstone)
-                .foregroundStyle(Color.white)
+                .foregroundStyle(AppTheme.textOnAccent)
                 .keyboardShortcut(.defaultAction)
                 .disabled(newReminderTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
@@ -1364,7 +1364,7 @@ public struct CalendarView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(AppTheme.accent)
-                .foregroundStyle(Color.white)
+                .foregroundStyle(AppTheme.textOnAccent)
                 .controlSize(.small)
                 .disabled(newReminderTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }

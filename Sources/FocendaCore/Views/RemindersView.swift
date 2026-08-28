@@ -261,7 +261,7 @@ public struct RemindersView: View {
         } label: {
             Label("New Reminder", systemImage: "plus")
                 .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(Color.white)
+                .foregroundStyle(AppTheme.textOnAccent)
         }
         .buttonStyle(.borderedProminent)
         .tint(AppTheme.accent)
@@ -797,7 +797,7 @@ public struct RemindersView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(AppTheme.accent)
-                .foregroundStyle(Color.white)
+                .foregroundStyle(AppTheme.textOnAccent)
                 .font(.system(size: 13, weight: .bold))
                 .keyboardShortcut(.defaultAction)
                 .disabled(formTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)

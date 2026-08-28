@@ -220,7 +220,7 @@ public struct ReminderAlertHUDView: View {
                     .padding(.horizontal, 10)
                     .padding(.vertical, 4.5)
                     .background(AppTheme.accent)
-                    .foregroundStyle(Color.white)
+                    .foregroundStyle(AppTheme.textOnAccent)
                     .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
                 }
                 .buttonStyle(.plain)

@@ -275,7 +275,7 @@ public struct FloatingControlCenterView: View {
                         )
                         .foregroundStyle(
                             selectedSection == section
-                                ? .white
+                                ? AppTheme.textOnAccent
                                 : AppTheme.textSecondary
                         )
                         .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
@@ -317,7 +317,7 @@ public struct FloatingControlCenterView: View {
                             .padding(.vertical, 4)
                             .frame(maxWidth: .infinity)
                             .background(timerVM.currentMode == mode ? AppTheme.accent : AppTheme.cardBackgroundSubtle)
-                            .foregroundStyle(timerVM.currentMode == mode ? .white : AppTheme.textSecondary)
+                            .foregroundStyle(timerVM.currentMode == mode ? AppTheme.textOnAccent : AppTheme.textSecondary)
                             .clipShape(Capsule())
                     }
                     .buttonStyle(.plain)

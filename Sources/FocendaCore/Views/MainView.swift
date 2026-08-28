@@ -174,7 +174,7 @@ public struct MainView: View {
                             .padding(.horizontal, 10)
                             .padding(.vertical, 4)
                             .background(AppTheme.accent)
-                            .foregroundStyle(Color.white)
+                            .foregroundStyle(AppTheme.textOnAccent)
                             .clipShape(RoundedRectangle(cornerRadius: 6))
                         }
                         .buttonStyle(.plain)
