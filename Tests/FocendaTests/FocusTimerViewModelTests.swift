@@ -4,10 +4,12 @@ import XCTest
 final class FocusTimerViewModelTests: XCTestCase {
 
     var viewModel: FocusTimerViewModel!
+    private var clock: TestClock!
 
     override func setUp() {
         super.setUp()
-        viewModel = FocusTimerViewModel()
+        clock = TestClock()
+        viewModel = FocusTimerViewModel(now: { [clock] in clock.now })
     }
 
     override func tearDown() {
@@ -15,6 +17,7 @@ final class FocusTimerViewModelTests: XCTestCase {
         viewModel?.reset()
         ReminderAlertHUDPanel.shared.dismiss()
         viewModel = nil
+        clock = nil
         super.tearDown()
     }
 
@@ -44,9 +47,56 @@ final class FocusTimerViewModelTests: XCTestCase {
         viewModel.start()
         XCTAssertEqual(viewModel.status, .running)
 
+        clock.advance(by: .seconds(1))
         viewModel.tick()
         XCTAssertEqual(viewModel.timeRemainingSeconds, (25 * 60) - 1)
         XCTAssertGreaterThan(viewModel.progress, 0.0)
+    }
+
+    func testTickUsesElapsedTimeWhenCallbacksAreDelayed() {
+        viewModel.start()
+
+        clock.advance(by: .seconds(7))
+        viewModel.tick()
+
+        XCTAssertEqual(viewModel.timeRemainingSeconds, (25 * 60) - 7)
+    }
+
+    func testPauseStopsElapsedTimeUntilResume() {
+        viewModel.start()
+        clock.advance(by: .seconds(10))
+        viewModel.pause()
+
+        clock.advance(by: .seconds(60))
+        XCTAssertEqual(viewModel.timeRemainingSeconds, (25 * 60) - 10)
+
+        viewModel.resume()
+        clock.advance(by: .seconds(4))
+        viewModel.tick()
+
+        XCTAssertEqual(viewModel.timeRemainingSeconds, (25 * 60) - 14)
+    }
+
+    func testAdjustTimePreservesElapsedTimeWhileRunning() {
+        viewModel.start()
+        clock.advance(by: .seconds(10))
+
+        viewModel.adjustTime(bySeconds: 5 * 60)
+        clock.advance(by: .seconds(5))
+        viewModel.tick()
+
+        XCTAssertEqual(viewModel.timeRemainingSeconds, (25 * 60) + (5 * 60) - 15)
+    }
+
+    func testDelayedTickCompletesTheSession() {
+        viewModel.start()
+        clock.advance(by: .seconds(25 * 60 + 30))
+
+        viewModel.tick()
+
+        XCTAssertEqual(viewModel.completedSessionsCount, 1)
+        XCTAssertEqual(viewModel.currentMode, .shortBreak)
+        XCTAssertEqual(viewModel.status, .idle)
     }
 
     func testPauseAndResume() {
@@ -174,5 +224,13 @@ final class FocusTimerViewModelTests: XCTestCase {
             subtitle: "Long Break"
         )
         XCTAssertNotNil(progressView.body)
+    }
+}
+
+private final class TestClock {
+    var now = ContinuousClock.now
+
+    func advance(by duration: Duration) {
+        now = now.advanced(by: duration)
     }
 }

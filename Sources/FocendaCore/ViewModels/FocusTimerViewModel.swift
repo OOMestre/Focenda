@@ -36,8 +36,18 @@ public final class FocusTimerViewModel {
     }
 
     private var timer: Timer?
+    // Timer callbacks refresh the UI; ContinuousClock is the source of truth for elapsed time.
+    private var runningSegmentStartedAt: ContinuousClock.Instant?
+    private var timeRemainingAtSegmentStart = 0
+    private let now: () -> ContinuousClock.Instant
 
     public init() {
+        self.now = { ContinuousClock.now }
+        resetToCurrentMode()
+    }
+
+    init(now: @escaping () -> ContinuousClock.Instant) {
+        self.now = now
         resetToCurrentMode()
     }
 
@@ -65,6 +75,8 @@ public final class FocusTimerViewModel {
     public func start() {
         guard status != .running else { return }
         status = .running
+        runningSegmentStartedAt = now()
+        timeRemainingAtSegmentStart = timeRemainingSeconds
 
         timer?.invalidate()
         timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
@@ -76,9 +88,14 @@ public final class FocusTimerViewModel {
 
     public func pause() {
         guard status == .running else { return }
+        updateRemainingTime()
+        guard status == .running else { return }
+
         status = .paused
         timer?.invalidate()
         timer = nil
+        runningSegmentStartedAt = nil
+        timeRemainingAtSegmentStart = 0
     }
 
     public func resume() {
@@ -119,10 +136,20 @@ public final class FocusTimerViewModel {
 
     /// Adjust remaining time by a delta in seconds (clamped to minimum 60s)
     public func adjustTime(bySeconds seconds: Int) {
+        if status == .running {
+            updateRemainingTime()
+            guard status == .running else { return }
+        }
+
         let updated = max(60, timeRemainingSeconds + seconds)
         timeRemainingSeconds = updated
         if updated > totalDurationSeconds {
             totalDurationSeconds = updated
+        }
+
+        if status == .running {
+            runningSegmentStartedAt = now()
+            timeRemainingAtSegmentStart = timeRemainingSeconds
         }
     }
 
@@ -134,16 +161,14 @@ public final class FocusTimerViewModel {
     public func tick() {
         guard status == .running else { return }
 
-        if timeRemainingSeconds > 0 {
-            timeRemainingSeconds -= 1
-        } else {
-            completeCurrentSession()
-        }
+        updateRemainingTime()
     }
 
     public func completeCurrentSession() {
         timer?.invalidate()
         timer = nil
+        runningSegmentStartedAt = nil
+        timeRemainingAtSegmentStart = 0
         status = .idle
 
         let finishedMode = currentMode
@@ -207,6 +232,9 @@ public final class FocusTimerViewModel {
     }
 
     public func resetToCurrentMode() {
+        runningSegmentStartedAt = nil
+        timeRemainingAtSegmentStart = 0
+
         let durationMinutes: Int
         switch currentMode {
         case .work:
@@ -222,6 +250,24 @@ public final class FocusTimerViewModel {
 
     deinit {
         timer?.invalidate()
+    }
+
+    private func updateRemainingTime() {
+        guard status == .running else { return }
+
+        guard let startedAt = runningSegmentStartedAt else {
+            runningSegmentStartedAt = now()
+            timeRemainingAtSegmentStart = timeRemainingSeconds
+            return
+        }
+
+        let elapsed = max(0, Int((now() - startedAt) / .seconds(1)))
+        let updatedRemaining = timeRemainingAtSegmentStart - elapsed
+        timeRemainingSeconds = max(0, updatedRemaining)
+
+        if updatedRemaining <= 0 {
+            completeCurrentSession()
+        }
     }
 }
 
