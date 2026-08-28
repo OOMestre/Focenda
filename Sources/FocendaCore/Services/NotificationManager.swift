@@ -46,6 +46,8 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
     public static let standardNotificationSoundName = ReminderSoundType.defaultSound.rawValue
 
     private let center: UNUserNotificationCenter?
+    /// Injectable activity provider used to select a single reminder delivery channel.
+    private let applicationIsActive: () -> Bool
     public private(set) var lastNotifiedMode: FocusMode?
     public private(set) var lastScheduledTask: TaskItem?
     public private(set) var lastFiredTask: TaskItem?
@@ -68,13 +70,20 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
     /// Active in-app fallback timers for recurring reminders
     private var recurringInAppTimers: [UUID: Timer] = [:]
 
+    /// Short-lived markers that close the race between the in-app timer and the
+    /// native notification arriving for the same reminder occurrence.
+    private var recentInAppDeliveries: [String: Date] = [:]
+
     /// Optional callback invoked when a task reminder fires
     public var onTaskReminderFired: ((TaskItem) -> Void)?
 
     /// Optional callback invoked when a recurring reminder fires
     public var onRecurringReminderFired: ((RecurringReminder) -> Void)?
 
-    public init(center: UNUserNotificationCenter? = nil) {
+    public init(
+        center: UNUserNotificationCenter? = nil,
+        applicationIsActive: (() -> Bool)? = nil
+    ) {
         if let center = center {
             self.center = center
         } else if Self.isNotificationAvailable {
@@ -82,6 +91,7 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
         } else {
             self.center = nil
         }
+        self.applicationIsActive = applicationIsActive ?? { Self.defaultApplicationIsActive() }
         super.init()
         self.center?.delegate = self
     }
@@ -103,6 +113,106 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
             return false
         }
         return true
+    }
+
+    private static func defaultApplicationIsActive() -> Bool {
+        #if canImport(AppKit)
+        guard let application = NSApp else {
+            // Command-line contexts do not have an application lifecycle. Treat
+            // them as active so direct fallback calls remain observable in tests.
+            return true
+        }
+        return application.isActive
+        #else
+        return true
+        #endif
+    }
+
+    /// The active app owns the richer HUD; otherwise the native channel owns
+    /// delivery whenever it is available.
+    static func shouldDeliverInAppReminder(
+        applicationIsActive: Bool,
+        hasNativeNotificationChannel: Bool
+    ) -> Bool {
+        applicationIsActive || !hasNativeNotificationChannel
+    }
+
+    private var shouldDeliverInAppReminder: Bool {
+        Self.shouldDeliverInAppReminder(
+            applicationIsActive: applicationIsActive(),
+            hasNativeNotificationChannel: center != nil
+        )
+    }
+
+    static func isReminderNotificationIdentifier(_ identifier: String) -> Bool {
+        identifier.hasPrefix("task-reminder-") || identifier.hasPrefix("recurring-reminder-")
+    }
+
+    private func reminderDeliveryKey(for identifier: String) -> String? {
+        let taskPrefix = "task-reminder-"
+        if identifier.hasPrefix(taskPrefix),
+           let id = UUID(uuidString: String(identifier.dropFirst(taskPrefix.count))) {
+            return "\(taskPrefix)\(id.uuidString)"
+        }
+
+        let recurringPrefix = "recurring-reminder-"
+        if identifier.hasPrefix(recurringPrefix) {
+            let suffix = String(identifier.dropFirst(recurringPrefix.count))
+            let baseIdentifier = suffix.components(separatedBy: "-wd").first ?? suffix
+            if let id = UUID(uuidString: baseIdentifier) {
+                return "\(recurringPrefix)\(id.uuidString)"
+            }
+        }
+
+        return nil
+    }
+
+    private func hasInAppFallback(for identifier: String) -> Bool {
+        let taskPrefix = "task-reminder-"
+        if identifier.hasPrefix(taskPrefix),
+           let id = UUID(uuidString: String(identifier.dropFirst(taskPrefix.count))) {
+            return inAppTimers[id] != nil
+        }
+
+        let recurringPrefix = "recurring-reminder-"
+        if identifier.hasPrefix(recurringPrefix) {
+            let suffix = String(identifier.dropFirst(recurringPrefix.count))
+            let baseIdentifier = suffix.components(separatedBy: "-wd").first ?? suffix
+            if let id = UUID(uuidString: baseIdentifier) {
+                return recurringInAppTimers[id] != nil
+            }
+        }
+
+        return false
+    }
+
+    private func markInAppDelivery(for identifier: String) {
+        guard let key = reminderDeliveryKey(for: identifier) else { return }
+        recentInAppDeliveries[key] = Date()
+    }
+
+    private func clearInAppDelivery(for identifier: String) {
+        guard let key = reminderDeliveryKey(for: identifier) else { return }
+        recentInAppDeliveries.removeValue(forKey: key)
+    }
+
+    private func shouldSuppressNativeReminder(for identifier: String) -> Bool {
+        guard let key = reminderDeliveryKey(for: identifier) else { return false }
+
+        if hasInAppFallback(for: identifier) {
+            return true
+        }
+
+        guard let deliveredAt = recentInAppDeliveries[key] else {
+            return false
+        }
+
+        if abs(Date().timeIntervalSince(deliveredAt)) <= 60 {
+            return true
+        }
+
+        recentInAppDeliveries.removeValue(forKey: key)
+        return false
     }
 
     private static var isAudioPlaybackAvailable: Bool {
@@ -416,6 +526,7 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
     /// Schedules a timed calendar notification reminder for a task with fallback in-app alert timer
     public func scheduleTaskReminder(task: TaskItem) {
         self.lastScheduledTask = task
+        clearInAppDelivery(for: "task-reminder-\(task.id.uuidString)")
 
         guard let reminderDate = task.reminderDate, reminderDate > Date() else {
             return
@@ -467,6 +578,7 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
     public func cancelTaskReminder(task: TaskItem) {
         inAppTimers[task.id]?.invalidate()
         inAppTimers.removeValue(forKey: task.id)
+        clearInAppDelivery(for: "task-reminder-\(task.id.uuidString)")
 
         guard let center = center else { return }
         center.removePendingNotificationRequests(withIdentifiers: ["task-reminder-\(task.id.uuidString)"])
@@ -474,8 +586,14 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
 
     /// Triggers the in-app alert and sound fallback when task reminder time is reached
     public func triggerInAppReminderFallback(for task: TaskItem) {
-        self.lastFiredTask = task
         self.inAppTimers.removeValue(forKey: task.id)
+
+        guard shouldDeliverInAppReminder else {
+            return
+        }
+
+        self.lastFiredTask = task
+        markInAppDelivery(for: "task-reminder-\(task.id.uuidString)")
 
         playUserReminderSound()
 
@@ -550,16 +668,7 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
         cancelRecurringReminder(reminder: reminder)
 
         // Setup in-app fallback timer for the next occurrence
-        if let nextDate = reminder.nextFireDate() {
-            let interval = nextDate.timeIntervalSinceNow
-            if interval > 0 {
-                let timer = Timer(timeInterval: interval, repeats: false) { [weak self] _ in
-                    self?.triggerInAppRecurringReminderFallback(for: reminder)
-                }
-                RunLoop.main.add(timer, forMode: .common)
-                recurringInAppTimers[reminder.id] = timer
-            }
-        }
+        scheduleNextInAppRecurringReminder(for: reminder)
 
         guard let center = center else { return }
 
@@ -634,6 +743,7 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
     public func cancelRecurringReminder(reminder: RecurringReminder) {
         recurringInAppTimers[reminder.id]?.invalidate()
         recurringInAppTimers.removeValue(forKey: reminder.id)
+        clearInAppDelivery(for: "recurring-reminder-\(reminder.id.uuidString)")
 
         guard let center = center else { return }
 
@@ -646,8 +756,17 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
 
     /// Triggers the in-app alert, banner, and rich sound when a recurring reminder fires
     public func triggerInAppRecurringReminderFallback(for reminder: RecurringReminder) {
-        self.lastFiredRecurringReminder = reminder
         self.recurringInAppTimers.removeValue(forKey: reminder.id)
+
+        guard shouldDeliverInAppReminder else {
+            // The native repeating request owns this occurrence while the app is
+            // inactive. Keep the in-app fallback alive for the next occurrence.
+            scheduleNextInAppRecurringReminder(for: reminder)
+            return
+        }
+
+        self.lastFiredRecurringReminder = reminder
+        markInAppDelivery(for: "recurring-reminder-\(reminder.id.uuidString)")
 
         playUserReminderSound()
 
@@ -704,6 +823,11 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
         onRecurringReminderFired?(reminder)
 
         // Reschedule next occurrence timer
+        scheduleNextInAppRecurringReminder(for: reminder)
+    }
+
+    /// Keeps a single in-app timer ready for the next recurring occurrence.
+    private func scheduleNextInAppRecurringReminder(for reminder: RecurringReminder) {
         if reminder.isEnabled {
             if let nextDate = reminder.nextFireDate() {
                 let interval = nextDate.timeIntervalSinceNow
@@ -823,12 +947,20 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
 
     // MARK: - UNUserNotificationCenterDelegate
 
-    /// Ensures notification banners and sounds are delivered even when Focenda is in the active foreground
+    /// Uses the in-app HUD for task and recurring reminders while Focenda is active.
+    /// Other native notifications continue to present normally in the foreground.
     public func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         willPresent notification: UNNotification,
         withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
     ) {
+        if Self.isReminderNotificationIdentifier(notification.request.identifier),
+           applicationIsActive(),
+           shouldSuppressNativeReminder(for: notification.request.identifier) {
+            completionHandler([])
+            return
+        }
+
         completionHandler([.banner, .sound, .badge, .list])
     }
 

@@ -75,6 +75,34 @@ final class NotificationManagerTests: XCTestCase {
         XCTAssertNil(content.sound)
     }
 
+    func testReminderDeliveryUsesOnlyOneChannelForEachApplicationState() {
+        XCTAssertTrue(
+            NotificationManager.shouldDeliverInAppReminder(
+                applicationIsActive: true,
+                hasNativeNotificationChannel: true
+            )
+        )
+        XCTAssertFalse(
+            NotificationManager.shouldDeliverInAppReminder(
+                applicationIsActive: false,
+                hasNativeNotificationChannel: true
+            )
+        )
+        XCTAssertTrue(
+            NotificationManager.shouldDeliverInAppReminder(
+                applicationIsActive: false,
+                hasNativeNotificationChannel: false
+            )
+        )
+    }
+
+    func testForegroundPresentationIsSuppressedOnlyForScheduledReminders() {
+        XCTAssertTrue(NotificationManager.isReminderNotificationIdentifier("task-reminder-123"))
+        XCTAssertTrue(NotificationManager.isReminderNotificationIdentifier("recurring-reminder-123"))
+        XCTAssertFalse(NotificationManager.isReminderNotificationIdentifier("focenda-update-1-2-0"))
+        XCTAssertFalse(NotificationManager.isReminderNotificationIdentifier(UUID().uuidString))
+    }
+
     func testUpdateNotificationTracksVersion() {
         let manager = NotificationManager()
 
