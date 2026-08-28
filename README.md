@@ -1,9 +1,11 @@
-# Focenda
-
 <div align="center">
 
-<img src="assets/focenda-mascot.png" alt="Focenda Owl Mascot" width="140" />
+<img src="assets/focenda-mascot.png" alt="Focenda Owl Mascot" width="220" />
 <br/><br/>
+
+<h1>Focenda</h1>
+
+<hr />
 
 **The native macOS focus, task, and calendar productivity suite.**
 
