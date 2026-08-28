@@ -122,7 +122,6 @@ public struct ReminderAlertHUDView: View {
     public var onClose: (() -> Void)?
 
     @State private var isHovered: Bool = false
-    @State private var isPulsing: Bool = false
     @State private var timeRemainingRatio: CGFloat = 1.0
 
     public init(
@@ -149,32 +148,23 @@ public struct ReminderAlertHUDView: View {
         VStack(alignment: .leading, spacing: 10) {
             // Header Bar
             HStack(spacing: 8) {
-                // Pulsing Alert Badge
-                HStack(spacing: 5) {
-                    Image(systemName: "alarm.fill")
-                        .font(.system(size: 11, weight: .bold))
-                        .scaleEffect(isPulsing ? 1.15 : 0.95)
-                        .animation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true), value: isPulsing)
+                // Calm Badge
+                HStack(spacing: 4) {
+                    Image(systemName: "bell.badge.fill")
+                        .font(.system(size: 10, weight: .bold))
 
-                    Text("Opa, deu a hora!")
-                        .font(.system(size: 11, weight: .heavy, design: .rounded))
+                    Text("Reminder")
+                        .font(.system(size: 10, weight: .bold, design: .rounded))
                 }
-                .foregroundStyle(.white)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 3.5)
-                .background(
-                    LinearGradient(
-                        colors: [Color.orange, Color.red.opacity(0.9)],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                )
+                .foregroundStyle(AppTheme.accent)
+                .padding(.horizontal, 7)
+                .padding(.vertical, 3)
+                .background(AppTheme.accent.opacity(0.15))
                 .clipShape(Capsule())
-                .shadow(color: Color.orange.opacity(0.3), radius: 4, x: 0, y: 2)
 
                 if !subtitle.isEmpty {
                     Text(subtitle)
-                        .font(.system(size: 10, weight: .semibold))
+                        .font(.system(size: 10, weight: .medium))
                         .foregroundStyle(AppTheme.textSecondary)
                         .lineLimit(1)
                 }
@@ -186,24 +176,24 @@ public struct ReminderAlertHUDView: View {
                     onClose?()
                 } label: {
                     Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 14, weight: .medium))
+                        .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(AppTheme.textTertiary)
                 }
                 .buttonStyle(.plain)
-                .help("Fechar aviso")
+                .help("Dismiss reminder")
             }
 
             // Main Content: Reminder Title & Notes
             VStack(alignment: .leading, spacing: 3) {
                 Text(title)
-                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                    .font(.system(size: 14, weight: .semibold, design: .rounded))
                     .foregroundStyle(AppTheme.textPrimary)
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
 
                 if !notes.isEmpty {
                     Text(notes)
-                        .font(.system(size: 12))
+                        .font(.system(size: 11.5))
                         .foregroundStyle(AppTheme.textSecondary)
                         .lineLimit(2)
                         .fixedSize(horizontal: false, vertical: true)
@@ -211,7 +201,7 @@ public struct ReminderAlertHUDView: View {
             }
 
             Divider()
-                .opacity(0.3)
+                .opacity(0.25)
 
             // Action Buttons
             HStack(spacing: 8) {
@@ -219,19 +209,20 @@ public struct ReminderAlertHUDView: View {
                 Button {
                     onComplete?()
                 } label: {
-                    HStack(spacing: 5) {
-                        Image(systemName: "checkmark.circle.fill")
-                            .font(.system(size: 11, weight: .bold))
-                        Text("Entendido")
-                            .font(.system(size: 11, weight: .bold))
+                    HStack(spacing: 4) {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 10, weight: .bold))
+                        Text("Done")
+                            .font(.system(size: 11, weight: .semibold))
                     }
                     .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
-                    .background(Color.green.opacity(0.85))
-                    .foregroundStyle(.white)
+                    .padding(.vertical, 4.5)
+                    .background(AppTheme.accent)
+                    .foregroundStyle(Color.white)
                     .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
                 }
                 .buttonStyle(.plain)
+                .help("Mark reminder as done and dismiss")
 
                 // Snooze 5 Min Button
                 Button {
@@ -239,18 +230,22 @@ public struct ReminderAlertHUDView: View {
                 } label: {
                     HStack(spacing: 4) {
                         Image(systemName: "clock.arrow.circlepath")
-                            .font(.system(size: 11, weight: .semibold))
-                        Text("Adiar 5m")
-                            .font(.system(size: 11, weight: .semibold))
+                            .font(.system(size: 10, weight: .medium))
+                        Text("Snooze 5m")
+                            .font(.system(size: 11, weight: .medium))
                     }
                     .padding(.horizontal, 9)
-                    .padding(.vertical, 5)
+                    .padding(.vertical, 4.5)
                     .background(AppTheme.cardBackgroundSubtle)
                     .foregroundStyle(AppTheme.textPrimary)
                     .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                            .stroke(AppTheme.subtleBorder, lineWidth: 1)
+                    )
                 }
                 .buttonStyle(.plain)
-                .help("Adiar lembrete por 5 minutos")
+                .help("Snooze reminder for 5 minutes")
 
                 Spacer()
 
@@ -258,16 +253,16 @@ public struct ReminderAlertHUDView: View {
                 Button {
                     onOpenApp?()
                 } label: {
-                    HStack(spacing: 4) {
-                        Text("Abrir")
+                    HStack(spacing: 3) {
+                        Text("Open")
                             .font(.system(size: 11, weight: .medium))
                         Image(systemName: "arrow.up.forward.app")
-                            .font(.system(size: 10))
+                            .font(.system(size: 9))
                     }
                     .foregroundStyle(AppTheme.accent)
                 }
                 .buttonStyle(.plain)
-                .help("Abrir Focenda na aba de Lembretes")
+                .help("Open Focenda Reminders")
             }
 
             // Countdown Progress Bar
@@ -276,15 +271,15 @@ public struct ReminderAlertHUDView: View {
                     ZStack(alignment: .leading) {
                         Capsule()
                             .fill(AppTheme.cardBackgroundSubtle)
-                            .frame(height: 2.5)
+                            .frame(height: 2)
 
                         Capsule()
-                            .fill(LinearGradient(colors: [Color.orange, Color.green], startPoint: .leading, endPoint: .trailing))
-                            .frame(width: max(0, geo.size.width * timeRemainingRatio), height: 2.5)
+                            .fill(AppTheme.accent.opacity(0.8))
+                            .frame(width: max(0, geo.size.width * timeRemainingRatio), height: 2)
                             .animation(.linear(duration: timeoutSeconds), value: timeRemainingRatio)
                     }
                 }
-                .frame(height: 2.5)
+                .frame(height: 2)
             }
         }
         .padding(12)
@@ -295,20 +290,16 @@ public struct ReminderAlertHUDView: View {
         .overlay(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .stroke(
-                    LinearGradient(
-                        colors: [Color.orange.opacity(isHovered ? 0.8 : 0.4), Color.accentColor.opacity(0.3)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
-                    lineWidth: 1.5
+                    isHovered ? AppTheme.border : AppTheme.subtleBorder,
+                    lineWidth: 1.2
                 )
         )
-        .shadow(color: Color.black.opacity(0.3), radius: 16, x: 0, y: 8)
+        .shadow(color: Color.black.opacity(0.25), radius: 14, x: 0, y: 6)
+        .preferredColorScheme(AppTheme.current.colorScheme)
         .onHover { hovering in
             isHovered = hovering
         }
         .onAppear {
-            isPulsing = true
             timeRemainingRatio = 1.0
             withAnimation(.linear(duration: timeoutSeconds)) {
                 timeRemainingRatio = 0.0

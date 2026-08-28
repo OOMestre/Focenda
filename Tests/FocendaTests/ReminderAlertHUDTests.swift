@@ -33,9 +33,9 @@ final class ReminderAlertHUDTests: XCTestCase {
         var didOpenApp = false
 
         panel.show(
-            title: "Bater o ponto",
-            subtitle: "18:00 • Diário",
-            notes: "Não esqueça de registrar seu ponto de saída!",
+            title: "Team Standup",
+            subtitle: "6:00 PM • Daily",
+            notes: "Review progress and align on daily goals.",
             type: "recurring",
             timeoutSeconds: 30.0,
             onSnooze: { didSnooze = true },
@@ -44,9 +44,9 @@ final class ReminderAlertHUDTests: XCTestCase {
         )
 
         XCTAssertTrue(panel.isShowingAlert)
-        XCTAssertEqual(panel.currentTitle, "Bater o ponto")
-        XCTAssertEqual(panel.currentSubtitle, "18:00 • Diário")
-        XCTAssertEqual(panel.currentNotes, "Não esqueça de registrar seu ponto de saída!")
+        XCTAssertEqual(panel.currentTitle, "Team Standup")
+        XCTAssertEqual(panel.currentSubtitle, "6:00 PM • Daily")
+        XCTAssertEqual(panel.currentNotes, "Review progress and align on daily goals.")
 
         panel.dismiss()
         XCTAssertFalse(panel.isShowingAlert)
@@ -59,9 +59,9 @@ final class ReminderAlertHUDTests: XCTestCase {
         var closeCalled = false
 
         let view = ReminderAlertHUDView(
-            title: "Bater o ponto",
-            subtitle: "18:00 • Diário",
-            notes: "Registro obrigatório",
+            title: "Team Standup",
+            subtitle: "6:00 PM • Daily",
+            notes: "Review progress and goals",
             timeoutSeconds: 25.0,
             onSnooze: { snoozeCalled = true },
             onComplete: { completeCalled = true },
@@ -69,9 +69,9 @@ final class ReminderAlertHUDTests: XCTestCase {
             onClose: { closeCalled = true }
         )
 
-        XCTAssertEqual(view.title, "Bater o ponto")
-        XCTAssertEqual(view.subtitle, "18:00 • Diário")
-        XCTAssertEqual(view.notes, "Registro obrigatório")
+        XCTAssertEqual(view.title, "Team Standup")
+        XCTAssertEqual(view.subtitle, "6:00 PM • Daily")
+        XCTAssertEqual(view.notes, "Review progress and goals")
         XCTAssertEqual(view.timeoutSeconds, 25.0)
 
         view.onSnooze?()
@@ -97,15 +97,15 @@ final class ReminderAlertHUDTests: XCTestCase {
         ) { notification in
             let title = notification.userInfo?["title"] as? String
             let minutes = notification.userInfo?["minutes"] as? Int
-            XCTAssertEqual(title, "Bater o ponto")
+            XCTAssertEqual(title, "Team Standup")
             XCTAssertEqual(minutes, 5)
             expectation.fulfill()
         }
 
         NotificationManager.shared.snoozeReminder(
-            title: "Bater o ponto",
-            subtitle: "Lembrete Diário",
-            notes: "Registro de ponto",
+            title: "Team Standup",
+            subtitle: "Daily Reminder",
+            notes: "Review progress",
             minutes: 5
         )
 
@@ -123,15 +123,15 @@ final class ReminderAlertHUDTests: XCTestCase {
         ) { notification in
             let title = notification.userInfo?["title"] as? String
             let type = notification.userInfo?["type"] as? String
-            XCTAssertEqual(title, "Bater o ponto")
+            XCTAssertEqual(title, "Daily Standup")
             XCTAssertEqual(type, "test")
             expectation.fulfill()
         }
 
         NotificationManager.shared.testReminderAlertHUD(
-            title: "Bater o ponto",
-            subtitle: "Lembrete Diário • 18:00",
-            notes: "Não se esqueça de registrar seu ponto no sistema!"
+            title: "Daily Standup",
+            subtitle: "Daily Reminder • 6:00 PM",
+            notes: "Time to review your daily accomplishments and plan ahead!"
         )
 
         wait(for: [expectation], timeout: 2.0)
@@ -140,11 +140,11 @@ final class ReminderAlertHUDTests: XCTestCase {
 
     func testTriggerInAppRecurringReminderFallbackPostsNotificationsAndShowsHUD() {
         let reminder = RecurringReminder(
-            title: "Bater o ponto",
+            title: "Daily Standup",
             time: Date(),
             repeatFrequency: .daily,
             isEnabled: true,
-            notes: "Check-in diário"
+            notes: "Daily team check-in"
         )
 
         let recurringExpectation = expectation(description: "Recurring reminder fired notification posted")
@@ -177,8 +177,8 @@ final class ReminderAlertHUDTests: XCTestCase {
 
     func testTriggerInAppTaskReminderFallbackPostsNotifications() {
         let task = TaskItem(
-            title: "Entregar relatório",
-            notes: "Prioridade alta",
+            title: "Submit quarterly report",
+            notes: "High priority",
             reminderDate: Date().addingTimeInterval(60)
         )
 

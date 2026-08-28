@@ -20,7 +20,7 @@ public protocol NotificationManagerProtocol: AnyObject {
 public extension NotificationManagerProtocol {
     func playReminderAlertChime(soundName: String = "Hero", customFilePath: String? = nil, repeatCount: Int = 3, interval: TimeInterval = 0.85) {}
     func stopActiveSound() {}
-    func snoozeReminder(title: String, subtitle: String = "Lembrete Adiado", notes: String = "", minutes: Int = 5) {}
+    func snoozeReminder(title: String, subtitle: String = "Snoozed Reminder", notes: String = "", minutes: Int = 5) {}
 }
 
 /// Service managing native macOS system notifications, rich audible alerts, and in-app banner broadcasts
@@ -389,14 +389,14 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
         DispatchQueue.main.async { [weak self] in
             ReminderAlertHUDPanel.shared.show(
                 title: task.title,
-                subtitle: timeStr.isEmpty ? "Lembrete de Tarefa" : "\(timeStr) • Tarefa",
+                subtitle: timeStr.isEmpty ? "Task Reminder" : "\(timeStr) • Task",
                 notes: task.notes,
                 type: "task",
                 timeoutSeconds: 25.0,
                 onSnooze: {
                     self?.snoozeReminder(
                         title: task.title,
-                        subtitle: "Lembrete de Tarefa",
+                        subtitle: "Task Reminder",
                         notes: task.notes,
                         minutes: 5
                     )
@@ -603,7 +603,7 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
     /// Snoozes a reminder for a specified duration in minutes, re-triggering sound and screen alert
     public func snoozeReminder(
         title: String,
-        subtitle: String = "Lembrete Adiado",
+        subtitle: String = "Snoozed Reminder",
         notes: String = "",
         minutes: Int = 5
     ) {
@@ -620,7 +620,7 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
                 userInfo: [
                     "title": title,
                     "subtitle": subtitle,
-                    "time": "Adiado (\(minutes)m)",
+                    "time": "Snoozed (\(minutes)m)",
                     "type": "snooze"
                 ]
             )
@@ -661,9 +661,9 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
 
     /// Triggers an immediate screen HUD alert and chime sequence for testing
     public func testReminderAlertHUD(
-        title: String = "Bater o ponto",
-        subtitle: String = "Lembrete Diário • 18:00",
-        notes: String = "Não se esqueça de registrar seu ponto no sistema!"
+        title: String = "Daily Standup",
+        subtitle: String = "Daily Reminder • 6:00 PM",
+        notes: String = "Time to review your daily accomplishments and plan ahead!"
     ) {
         playUserReminderSound()
 
@@ -673,7 +673,7 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
             userInfo: [
                 "title": title,
                 "subtitle": subtitle,
-                "time": "Agora",
+                "time": "Now",
                 "type": "test"
             ]
         )

@@ -228,16 +228,16 @@ public struct RemindersView: View {
     private var testHUDAlertButton: some View {
         Button {
             NotificationManager.shared.testReminderAlertHUD(
-                title: "Bater o ponto",
-                subtitle: "Lembrete Diário • 18:00",
-                notes: "Não se esqueça de registrar seu ponto no sistema!"
+                title: "Daily Standup",
+                subtitle: "Daily Reminder • 6:00 PM",
+                notes: "Time to review your daily accomplishments and plan ahead!"
             )
         } label: {
             HStack(spacing: 4) {
-                Image(systemName: "alarm.fill")
+                Image(systemName: "bell.badge.fill")
                     .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(Color.orange)
-                Text("Testar Alerta")
+                    .foregroundStyle(AppTheme.accent)
+                Text("Test Alert")
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(AppTheme.textPrimary)
             }
@@ -247,11 +247,11 @@ public struct RemindersView: View {
             .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .stroke(Color.orange.opacity(0.4), lineWidth: 1)
+                    .stroke(AppTheme.border, lineWidth: 1)
             )
         }
         .buttonStyle(.plain)
-        .help("Testar popup visual e alerta flutuante na tela (HUD)")
+        .help("Test visual popup and floating screen alert (HUD)")
     }
 
     private var newReminderButton: some View {

@@ -90,16 +90,16 @@ public struct MainView: View {
                 // Floating In-App Reminder Toast Banner
                 if let reminderAlert = activeInAppReminder {
                     HStack(spacing: 12) {
-                        HStack(spacing: 6) {
-                            Image(systemName: "alarm.fill")
-                                .font(.system(size: 13, weight: .bold))
-                            Text("Opa, deu a hora!")
-                                .font(.system(size: 11, weight: .heavy, design: .rounded))
+                        HStack(spacing: 5) {
+                            Image(systemName: "bell.badge.fill")
+                                .font(.system(size: 11, weight: .bold))
+                            Text("Reminder")
+                                .font(.system(size: 11, weight: .bold, design: .rounded))
                         }
-                        .foregroundStyle(.white)
+                        .foregroundStyle(AppTheme.accent)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
-                        .background(Color.orange)
+                        .background(AppTheme.accent.opacity(0.15))
                         .clipShape(Capsule())
 
                         VStack(alignment: .leading, spacing: 2) {
@@ -129,7 +129,7 @@ public struct MainView: View {
                             HStack(spacing: 4) {
                                 Image(systemName: "clock.arrow.circlepath")
                                     .font(.system(size: 10))
-                                Text("Adiar 5m")
+                                Text("Snooze 5m")
                                     .font(.system(size: 11, weight: .semibold))
                             }
                             .padding(.horizontal, 8)
@@ -137,6 +137,10 @@ public struct MainView: View {
                             .background(AppTheme.cardBackgroundSubtle)
                             .foregroundStyle(AppTheme.textPrimary)
                             .clipShape(RoundedRectangle(cornerRadius: 6))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 6)
+                                    .stroke(AppTheme.subtleBorder, lineWidth: 1)
+                            )
                         }
                         .buttonStyle(.plain)
 
@@ -146,13 +150,17 @@ public struct MainView: View {
                                 activeInAppReminder = nil
                             }
                         } label: {
-                            Text("Entendido")
+                            HStack(spacing: 4) {
+                                Image(systemName: "checkmark")
+                                    .font(.system(size: 10, weight: .bold))
+                            Text("Done")
                                 .font(.system(size: 11, weight: .bold))
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 4)
-                                .background(Color.green.opacity(0.85))
-                                .foregroundStyle(.white)
-                                .clipShape(RoundedRectangle(cornerRadius: 6))
+                            }
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 4)
+                            .background(AppTheme.accent)
+                            .foregroundStyle(Color.white)
+                            .clipShape(RoundedRectangle(cornerRadius: 6))
                         }
                         .buttonStyle(.plain)
 
@@ -176,9 +184,9 @@ public struct MainView: View {
                     )
                     .overlay(
                         RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .stroke(Color.orange.opacity(0.5), lineWidth: 1.2)
+                            .stroke(AppTheme.border, lineWidth: 1.0)
                     )
-                    .shadow(color: Color.black.opacity(0.2), radius: 10, x: 0, y: 4)
+                    .shadow(color: Color.black.opacity(0.18), radius: 10, x: 0, y: 4)
                     .padding(.top, 10)
                     .padding(.horizontal, 20)
                     .transition(.move(edge: .top).combined(with: .opacity))

@@ -160,9 +160,9 @@ public struct MenuBarCardView: View {
             if let reminderAlert = activeReminderAlert {
                 VStack(spacing: 6) {
                     HStack(spacing: 8) {
-                        Image(systemName: "alarm.fill")
+                        Image(systemName: "bell.badge.fill")
                             .font(.caption)
-                            .foregroundStyle(Color.orange)
+                            .foregroundStyle(AppTheme.accent)
                         VStack(alignment: .leading, spacing: 1) {
                             Text(reminderAlert.title)
                                 .font(.caption.weight(.bold))
@@ -188,12 +188,12 @@ public struct MenuBarCardView: View {
                             NotificationManager.shared.stopActiveSound()
                             withAnimation { activeReminderAlert = nil }
                         } label: {
-                            Text("Entendido")
-                                .font(.system(size: 10, weight: .bold))
+                            Text("Done")
+                                .font(.system(size: 10, weight: .semibold))
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 3)
-                                .background(Color.green.opacity(0.8))
-                                .foregroundStyle(.white)
+                                .background(AppTheme.accent)
+                                .foregroundStyle(Color.white)
                                 .clipShape(RoundedRectangle(cornerRadius: 4))
                         }
                         .buttonStyle(.plain)
@@ -210,7 +210,7 @@ public struct MenuBarCardView: View {
                             HStack(spacing: 3) {
                                 Image(systemName: "clock.arrow.circlepath")
                                     .font(.system(size: 9))
-                                Text("Adiar 5m")
+                                Text("Snooze 5m")
                                     .font(.system(size: 10, weight: .semibold))
                             }
                             .padding(.horizontal, 6)
@@ -218,6 +218,10 @@ public struct MenuBarCardView: View {
                             .background(AppTheme.cardBackgroundSubtle)
                             .foregroundStyle(AppTheme.textPrimary)
                             .clipShape(RoundedRectangle(cornerRadius: 4))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 4)
+                                    .stroke(AppTheme.subtleBorder, lineWidth: 1)
+                            )
                         }
                         .buttonStyle(.plain)
 
@@ -228,11 +232,11 @@ public struct MenuBarCardView: View {
                 .padding(.vertical, 7)
                 .background(
                     RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(Color.orange.opacity(0.12))
+                        .fill(AppTheme.accent.opacity(0.12))
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .stroke(Color.orange.opacity(0.35), lineWidth: 1)
+                        .stroke(AppTheme.border, lineWidth: 1)
                 )
                 .transition(.asymmetric(
                     insertion: .scale(scale: 0.95).combined(with: .opacity),
