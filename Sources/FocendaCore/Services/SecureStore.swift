@@ -9,13 +9,18 @@ import Security
 /// stored separately in the macOS Keychain and never in UserDefaults.
 public final class SecureStore {
     public static let shared = SecureStore()
-    public static let defaultKeychainService = "com.oomestre.focenda.secure-storage"
+    public static let defaultKeychainService = "com.oomestre.focenda.secure-store"
 
     private static let keychainAccount = "master-key-v1"
     private static let envelopeMarker = Data("FocendaSecureStoreV1".utf8)
+    private static let previewKey = SymmetricKey(data: Data(repeating: 0x42, count: 32))
 
     private let defaults: UserDefaults
     private let encryptionKey: SymmetricKey
+
+    private static var isRunningForPreviews: Bool {
+        ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1"
+    }
 
     /// Creates a store backed by the supplied defaults domain.
     ///
@@ -162,14 +167,33 @@ public final class SecureStore {
     }
 
     private static func loadOrCreateKey(service: String) -> SymmetricKey {
+        if isRunningForPreviews {
+            return previewKey
+        }
+
         if let keyData = readKeychainData(service: service), keyData.count == 32 {
             return SymmetricKey(data: keyData)
         }
 
+        if let fallbackData = readFallbackKeyData(), fallbackData.count == 32 {
+            _ = saveKeychainData(fallbackData, service: service)
+            return SymmetricKey(data: fallbackData)
+        }
+
         let generatedKey = SymmetricKey(size: .bits256)
         let keyData = generatedKey.withUnsafeBytes { Data($0) }
-        _ = saveKeychainData(keyData, service: service)
+        let saveStatus = saveKeychainData(keyData, service: service)
+        if saveStatus != errSecSuccess {
+            saveFallbackKeyData(keyData)
+        }
         return generatedKey
+    }
+
+    private static func createOpenAccess(service: String) -> SecAccess? {
+        var access: SecAccess?
+        let status = SecAccessCreate(service as CFString, (nil as CFArray?), &access)
+        guard status == errSecSuccess else { return nil }
+        return access
     }
 
     private static func readKeychainData(service: String) -> Data? {
@@ -189,12 +213,16 @@ public final class SecureStore {
 
     @discardableResult
     private static func saveKeychainData(_ data: Data, service: String) -> OSStatus {
-        let attributes: [String: Any] = [
+        var attributes: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
             kSecAttrAccount as String: keychainAccount,
             kSecValueData as String: data
         ]
+
+        if let access = createOpenAccess(service: service) {
+            attributes[kSecAttrAccess as String] = access
+        }
 
         let addStatus = SecItemAdd(attributes as CFDictionary, nil)
         guard addStatus == errSecDuplicateItem else { return addStatus }
@@ -204,7 +232,38 @@ public final class SecureStore {
             kSecAttrService as String: service,
             kSecAttrAccount as String: keychainAccount
         ]
-        let update: [String: Any] = [kSecValueData as String: data]
+        var update: [String: Any] = [kSecValueData as String: data]
+        if let access = createOpenAccess(service: service) {
+            update[kSecAttrAccess as String] = access
+        }
         return SecItemUpdate(query as CFDictionary, update as CFDictionary)
+    }
+
+    private static var fallbackKeyURL: URL? {
+        guard let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
+            return nil
+        }
+        let folder = appSupport.appendingPathComponent("com.oomestre.Focenda", isDirectory: true)
+        if !FileManager.default.fileExists(atPath: folder.path) {
+            try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true, attributes: [
+                .posixPermissions: 0o700
+            ])
+        }
+        return folder.appendingPathComponent(".vault_key")
+    }
+
+    private static func readFallbackKeyData() -> Data? {
+        guard let url = fallbackKeyURL,
+              let data = try? Data(contentsOf: url),
+              data.count == 32 else {
+            return nil
+        }
+        return data
+    }
+
+    private static func saveFallbackKeyData(_ data: Data) {
+        guard let url = fallbackKeyURL else { return }
+        try? data.write(to: url, options: [.atomic, .completeFileProtection])
+        try? FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)
     }
 }

@@ -81,4 +81,14 @@ final class SecureStoreTests: XCTestCase {
 
         XCTAssertNil(store.string(forKey: "focenda_other_note"))
     }
+
+    func testSecureStoreInitializationWithDefaultKey() {
+        let isolatedSuite = "Focenda.SecureStoreIsolated.\(UUID().uuidString)"
+        let isolatedDefaults = UserDefaults(suiteName: isolatedSuite)!
+        defer { isolatedDefaults.removePersistentDomain(forName: isolatedSuite) }
+
+        let isolatedStore = SecureStore(defaults: isolatedDefaults, keychainService: "com.oomestre.focenda.test-store-\(UUID().uuidString)")
+        isolatedStore.set("test-payload", forKey: "test-key")
+        XCTAssertEqual(isolatedStore.string(forKey: "test-key"), "test-payload")
+    }
 }
