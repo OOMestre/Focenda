@@ -14,6 +14,10 @@ final class SupportViewTests: XCTestCase {
         XCTAssertEqual(SupportView.supportURL.absoluteString, "https://buymeacoffee.com/omestre")
     }
 
+    func testGitHubURLPointsToFocendaRepository() {
+        XCTAssertEqual(SupportView.githubURL.absoluteString, "https://github.com/OOMestre/Focenda")
+    }
+
     func testSupportViewInitialization() {
         let supportView = SupportView()
 
