@@ -10,6 +10,7 @@ struct FocendaApp: App {
     @State private var scratchpadVM = ScratchpadViewModel()
     @State private var bookmarkVM = BookmarkViewModel()
     @State private var recurringReminderVM = RecurringReminderViewModel()
+    @State private var isReminderAlertActive: Bool = false
 
     init() {
         NotificationManager.shared.requestAuthorization()
@@ -39,16 +40,34 @@ struct FocendaApp: App {
                 }
             }
             .onReceive(NotificationCenter.default.publisher(for: NotificationManager.taskReminderFiredNotification)) { _ in
+                isReminderAlertActive = true
                 NSApp.activate(ignoringOtherApps: true)
                 if let window = NSApp.windows.first(where: { $0.canBecomeKey && $0.isVisible }) ?? NSApp.windows.first {
                     window.makeKeyAndOrderFront(nil)
                 }
             }
             .onReceive(NotificationCenter.default.publisher(for: NotificationManager.recurringReminderFiredNotification)) { _ in
+                isReminderAlertActive = true
                 NSApp.activate(ignoringOtherApps: true)
                 if let window = NSApp.windows.first(where: { $0.canBecomeKey && $0.isVisible }) ?? NSApp.windows.first {
                     window.makeKeyAndOrderFront(nil)
                 }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: NotificationManager.openRemindersTabNotification)) { _ in
+                appState.selectedTab = .reminders
+                NSApp.activate(ignoringOtherApps: true)
+                if let window = NSApp.windows.first(where: { $0.canBecomeKey && $0.isVisible }) ?? NSApp.windows.first {
+                    window.makeKeyAndOrderFront(nil)
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: NotificationManager.reminderAlertBannerNotification)) { _ in
+                isReminderAlertActive = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 25.0) {
+                    isReminderAlertActive = false
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: NotificationManager.reminderAlertDismissedNotification)) { _ in
+                isReminderAlertActive = false
             }
         }
         .windowStyle(.titleBar)
@@ -111,7 +130,12 @@ struct FocendaApp: App {
             )
         } label: {
             HStack(spacing: 4) {
-                Image(systemName: "timer")
+                if isReminderAlertActive {
+                    Image(systemName: "bell.badge.fill")
+                        .symbolRenderingMode(.multicolor)
+                } else {
+                    Image(systemName: "timer")
+                }
                 if timerVM.status == .running {
                     Text(timerVM.formattedTimeRemaining)
                         .monospacedDigit()

@@ -140,7 +140,7 @@ public struct MenuBarCardView: View {
                 withAnimation(.spring(response: 0.35, dampingFraction: 0.72)) {
                     activeReminderAlert = (title: title, subtitle: subtitle, time: time)
                 }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 25.0) {
                     withAnimation(.spring(response: 0.35, dampingFraction: 0.72)) {
                         activeReminderAlert = nil
                     }
@@ -155,37 +155,81 @@ public struct MenuBarCardView: View {
 
             // Active Reminder Banner
             if let reminderAlert = activeReminderAlert {
-                HStack(spacing: 8) {
-                    Image(systemName: "bell.badge.fill")
-                        .font(.caption)
-                        .foregroundStyle(AppTheme.sandstone)
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(reminderAlert.title)
-                            .font(.caption.weight(.bold))
+                VStack(spacing: 6) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "alarm.fill")
+                            .font(.caption)
+                            .foregroundStyle(Color.orange)
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(reminderAlert.title)
+                                .font(.caption.weight(.bold))
+                                .foregroundStyle(AppTheme.textPrimary)
+                            Text("\(reminderAlert.subtitle) • \(reminderAlert.time)")
+                                .font(.system(size: 9))
+                                .foregroundStyle(AppTheme.textSecondary)
+                        }
+                        Spacer()
+                        Button {
+                            NotificationManager.shared.stopActiveSound()
+                            withAnimation { activeReminderAlert = nil }
+                        } label: {
+                            Image(systemName: "xmark")
+                                .font(.system(size: 9, weight: .bold))
+                                .foregroundStyle(AppTheme.textTertiary)
+                        }
+                        .buttonStyle(.plain)
+                    }
+
+                    HStack(spacing: 6) {
+                        Button {
+                            NotificationManager.shared.stopActiveSound()
+                            withAnimation { activeReminderAlert = nil }
+                        } label: {
+                            Text("Entendido")
+                                .font(.system(size: 10, weight: .bold))
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 3)
+                                .background(Color.green.opacity(0.8))
+                                .foregroundStyle(.white)
+                                .clipShape(RoundedRectangle(cornerRadius: 4))
+                        }
+                        .buttonStyle(.plain)
+
+                        Button {
+                            NotificationManager.shared.snoozeReminder(
+                                title: reminderAlert.title,
+                                subtitle: reminderAlert.subtitle,
+                                notes: "",
+                                minutes: 5
+                            )
+                            withAnimation { activeReminderAlert = nil }
+                        } label: {
+                            HStack(spacing: 3) {
+                                Image(systemName: "clock.arrow.circlepath")
+                                    .font(.system(size: 9))
+                                Text("Adiar 5m")
+                                    .font(.system(size: 10, weight: .semibold))
+                            }
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 3)
+                            .background(AppTheme.cardBackgroundSubtle)
                             .foregroundStyle(AppTheme.textPrimary)
-                        Text("\(reminderAlert.subtitle) • \(reminderAlert.time)")
-                            .font(.system(size: 9))
-                            .foregroundStyle(AppTheme.textSecondary)
+                            .clipShape(RoundedRectangle(cornerRadius: 4))
+                        }
+                        .buttonStyle(.plain)
+
+                        Spacer()
                     }
-                    Spacer()
-                    Button {
-                        withAnimation { activeReminderAlert = nil }
-                    } label: {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 9, weight: .bold))
-                            .foregroundStyle(AppTheme.textTertiary)
-                    }
-                    .buttonStyle(.plain)
                 }
                 .padding(.horizontal, 10)
-                .padding(.vertical, 6)
+                .padding(.vertical, 7)
                 .background(
                     RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(AppTheme.sandstone.opacity(0.15))
+                        .fill(Color.orange.opacity(0.12))
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .stroke(AppTheme.sandstone.opacity(0.35), lineWidth: 1)
+                        .stroke(Color.orange.opacity(0.35), lineWidth: 1)
                 )
                 .transition(.asymmetric(
                     insertion: .scale(scale: 0.95).combined(with: .opacity),

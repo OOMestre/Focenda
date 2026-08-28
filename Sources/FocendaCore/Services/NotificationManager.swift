@@ -14,11 +14,13 @@ public protocol NotificationManagerProtocol: AnyObject {
     func cancelRecurringReminder(reminder: RecurringReminder)
     func playReminderAlertChime(soundName: String, customFilePath: String?, repeatCount: Int, interval: TimeInterval)
     func stopActiveSound()
+    func snoozeReminder(title: String, subtitle: String, notes: String, minutes: Int)
 }
 
 public extension NotificationManagerProtocol {
     func playReminderAlertChime(soundName: String = "Hero", customFilePath: String? = nil, repeatCount: Int = 3, interval: TimeInterval = 0.85) {}
     func stopActiveSound() {}
+    func snoozeReminder(title: String, subtitle: String = "Lembrete Adiado", notes: String = "", minutes: Int = 5) {}
 }
 
 /// Service managing native macOS system notifications, rich audible alerts, and in-app banner broadcasts
@@ -28,6 +30,9 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
     public static let taskReminderFiredNotification = Notification.Name("FocendaTaskReminderFired")
     public static let recurringReminderFiredNotification = Notification.Name("FocendaRecurringReminderFired")
     public static let reminderAlertBannerNotification = Notification.Name("FocendaReminderAlertBanner")
+    public static let openRemindersTabNotification = Notification.Name("FocendaOpenRemindersTab")
+    public static let reminderSnoozedNotification = Notification.Name("FocendaReminderSnoozed")
+    public static let reminderAlertDismissedNotification = Notification.Name("FocendaReminderAlertDismissed")
 
     private let center: UNUserNotificationCenter?
     public private(set) var lastNotifiedMode: FocusMode?
@@ -380,6 +385,33 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
             ]
         )
 
+        #if canImport(AppKit)
+        DispatchQueue.main.async { [weak self] in
+            ReminderAlertHUDPanel.shared.show(
+                title: task.title,
+                subtitle: timeStr.isEmpty ? "Lembrete de Tarefa" : "\(timeStr) • Tarefa",
+                notes: task.notes,
+                type: "task",
+                timeoutSeconds: 25.0,
+                onSnooze: {
+                    self?.snoozeReminder(
+                        title: task.title,
+                        subtitle: "Lembrete de Tarefa",
+                        notes: task.notes,
+                        minutes: 5
+                    )
+                },
+                onComplete: {
+                    self?.stopActiveSound()
+                },
+                onOpenApp: {
+                    self?.stopActiveSound()
+                    NotificationCenter.default.post(name: Self.openRemindersTabNotification, object: task)
+                }
+            )
+        }
+        #endif
+
         onTaskReminderFired?(task)
     }
 
@@ -522,6 +554,33 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
             ]
         )
 
+        #if canImport(AppKit)
+        DispatchQueue.main.async { [weak self] in
+            ReminderAlertHUDPanel.shared.show(
+                title: reminder.title,
+                subtitle: "\(reminder.formattedTime) • \(reminder.repeatFrequency.rawValue)",
+                notes: reminder.notes,
+                type: "recurring",
+                timeoutSeconds: 25.0,
+                onSnooze: {
+                    self?.snoozeReminder(
+                        title: reminder.title,
+                        subtitle: "\(reminder.formattedTime) • \(reminder.repeatFrequency.rawValue)",
+                        notes: reminder.notes,
+                        minutes: 5
+                    )
+                },
+                onComplete: {
+                    self?.stopActiveSound()
+                },
+                onOpenApp: {
+                    self?.stopActiveSound()
+                    NotificationCenter.default.post(name: Self.openRemindersTabNotification, object: reminder)
+                }
+            )
+        }
+        #endif
+
         onRecurringReminderFired?(reminder)
 
         // Reschedule next occurrence timer
@@ -537,6 +596,109 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
                 }
             }
         }
+    }
+
+    // MARK: - Snooze & Test Reminders
+
+    /// Snoozes a reminder for a specified duration in minutes, re-triggering sound and screen alert
+    public func snoozeReminder(
+        title: String,
+        subtitle: String = "Lembrete Adiado",
+        notes: String = "",
+        minutes: Int = 5
+    ) {
+        stopActiveSound()
+
+        let interval = TimeInterval(max(1, minutes) * 60)
+        let snoozeTimer = Timer(timeInterval: interval, repeats: false) { [weak self] _ in
+            guard let self = self else { return }
+            self.playUserReminderSound()
+
+            NotificationCenter.default.post(
+                name: Self.reminderAlertBannerNotification,
+                object: nil,
+                userInfo: [
+                    "title": title,
+                    "subtitle": subtitle,
+                    "time": "Adiado (\(minutes)m)",
+                    "type": "snooze"
+                ]
+            )
+
+            #if canImport(AppKit)
+            DispatchQueue.main.async {
+                ReminderAlertHUDPanel.shared.show(
+                    title: title,
+                    subtitle: subtitle,
+                    notes: notes,
+                    type: "snooze",
+                    timeoutSeconds: 25.0,
+                    onSnooze: { [weak self] in
+                        self?.snoozeReminder(title: title, subtitle: subtitle, notes: notes, minutes: minutes)
+                    },
+                    onComplete: { [weak self] in
+                        self?.stopActiveSound()
+                    },
+                    onOpenApp: { [weak self] in
+                        self?.stopActiveSound()
+                        NotificationCenter.default.post(name: Self.openRemindersTabNotification, object: nil)
+                    }
+                )
+            }
+            #endif
+        }
+        RunLoop.main.add(snoozeTimer, forMode: .common)
+
+        NotificationCenter.default.post(
+            name: Self.reminderSnoozedNotification,
+            object: nil,
+            userInfo: [
+                "title": title,
+                "minutes": minutes
+            ]
+        )
+    }
+
+    /// Triggers an immediate screen HUD alert and chime sequence for testing
+    public func testReminderAlertHUD(
+        title: String = "Bater o ponto",
+        subtitle: String = "Lembrete Diário • 18:00",
+        notes: String = "Não se esqueça de registrar seu ponto no sistema!"
+    ) {
+        playUserReminderSound()
+
+        NotificationCenter.default.post(
+            name: Self.reminderAlertBannerNotification,
+            object: nil,
+            userInfo: [
+                "title": title,
+                "subtitle": subtitle,
+                "time": "Agora",
+                "type": "test"
+            ]
+        )
+
+        #if canImport(AppKit)
+        DispatchQueue.main.async { [weak self] in
+            ReminderAlertHUDPanel.shared.show(
+                title: title,
+                subtitle: subtitle,
+                notes: notes,
+                type: "test",
+                timeoutSeconds: 25.0,
+                onSnooze: {
+                    self?.snoozeReminder(title: title, subtitle: subtitle, notes: notes, minutes: 5)
+                },
+                onComplete: {
+                    self?.stopActiveSound()
+                },
+                onOpenApp: {
+                    self?.stopActiveSound()
+                    NotificationCenter.default.post(name: Self.openRemindersTabNotification, object: nil)
+                }
+            )
+        }
+        #endif
     }
 
     // MARK: - UNUserNotificationCenterDelegate
