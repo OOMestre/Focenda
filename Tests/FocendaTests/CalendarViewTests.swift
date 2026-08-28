@@ -599,22 +599,19 @@ final class CalendarViewTests: XCTestCase {
     }
 
     func testCalendarHoverPopoverDebounceContract() async {
-        var didOpenPopover = false
-        var isCancelled = false
-
-        // Simulating the 1.0s debounce task
-        let task = Task {
-            try? await Task.sleep(nanoseconds: 50_000_000) // 50ms for unit test
-            if !Task.isCancelled {
-                didOpenPopover = true
-            } else {
-                isCancelled = true
+        // Simulating the debounce task returning whether it was not cancelled
+        let task = Task<Bool, Never> {
+            do {
+                try await Task.sleep(nanoseconds: 50_000_000) // 50ms for unit test
+                return !Task.isCancelled
+            } catch {
+                return false
             }
         }
 
         // Cancel early before sleep completes
         task.cancel()
-        _ = await task.result
+        let didOpenPopover = await task.value
 
         XCTAssertFalse(didOpenPopover)
         XCTAssertTrue(task.isCancelled)
