@@ -34,6 +34,25 @@ final class NotificationManagerTests: XCTestCase {
         )
     }
 
+    func testSessionCompletionNotificationUsesSystemSoundWhenEnabled() {
+        let content = NotificationManager.sessionCompletionNotificationContent(
+            for: .shortBreak,
+            soundEnabled: true
+        )
+
+        XCTAssertEqual(content.title, "Short Break Finished")
+        XCTAssertNotNil(content.sound)
+    }
+
+    func testSessionCompletionNotificationHonorsDisabledSoundPreference() {
+        let content = NotificationManager.sessionCompletionNotificationContent(
+            for: .longBreak,
+            soundEnabled: false
+        )
+
+        XCTAssertNil(content.sound)
+    }
+
     func testUpdateNotificationTracksVersion() {
         let manager = NotificationManager()
 

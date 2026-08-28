@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 
 ### Fixed
 - **Pomodoro Completion Alert:** Timer completion now uses the floating alert HUD without activating the app, and plays the shared Hero notification sound only once.
+- **Pomodoro Alert Sound & Motion:** Completion alerts now use the native macOS notification sound reliably and animate the timer badge with a subtle pulse that respects Reduce Motion.
 
 - **Calendar Day Preview:** Clicking a calendar date now pins its preview while the cursor moves to the quick actions, and the preview has been simplified to reduce visual density.
 - **Simplified Scratchpad Notes:** Removed the generic color categories and their filter controls. The Scratchpad now starts empty, allows the final note to be deleted, uses neutral untitled notes, and migrates old category placeholders without losing user-written content.

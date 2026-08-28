@@ -80,12 +80,16 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
         self.center?.delegate = self
     }
 
+    private static var isRunningUnitTests: Bool {
+        NSClassFromString("XCTestCase") != nil ||
+        NSClassFromString("XCTest") != nil ||
+        ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil ||
+        ProcessInfo.processInfo.environment["XCTestBundlePath"] != nil ||
+        ProcessInfo.processInfo.arguments.contains(where: { $0.contains("xctest") || $0.contains("test") })
+    }
+
     private static var isNotificationAvailable: Bool {
-        guard NSClassFromString("XCTestCase") == nil,
-              NSClassFromString("XCTest") == nil,
-              ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil,
-              ProcessInfo.processInfo.environment["XCTestBundlePath"] == nil,
-              !ProcessInfo.processInfo.arguments.contains(where: { $0.contains("xctest") || $0.contains("test") }),
+        guard !isRunningUnitTests,
               let bundleId = Bundle.main.bundleIdentifier,
               bundleId != "com.apple.dt.xctest.tool",
               bundleId != "FocendaPackageTests",
@@ -95,13 +99,17 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
         return true
     }
 
+    private static var isAudioPlaybackAvailable: Bool {
+        !isRunningUnitTests || ProcessInfo.processInfo.environment["ENABLE_TEST_AUDIO"] == "1"
+    }
+
     // MARK: - Rich Audible Alerts
 
     /// Plays a single rich native macOS alert chime sequence (e.g. Hero, Ping, Glass) with fallback
     public func playRichAlertChime(soundName: String = "Hero") {
         #if canImport(AppKit)
         // Guard against playing sound in headless unit test environments unless explicitly enabled
-        guard Self.isNotificationAvailable || ProcessInfo.processInfo.environment["ENABLE_TEST_AUDIO"] == "1" else {
+        guard Self.isAudioPlaybackAvailable else {
             return
         }
         stopActiveSound()
@@ -119,7 +127,7 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
         #if canImport(AppKit)
         stopActiveSound()
 
-        guard Self.isNotificationAvailable || ProcessInfo.processInfo.environment["ENABLE_TEST_AUDIO"] == "1" else {
+        guard Self.isAudioPlaybackAvailable else {
             return
         }
 
@@ -179,21 +187,32 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
            let sound = NSSound(contentsOfFile: customPath, byReference: true) {
             self.activeSound = sound
             sound.stop()
-            sound.play()
-            return
+            if sound.play() {
+                return
+            }
+            self.activeSound = nil
         }
 
         if let sound = NSSound(named: NSSound.Name(soundName)) {
             self.activeSound = sound
             sound.stop()
-            sound.play()
-        } else if let fallbackSound = NSSound(named: NSSound.Name("Ping")) {
+            if sound.play() {
+                return
+            }
+            self.activeSound = nil
+        }
+
+        if let fallbackSound = NSSound(named: NSSound.Name("Ping")) {
             self.activeSound = fallbackSound
             fallbackSound.stop()
-            fallbackSound.play()
-        } else {
-            NSSound.beep()
+            if fallbackSound.play() {
+                return
+            }
+            self.activeSound = nil
         }
+
+        // Keep an audible fallback even when a named system sound cannot start.
+        NSSound.beep()
         #endif
     }
 
@@ -267,6 +286,20 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
         }
     }
 
+    /// Builds the local notification content for a completed Pomodoro session.
+    /// The system notification owns playback when a notification center is available,
+    /// which keeps the banner and its sound in sync without playing the alert twice.
+    static func sessionCompletionNotificationContent(
+        for mode: FocusMode,
+        soundEnabled: Bool
+    ) -> UNMutableNotificationContent {
+        let content = UNMutableNotificationContent()
+        content.title = Self.notificationTitle(for: mode)
+        content.body = Self.notificationBody(for: mode)
+        content.sound = soundEnabled ? .default : nil
+        return content
+    }
+
     // MARK: - Focus Session Completed
 
     /// Presents the focus completion alert without activating Focenda in front of the user's current app.
@@ -276,8 +309,10 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
         let soundEnabled = UserDefaults.standard.object(forKey: "soundEnabled") == nil
             ? true
             : UserDefaults.standard.bool(forKey: "soundEnabled")
-        if soundEnabled {
-            // The HUD owns the completion alert, so play the shared sound exactly once.
+
+        // The native notification owns playback when available. If it is unavailable,
+        // retain an in-app fallback so a standalone executable still produces a chime.
+        if center == nil && soundEnabled {
             playRichAlertChime(soundName: Self.standardNotificationSoundName)
         }
 
@@ -304,11 +339,7 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
             return
         }
 
-        let content = UNMutableNotificationContent()
-        content.title = Self.notificationTitle(for: mode)
-        content.body = Self.notificationBody(for: mode)
-        // Avoid a second system sound. The shared Hero chime above is the only completion sound.
-        content.sound = nil
+        let content = Self.sessionCompletionNotificationContent(for: mode, soundEnabled: soundEnabled)
 
         let request = UNNotificationRequest(
             identifier: UUID().uuidString,

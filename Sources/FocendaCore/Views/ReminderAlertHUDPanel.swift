@@ -154,11 +154,11 @@ public struct ReminderAlertHUDView: View {
     }
 
     private var alertLabel: String {
-        type.lowercased() == "pomodoro" ? "Pomodoro" : "Reminder"
+        isPomodoro ? "Pomodoro" : "Reminder"
     }
 
-    private var alertIconName: String {
-        type.lowercased() == "pomodoro" ? "timer" : "bell.badge.fill"
+    private var isPomodoro: Bool {
+        type.lowercased() == "pomodoro"
     }
 
     private var openButtonTitle: String {
@@ -175,9 +175,8 @@ public struct ReminderAlertHUDView: View {
             HStack(spacing: 8) {
                 // Animated notification badge
                 HStack(spacing: 4) {
-                    if type.lowercased() == "pomodoro" {
-                        Image(systemName: alertIconName)
-                            .font(.system(size: 10, weight: .bold))
+                    if isPomodoro {
+                        PomodoroNotificationTimer()
                     } else {
                         ReminderNotificationBell()
                     }
@@ -412,6 +411,41 @@ private struct ReminderNotificationBell: View {
         rotation = -7
         withAnimation(.easeInOut(duration: 0.18).repeatForever(autoreverses: true)) {
             rotation = 7
+        }
+    }
+}
+
+/// Small animated timer that gives a completed Pomodoro the same visual presence as a reminder.
+private struct PomodoroNotificationTimer: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var isPulsing: Bool = false
+
+    var body: some View {
+        Image(systemName: "timer")
+            .font(.system(size: 10, weight: .bold))
+            .scaleEffect(reduceMotion ? 1 : (isPulsing ? 1.12 : 0.92))
+            .opacity(reduceMotion ? 1 : (isPulsing ? 1 : 0.78))
+            .onAppear {
+                startPulseIfNeeded()
+            }
+            .onChange(of: reduceMotion) { _, shouldReduceMotion in
+                if shouldReduceMotion {
+                    isPulsing = false
+                } else {
+                    startPulseIfNeeded()
+                }
+            }
+    }
+
+    private func startPulseIfNeeded() {
+        guard !reduceMotion else {
+            isPulsing = false
+            return
+        }
+
+        isPulsing = false
+        withAnimation(.easeInOut(duration: 0.55).repeatForever(autoreverses: true)) {
+            isPulsing = true
         }
     }
 }
