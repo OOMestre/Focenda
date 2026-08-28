@@ -255,17 +255,21 @@ public final class ScratchpadViewModel {
     /// The currently selected note, or a graceful fallback
     public var currentNote: ScratchpadNote {
         get {
-            if let selectedId = selectedNoteId, let note = notes.first(where: { $0.id == selectedId }) {
+            if let selectedId = selectedNoteId,
+               let note = notes.first(where: { $0.id == selectedId }),
+               (selectedFolder == Self.allNotesFolder || note.folder.caseInsensitiveCompare(selectedFolder) == .orderedSame) {
                 return note
             }
             if let firstFiltered = filteredNotes.first {
                 return firstFiltered
             }
-            if let note = notes.first(where: { $0.color == selectedColor }) {
-                return note
-            }
-            if let first = notes.first {
-                return first
+            if selectedFolder == Self.allNotesFolder {
+                if let note = notes.first(where: { $0.color == selectedColor }) {
+                    return note
+                }
+                if let first = notes.first {
+                    return first
+                }
             }
             let activeFolder = selectedFolder == Self.allNotesFolder ? "General" : selectedFolder
             return ScratchpadNote(color: selectedColor, folder: activeFolder)
@@ -324,6 +328,8 @@ public final class ScratchpadViewModel {
         if let firstInFolder = filteredNotes.first {
             selectedNoteId = firstInFolder.id
             selectedColor = firstInFolder.color
+        } else {
+            selectedNoteId = nil
         }
     }
 
@@ -485,7 +491,7 @@ public final class ScratchpadViewModel {
             notes[index].content = text
             notes[index].updatedAt = Date()
             saveToUserDefaults()
-        } else if let index = notes.firstIndex(where: { $0.color == selectedColor }) {
+        } else if selectedFolder == Self.allNotesFolder, let index = notes.firstIndex(where: { $0.color == selectedColor }) {
             notes[index].content = text
             notes[index].updatedAt = Date()
             saveToUserDefaults()
@@ -510,7 +516,7 @@ public final class ScratchpadViewModel {
             notes[index].title = title
             notes[index].updatedAt = Date()
             saveToUserDefaults()
-        } else if let index = notes.firstIndex(where: { $0.color == selectedColor }) {
+        } else if selectedFolder == Self.allNotesFolder, let index = notes.firstIndex(where: { $0.color == selectedColor }) {
             notes[index].title = title
             notes[index].updatedAt = Date()
             saveToUserDefaults()
