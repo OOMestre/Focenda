@@ -272,9 +272,10 @@ final class MenuBarCardViewTests: XCTestCase {
         XCTAssertEqual(scratchpadVM.selectedFolder, "Sprint Goals")
 
         // Save a note to the new folder
-        cardView.saveQuickNote(content: "Deliver release v1.2", folder: "Sprint Goals")
+        cardView.saveQuickNote(title: "Release Checklist", content: "Deliver release v1.2", folder: "Sprint Goals")
         XCTAssertEqual(scratchpadVM.noteCount(for: "Sprint Goals"), 1)
         XCTAssertEqual(scratchpadVM.notes.first?.folder, "Sprint Goals")
+        XCTAssertEqual(scratchpadVM.notes.first?.title, "Release Checklist")
         XCTAssertEqual(scratchpadVM.notes.first?.content, "Deliver release v1.2")
     }
 

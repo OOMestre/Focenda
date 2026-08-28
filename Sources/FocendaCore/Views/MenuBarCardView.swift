@@ -50,10 +50,12 @@ public struct MenuBarCardView: View {
 
     // Quick Note state
     @State public var selectedNoteFolder: String = "General"
+    @State private var quickNoteTitle: String = ""
     @State private var quickNoteText: String = ""
     @State private var noteSavedFeedback: Bool = false
     @State public var isAddingNoteFolder: Bool = false
     @State public var newNoteFolderName: String = ""
+    @FocusState private var isQuickNoteTitleFocused: Bool
 
     // Quick Links state
     @State private var customLinks: [QuickLink] = []
@@ -110,14 +112,15 @@ public struct MenuBarCardView: View {
             }
             .onAppear {
                 isPresented = false
-                if selectedNoteFolder.isEmpty || !scratchpadVM.folders.contains(where: { $0.caseInsensitiveCompare(selectedNoteFolder) == .orderedSame }) {
-                    selectedNoteFolder = scratchpadVM.folders.first ?? "General"
-                }
-                quickNoteText = scratchpadVM.currentContent
+                synchronizeQuickNoteFolder()
+                resetQuickNoteDraft()
                 loadCustomLinks()
                 DispatchQueue.main.async {
                     withAnimation(.spring(response: 0.32, dampingFraction: 0.76)) {
                         isPresented = true
+                    }
+                    if selectedSection == .quickNote {
+                        isQuickNoteTitleFocused = true
                     }
                 }
             }
@@ -328,10 +331,10 @@ public struct MenuBarCardView: View {
                     withAnimation(.spring(response: 0.25, dampingFraction: 0.72)) {
                         selectedSection = section
                         if section == .quickNote {
-                            if !scratchpadVM.folders.contains(where: { $0.caseInsensitiveCompare(selectedNoteFolder) == .orderedSame }) {
-                                selectedNoteFolder = scratchpadVM.folders.first ?? "General"
+                            synchronizeQuickNoteFolder()
+                            DispatchQueue.main.async {
+                                isQuickNoteTitleFocused = true
                             }
-                            quickNoteText = scratchpadVM.currentContent
                         }
                     }
                 } label: {
@@ -752,7 +755,7 @@ public struct MenuBarCardView: View {
                                 withAnimation(.spring(response: 0.25, dampingFraction: 0.72)) {
                                     selectedNoteFolder = folder
                                     scratchpadVM.selectFolder(folder)
-                                    quickNoteText = scratchpadVM.currentContent
+                                    resetQuickNoteDraft()
                                 }
                             } label: {
                                 HStack {
@@ -886,6 +889,8 @@ public struct MenuBarCardView: View {
                 ))
             }
 
+            quickNoteTitleField
+
             ZStack(alignment: .topLeading) {
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
                     .fill(AppTheme.inputBackground)
@@ -906,9 +911,6 @@ public struct MenuBarCardView: View {
                     .foregroundStyle(AppTheme.textPrimary)
                     .scrollContentBackground(.hidden)
                     .padding(6)
-                    .onChange(of: quickNoteText) { _, newText in
-                        scratchpadVM.updateContent(newText)
-                    }
             }
             .frame(height: 120)
 
@@ -946,8 +948,7 @@ public struct MenuBarCardView: View {
                 .disabled(quickNoteText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
 
                 Button {
-                    scratchpadVM.updateContent(quickNoteText)
-                    scratchpadVM.copyCurrentNoteToClipboard()
+                    copyQuickNoteToClipboard()
                     withAnimation {
                         noteSavedFeedback = true
                     }
@@ -962,8 +963,8 @@ public struct MenuBarCardView: View {
                 .controlSize(.small)
 
                 Button {
+                    quickNoteTitle = ""
                     quickNoteText = ""
-                    scratchpadVM.clearCurrentNote()
                 } label: {
                     Text("Clear")
                         .font(.caption2)
@@ -975,6 +976,56 @@ public struct MenuBarCardView: View {
         .padding(.vertical, 2)
     }
 
+    private var quickNoteTitleField: some View {
+        HStack(spacing: 7) {
+            Image(systemName: "textformat")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(AppTheme.accent)
+
+            TextField("Add a title...", text: $quickNoteTitle)
+                .textFieldStyle(.plain)
+                .font(.callout.weight(.semibold))
+                .foregroundStyle(AppTheme.textPrimary)
+                .focused($isQuickNoteTitleFocused)
+                .submitLabel(.next)
+                .accessibilityLabel("Note title")
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .background(AppTheme.inputBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .stroke(AppTheme.accent.opacity(0.3), lineWidth: 1)
+        )
+    }
+
+    private func synchronizeQuickNoteFolder() {
+        let preferredFolder = scratchpadVM.selectedFolder == ScratchpadViewModel.allNotesFolder
+            ? selectedNoteFolder
+            : scratchpadVM.selectedFolder
+
+        if let matchingFolder = scratchpadVM.folders.first(where: {
+            $0.caseInsensitiveCompare(preferredFolder) == .orderedSame
+        }) {
+            selectedNoteFolder = matchingFolder
+        } else {
+            selectedNoteFolder = scratchpadVM.folders.first ?? "General"
+        }
+
+    }
+
+    private func resetQuickNoteDraft() {
+        quickNoteTitle = ""
+        quickNoteText = ""
+    }
+
+    private func copyQuickNoteToClipboard() {
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(quickNoteText, forType: .string)
+    }
+
     public func createNewNoteFolder(named name: String? = nil) {
         let nameToUse = name ?? newNoteFolderName
         let trimmed = nameToUse.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -984,7 +1035,7 @@ public struct MenuBarCardView: View {
         if success {
             selectedNoteFolder = trimmed
             scratchpadVM.selectFolder(trimmed)
-            quickNoteText = scratchpadVM.currentContent
+            resetQuickNoteDraft()
         }
         newNoteFolderName = ""
         withAnimation(.spring(response: 0.25, dampingFraction: 0.75)) {
@@ -992,16 +1043,18 @@ public struct MenuBarCardView: View {
         }
     }
 
-    public func saveQuickNote(content: String? = nil, folder: String? = nil) {
+    public func saveQuickNote(title: String? = nil, content: String? = nil, folder: String? = nil) {
+        let titleToUse = (title ?? quickNoteTitle).trimmingCharacters(in: .whitespacesAndNewlines)
         let textToUse = content ?? quickNoteText
         let folderToUse = folder ?? selectedNoteFolder
         let trimmed = textToUse.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         _ = scratchpadVM.createNote(
-            title: "",
+            title: titleToUse,
             content: trimmed,
             folder: folderToUse
         )
+        resetQuickNoteDraft()
         withAnimation {
             noteSavedFeedback = true
         }
