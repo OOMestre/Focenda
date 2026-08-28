@@ -51,12 +51,13 @@ case "$ACTION" in
 
     remove|rm|delete)
         if [ -z "$NAME" ]; then
-            echo "❌ Usage: $0 remove <name>"
-            echo "   Example: $0 remove bookmark-stats"
+            echo "❌ Usage: $0 remove <name> [branch-name]"
+            echo "   Example: $0 remove bookmark-stats feat/bookmark-stats"
             exit 1
         fi
 
         TARGET_DIR="$WORKTREES_DIR/$NAME"
+        TARGET_BRANCH="${BRANCH:-feat/$NAME}"
 
         if [ -d "$TARGET_DIR" ]; then
             echo "🗑️ Removing worktree at: $TARGET_DIR"
@@ -71,6 +72,19 @@ case "$ACTION" in
             fi
         fi
         git worktree prune
+
+        # Clean local and remote branch if specified or standard convention
+        for b in "$TARGET_BRANCH" "fix/$NAME" "feat/$NAME"; do
+            if git show-ref --verify --quiet "refs/heads/$b"; then
+                echo "🗑️ Deleting local branch: $b"
+                git branch -D "$b" 2>/dev/null || true
+            fi
+            # Try deleting remote branch if it exists on origin
+            if git ls-remote --heads origin "$b" | grep -q "$b"; then
+                echo "🌐 Deleting remote branch on origin: $b"
+                git push origin --delete "$b" 2>/dev/null || true
+            fi
+        done
         ;;
 
     *)
