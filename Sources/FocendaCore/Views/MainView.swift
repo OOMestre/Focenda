@@ -5,8 +5,10 @@ public struct MainView: View {
     /// and text remain 100% visible, fully functional, and visually balanced without breaking.
     public static let minimumWindowWidth: CGFloat = 800
     public static let minimumWindowHeight: CGFloat = 560
-    public static let defaultWindowWidth: CGFloat = 1060
-    public static let defaultWindowHeight: CGFloat = 720
+    /// Comfortable first-launch size that keeps the sidebar and primary workspace visible
+    /// without opening the app in full screen. Users can still resize down to the minimum.
+    public static let defaultWindowWidth: CGFloat = 1360
+    public static let defaultWindowHeight: CGFloat = 900
 
     @Bindable var appState: AppState
     @State private var timerVM: FocusTimerViewModel

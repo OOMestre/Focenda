@@ -40,8 +40,8 @@ final class WindowMinimumSizeTests: XCTestCase {
     func testMinimumWindowSizeConstants() {
         XCTAssertEqual(MainView.minimumWindowWidth, 800)
         XCTAssertEqual(MainView.minimumWindowHeight, 560)
-        XCTAssertEqual(MainView.defaultWindowWidth, 1060)
-        XCTAssertEqual(MainView.defaultWindowHeight, 720)
+        XCTAssertEqual(MainView.defaultWindowWidth, 1360)
+        XCTAssertEqual(MainView.defaultWindowHeight, 900)
         XCTAssertGreaterThan(MainView.defaultWindowWidth, MainView.minimumWindowWidth)
         XCTAssertGreaterThan(MainView.defaultWindowHeight, MainView.minimumWindowHeight)
     }
