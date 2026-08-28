@@ -9,12 +9,14 @@ final class SettingsViewTests: XCTestCase {
         UserDefaults.standard.removeObject(forKey: AppTheme.storageKey)
         UserDefaults.standard.removeObject(forKey: "dailyFocusGoalMinutes")
         UserDefaults.standard.removeObject(forKey: "soundEnabled")
+        UserDefaults.standard.removeObject(forKey: AppUpdatePreferences.automaticChecksEnabledKey)
     }
 
     override func tearDown() {
         UserDefaults.standard.removeObject(forKey: AppTheme.storageKey)
         UserDefaults.standard.removeObject(forKey: "dailyFocusGoalMinutes")
         UserDefaults.standard.removeObject(forKey: "soundEnabled")
+        UserDefaults.standard.removeObject(forKey: AppUpdatePreferences.automaticChecksEnabledKey)
         super.tearDown()
     }
 
@@ -71,6 +73,18 @@ final class SettingsViewTests: XCTestCase {
         XCTAssertFalse(UserDefaults.standard.bool(forKey: "globalShortcutsEnabled"))
         XCTAssertEqual(UserDefaults.standard.string(forKey: "shortcutPreset"), GlobalShortcutPreset.powerUser.rawValue)
         XCTAssertFalse(UserDefaults.standard.bool(forKey: "showShortcutFeedback"))
+    }
+
+    func testAutomaticUpdateChecksDefaultToEnabledAndPersist() {
+        let appState = AppState()
+
+        XCTAssertTrue(appState.automaticUpdateChecksEnabled)
+
+        appState.automaticUpdateChecksEnabled = false
+        XCTAssertFalse(UserDefaults.standard.bool(forKey: AppUpdatePreferences.automaticChecksEnabledKey))
+
+        let reloadedAppState = AppState()
+        XCTAssertFalse(reloadedAppState.automaticUpdateChecksEnabled)
     }
 
     func testSettingsViewWithShortcutsDisabled() {

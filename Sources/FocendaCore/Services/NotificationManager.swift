@@ -12,12 +12,14 @@ public protocol NotificationManagerProtocol: AnyObject {
     func cancelTaskReminder(task: TaskItem)
     func scheduleRecurringReminder(reminder: RecurringReminder)
     func cancelRecurringReminder(reminder: RecurringReminder)
+    func notifyUpdateAvailable(version: String)
     func playReminderAlertChime(soundName: String, customFilePath: String?, repeatCount: Int, interval: TimeInterval)
     func stopActiveSound()
     func snoozeReminder(title: String, subtitle: String, notes: String, minutes: Int)
 }
 
 public extension NotificationManagerProtocol {
+    func notifyUpdateAvailable(version: String) {}
     func playReminderAlertChime(soundName: String = "Hero", customFilePath: String? = nil, repeatCount: Int = 3, interval: TimeInterval = 0.85) {}
     func stopActiveSound() {}
     func snoozeReminder(title: String, subtitle: String = "Snoozed Reminder", notes: String = "", minutes: Int = 5) {}
@@ -33,6 +35,7 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
     public static let openRemindersTabNotification = Notification.Name("FocendaOpenRemindersTab")
     public static let reminderSnoozedNotification = Notification.Name("FocendaReminderSnoozed")
     public static let reminderAlertDismissedNotification = Notification.Name("FocendaReminderAlertDismissed")
+    public static let openSettingsNotification = Notification.Name("FocendaOpenSettings")
 
     private let center: UNUserNotificationCenter?
     public private(set) var lastNotifiedMode: FocusMode?
@@ -40,6 +43,7 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
     public private(set) var lastFiredTask: TaskItem?
     public private(set) var lastScheduledRecurringReminder: RecurringReminder?
     public private(set) var lastFiredRecurringReminder: RecurringReminder?
+    public private(set) var lastNotifiedUpdateVersion: String?
 
     /// Active sound playback task for repeated chimes
     private var activeSoundTask: Task<Void, Never>?
@@ -287,6 +291,36 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
         center.add(request) { error in
             if let error = error {
                 print("Failed to schedule notification: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    // MARK: - App Updates
+
+    /// Delivers a native macOS notification for a release discovered by the local updater.
+    public func notifyUpdateAvailable(version: String) {
+        lastNotifiedUpdateVersion = version
+
+        guard let center = center else {
+            return
+        }
+
+        let content = UNMutableNotificationContent()
+        content.title = "Focenda Update Available"
+        content.body = "Version \(version) is ready. Open Settings to install it."
+        content.sound = .default
+        content.threadIdentifier = "focenda-updates"
+        content.userInfo = ["action": "openSettings", "version": version]
+
+        let request = UNNotificationRequest(
+            identifier: "focenda-update-\(version.replacingOccurrences(of: ".", with: "-"))",
+            content: content,
+            trigger: nil
+        )
+
+        center.add(request) { error in
+            if let error = error {
+                print("Failed to schedule update notification: \(error.localizedDescription)")
             }
         }
     }
@@ -710,5 +744,20 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
         withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
     ) {
         completionHandler([.banner, .sound, .badge, .list])
+    }
+
+    /// Takes the user to Settings when they click the update notification.
+    public func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        didReceive response: UNNotificationResponse,
+        withCompletionHandler completionHandler: @escaping () -> Void
+    ) {
+        if let action = response.notification.request.content.userInfo["action"] as? String,
+           action == "openSettings" {
+            DispatchQueue.main.async {
+                NotificationCenter.default.post(name: Self.openSettingsNotification, object: nil)
+            }
+        }
+        completionHandler()
     }
 }

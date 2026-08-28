@@ -11,6 +11,9 @@ on:
         required: true
         default: 'v0.1.0'
 
+permissions:
+  contents: write
+
 jobs:
   release:
     name: Build & Publish Release
@@ -23,15 +26,7 @@ jobs:
       - name: Run Tests
         run: swift test
 
-      - name: Build Staging / Release Bundle
-        run: ./scripts/build-staging.sh
-
-      - name: Package App as ZIP
-        run: |
-          cd dist
-          zip -r -X ../Focenda-macOS.zip "Focenda Staging.app"
-
-      - name: Determine Prerelease Status
+      - name: Determine Release Version
         id: check-prerelease
         run: |
           TAG_NAME="${{ github.ref_name }}"
@@ -41,9 +36,28 @@ jobs:
           echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
           if [[ "$TAG_NAME" == *"beta"* || "$TAG_NAME" == *"rc"* || "$TAG_NAME" == *"alpha"* ]]; then
             echo "is_prerelease=true" >> $GITHUB_OUTPUT
+            echo "app_name=Focenda Staging" >> $GITHUB_OUTPUT
+            echo "bundle_identifier=com.oomestre.focenda.staging" >> $GITHUB_OUTPUT
           else
             echo "is_prerelease=false" >> $GITHUB_OUTPUT
+            echo "app_name=Focenda" >> $GITHUB_OUTPUT
+            echo "bundle_identifier=com.oomestre.focenda" >> $GITHUB_OUTPUT
           fi
+
+      - name: Build Staging / Release Bundle
+        env:
+          FOCENDA_RELEASE_TAG: ${{ steps.check-prerelease.outputs.tag_name }}
+          FOCENDA_APP_NAME: ${{ steps.check-prerelease.outputs.app_name }}
+          FOCENDA_BUNDLE_IDENTIFIER: ${{ steps.check-prerelease.outputs.bundle_identifier }}
+          FOCENDA_NO_OPEN: "1"
+        run: ./scripts/build-staging.sh
+
+      - name: Package App as ZIP
+        env:
+          FOCENDA_APP_NAME: ${{ steps.check-prerelease.outputs.app_name }}
+        run: |
+          cd dist
+          zip -r -X ../Focenda-macOS.zip "${FOCENDA_APP_NAME}.app"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2

@@ -17,6 +17,7 @@ public struct MainView: View {
     @State private var scratchpadVM: ScratchpadViewModel
     @State private var bookmarkVM: BookmarkViewModel
     @State private var recurringReminderVM: RecurringReminderViewModel
+    var updateManager: AppUpdateManager
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
     @State private var activeInAppReminder: (title: String, subtitle: String, time: String)?
 
@@ -26,9 +27,11 @@ public struct MainView: View {
         taskVM: TaskListViewModel = TaskListViewModel(),
         scratchpadVM: ScratchpadViewModel = ScratchpadViewModel(),
         bookmarkVM: BookmarkViewModel = BookmarkViewModel(),
-        recurringReminderVM: RecurringReminderViewModel = RecurringReminderViewModel()
+        recurringReminderVM: RecurringReminderViewModel = RecurringReminderViewModel(),
+        updateManager: AppUpdateManager = AppUpdateManager()
     ) {
         self.appState = appState
+        self.updateManager = updateManager
         _timerVM = State(initialValue: timerVM)
         _taskVM = State(initialValue: taskVM)
         _scratchpadVM = State(initialValue: scratchpadVM)
@@ -79,14 +82,28 @@ public struct MainView: View {
                     case .settings:
                         SettingsView(
                             appState: appState,
-                            timerVM: timerVM
+                            timerVM: timerVM,
+                            updateManager: updateManager
                         )
                     }
                 }
                 .background(AppTheme.background)
 
-                // Floating In-App Reminder Toast Banner
-                if let reminderAlert = activeInAppReminder {
+                VStack(alignment: .trailing, spacing: 10) {
+                    if let update = updateManager.availableUpdate {
+                        AppUpdateBanner(
+                            update: update,
+                            isInstalling: updateManager.status == .installing,
+                            onInstall: updateManager.installAvailableUpdate,
+                            onDismiss: updateManager.dismissAvailableUpdate
+                        )
+                        .padding(.top, 10)
+                        .padding(.horizontal, 20)
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                    }
+
+                    // Floating In-App Reminder Toast Banner
+                    if let reminderAlert = activeInAppReminder {
                     HStack(spacing: 12) {
                         HStack(spacing: 5) {
                             Image(systemName: "bell.badge.fill")
@@ -188,7 +205,9 @@ public struct MainView: View {
                     .padding(.top, 10)
                     .padding(.horizontal, 20)
                     .transition(.move(edge: .top).combined(with: .opacity))
+                    }
                 }
+                .frame(maxWidth: .infinity, alignment: .topTrailing)
             }
         }
         .navigationSplitViewStyle(.balanced)

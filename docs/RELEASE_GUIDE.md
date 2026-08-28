@@ -223,6 +223,14 @@ Focenda's release workflows are automated via GitHub Actions:
 - Detects whether the tag is a beta (`is_prerelease=true`) or production release (`is_prerelease=false`).
 - Publishes the GitHub Release with attached binaries and release notes.
 
+### 3. In-App Update Client
+Focenda checks the public GitHub Releases API from the Mac. The client sends no tasks, notes, preferences, identifiers, or telemetry; the only downloaded content is the public release metadata and the selected `Focenda-macOS.zip` archive.
+
+- The Settings page provides **Check Now** and an enabled-by-default **Check for updates automatically** preference. Automatic checks run at most once every 24 hours while the app is open.
+- Staging builds accept prerelease tags; production builds accept stable tags only. The release tag is embedded as `FocendaReleaseTag` so beta builds do not offer the same beta repeatedly.
+- Before installation, Focenda requires HTTPS GitHub download URLs, the expected Focenda bundle identifier, and a matching release version. It then replaces only the running `.app` bundle and relaunches it; local user data remains in macOS storage.
+- If the app is running from a development executable or the installed app directory is not writable, the update remains available and Settings shows the reason so the user can install manually from GitHub Releases.
+
 ---
 
 ## 9. Release Checklist & Rollback Procedure

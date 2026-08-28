@@ -10,6 +10,7 @@ struct FocendaApp: App {
     @State private var scratchpadVM = ScratchpadViewModel()
     @State private var bookmarkVM = BookmarkViewModel()
     @State private var recurringReminderVM = RecurringReminderViewModel()
+    @State private var updateManager = AppUpdateManager()
     @State private var isReminderAlertActive: Bool = false
 
     init() {
@@ -24,11 +25,16 @@ struct FocendaApp: App {
                 taskVM: taskVM,
                 scratchpadVM: scratchpadVM,
                 bookmarkVM: bookmarkVM,
-                recurringReminderVM: recurringReminderVM
+                recurringReminderVM: recurringReminderVM,
+                updateManager: updateManager
             )
             .task {
                 _ = try? await NotificationManager.shared.requestAuthorization()
                 GlobalShortcutManager.shared.setup(timerVM: timerVM, appState: appState)
+                updateManager.startAutomaticChecks(enabled: appState.automaticUpdateChecksEnabled)
+            }
+            .onChange(of: appState.automaticUpdateChecksEnabled) { _, isEnabled in
+                updateManager.setAutomaticChecksEnabled(isEnabled)
             }
             .onReceive(NotificationCenter.default.publisher(for: .focusShortcutTriggered)) { _ in
                 // Visual feedback or state synchronization handled reactively
@@ -68,6 +74,14 @@ struct FocendaApp: App {
             }
             .onReceive(NotificationCenter.default.publisher(for: NotificationManager.reminderAlertDismissedNotification)) { _ in
                 isReminderAlertActive = false
+            }
+            .onReceive(NotificationCenter.default.publisher(for: NotificationManager.openSettingsNotification)) { _ in
+                updateManager.checkForUpdates()
+                appState.selectedTab = .settings
+                NSApp.activate(ignoringOtherApps: true)
+                if let window = NSApp.windows.first(where: { $0.canBecomeKey && $0.isVisible }) ?? NSApp.windows.first {
+                    window.makeKeyAndOrderFront(nil)
+                }
             }
         }
         .windowStyle(.titleBar)

@@ -7,16 +7,19 @@ import AppKit
 public struct SettingsView: View {
     @Bindable var appState: AppState
     var timerVM: FocusTimerViewModel
+    var updateManager: AppUpdateManager
 
     @State private var isTestingSound: Bool = false
     @State private var testingTask: Task<Void, Never>?
 
     public init(
         appState: AppState,
-        timerVM: FocusTimerViewModel
+        timerVM: FocusTimerViewModel,
+        updateManager: AppUpdateManager = AppUpdateManager()
     ) {
         self.appState = appState
         self.timerVM = timerVM
+        self.updateManager = updateManager
     }
 
     public var body: some View {
@@ -24,6 +27,9 @@ public struct SettingsView: View {
             VStack(alignment: .leading, spacing: 24) {
                 // Appearance & Theme Picker
                 themePickerSection
+
+                // App Updates
+                appUpdateSection
 
                 // Reminder Sounds & Chimes
                 reminderSoundSection
@@ -98,7 +104,7 @@ public struct SettingsView: View {
                                 Text("Focenda for Mac")
                                     .font(.headline)
                                     .foregroundStyle(AppTheme.textPrimary)
-                                Text("Version 0.1.0 • 100% Free & Open Source")
+                                Text("Version \(AppRuntime.currentReleaseIdentifier) • 100% Free & Open Source")
                                     .font(.caption)
                                     .foregroundStyle(AppTheme.textSecondary)
                             }
@@ -135,6 +141,170 @@ public struct SettingsView: View {
         .navigationTitle("Settings")
         .onDisappear {
             stopAudioPreview()
+        }
+    }
+
+    // MARK: - App Updates Section
+    private var appUpdateSection: some View {
+        GroupBox(label: Label("App Updates", systemImage: "arrow.down.circle").foregroundStyle(AppTheme.textPrimary)) {
+            VStack(alignment: .leading, spacing: 14) {
+                Toggle(isOn: $appState.automaticUpdateChecksEnabled) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Check for updates automatically")
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(AppTheme.textPrimary)
+                        Text("Check GitHub Releases once a day while Focenda is open and notify you when a new version is ready.")
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.textSecondary)
+                    }
+                }
+                .toggleStyle(.switch)
+                .tint(AppTheme.accent)
+                .onChange(of: appState.automaticUpdateChecksEnabled) { _, isEnabled in
+                    updateManager.setAutomaticChecksEnabled(isEnabled)
+                }
+
+                Divider()
+
+                HStack(alignment: .center, spacing: 10) {
+                    Image(systemName: updateStatusIcon)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(updateStatusColor)
+                        .frame(width: 22)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(updateStatusTitle)
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(AppTheme.textPrimary)
+                        if let lastCheckedAt = updateManager.lastCheckedAt {
+                            Text("Last checked \(lastCheckedAt.formatted(date: .abbreviated, time: .shortened))")
+                                .font(.caption)
+                                .foregroundStyle(AppTheme.textTertiary)
+                        }
+                    }
+
+                    Spacer()
+
+                    Button {
+                        updateManager.checkForUpdates()
+                    } label: {
+                        Label(updateManager.status == .checking ? "Checking..." : "Check Now", systemImage: "arrow.clockwise")
+                            .font(.caption.weight(.semibold))
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    .disabled(updateManager.status.isBusy)
+                }
+
+                if let update = updateManager.availableUpdate {
+                    VStack(alignment: .leading, spacing: 10) {
+                        HStack(alignment: .top, spacing: 10) {
+                            Image(systemName: "sparkles")
+                                .foregroundStyle(AppTheme.accent)
+
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text("Version \(update.version.description) is available")
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(AppTheme.textPrimary)
+                                Text(update.displayName)
+                                    .font(.caption)
+                                    .foregroundStyle(AppTheme.textSecondary)
+                                    .lineLimit(1)
+                            }
+
+                            Spacer()
+                        }
+
+                        HStack {
+                            Button("Update Now") {
+                                updateManager.installAvailableUpdate()
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .tint(AppTheme.accent)
+                            .controlSize(.small)
+                            .disabled(updateManager.status.isBusy)
+
+                            Button("Later") {
+                                updateManager.dismissAvailableUpdate()
+                            }
+                            .buttonStyle(.bordered)
+                            .controlSize(.small)
+                            .disabled(updateManager.status.isBusy)
+
+                            Spacer()
+                        }
+                    }
+                    .padding(10)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .fill(AppTheme.accent.opacity(0.08))
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .stroke(AppTheme.accent.opacity(0.25), lineWidth: 1)
+                    )
+                }
+
+                if case .failed(let message) = updateManager.status {
+                    Text(message)
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Text("Privacy: Focenda contacts only GitHub's public release service for update metadata and the selected app archive. Your tasks, notes, and preferences never leave this Mac.")
+                    .font(.system(size: 10))
+                    .foregroundStyle(AppTheme.textTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(12)
+        }
+    }
+
+    private var updateStatusTitle: String {
+        switch updateManager.status {
+        case .idle:
+            return "Updates are ready to check"
+        case .checking:
+            return "Checking GitHub Releases..."
+        case .available:
+            return "A new version is ready"
+        case .upToDate:
+            return "Focenda is up to date"
+        case .installing:
+            return "Installing update..."
+        case .failed:
+            return "Update check could not be completed"
+        }
+    }
+
+    private var updateStatusIcon: String {
+        switch updateManager.status {
+        case .idle:
+            return "arrow.down.circle"
+        case .checking:
+            return "arrow.triangle.2.circlepath"
+        case .available:
+            return "checkmark.seal.fill"
+        case .upToDate:
+            return "checkmark.circle.fill"
+        case .installing:
+            return "shippingbox.fill"
+        case .failed:
+            return "exclamationmark.triangle.fill"
+        }
+    }
+
+    private var updateStatusColor: Color {
+        switch updateManager.status {
+        case .failed:
+            return .orange
+        case .available, .installing:
+            return AppTheme.accent
+        case .upToDate:
+            return AppTheme.success
+        case .idle, .checking:
+            return AppTheme.textTertiary
         }
     }
 

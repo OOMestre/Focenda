@@ -158,9 +158,9 @@ if [ "$DRY_RUN" -eq 1 ]; then
   echo "[Dry Run] Would execute: ./scripts/build-staging.sh"
 else
   if [ "$NO_OPEN" -eq 1 ]; then
-    FOCENDA_NO_OPEN=1 "$SCRIPT_DIR/build-staging.sh"
+    FOCENDA_RELEASE_TAG="$BETA_TAG" FOCENDA_NO_OPEN=1 "$SCRIPT_DIR/build-staging.sh"
   else
-    "$SCRIPT_DIR/build-staging.sh"
+    FOCENDA_RELEASE_TAG="$BETA_TAG" "$SCRIPT_DIR/build-staging.sh"
   fi
 fi
 
