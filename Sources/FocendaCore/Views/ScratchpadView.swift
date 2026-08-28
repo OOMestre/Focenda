@@ -6,6 +6,7 @@ public struct ScratchpadView: View {
     @State private var showingDeleteConfirmation = false
     @State private var copiedFeedback = false
     @State private var showingNewFolderSheet = false
+    @State private var showingCompactFolderPicker = false
     @State private var newFolderName = ""
     @FocusState private var isEditorFocused: Bool
     @FocusState private var isTitleFocused: Bool
@@ -479,22 +480,8 @@ public struct ScratchpadView: View {
     }
 
     private var compactFolderPicker: some View {
-        Menu {
-            Button {
-                viewModel.selectFolder(ScratchpadViewModel.allNotesFolder)
-            } label: {
-                Label(ScratchpadViewModel.allNotesFolder, systemImage: "tray.full")
-            }
-
-            Divider()
-
-            ForEach(viewModel.folders, id: \.self) { folder in
-                Button {
-                    viewModel.selectFolder(folder)
-                } label: {
-                    Label(folder, systemImage: ScratchpadViewModel.iconForFolder(folder))
-                }
-            }
+        Button {
+            showingCompactFolderPicker.toggle()
         } label: {
             HStack(spacing: 5) {
                 Image(systemName: ScratchpadViewModel.iconForFolder(viewModel.selectedFolder))
@@ -508,9 +495,83 @@ public struct ScratchpadView: View {
                     .foregroundStyle(AppTheme.textTertiary)
             }
             .foregroundStyle(AppTheme.textPrimary)
+            .contentShape(Rectangle())
         }
-        .menuStyle(.borderlessButton)
+        .buttonStyle(.plain)
+        .popover(isPresented: $showingCompactFolderPicker, arrowEdge: .bottom) {
+            compactFolderPickerPopover
+        }
         .help("Choose a folder")
+    }
+
+    private var compactFolderPickerPopover: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Folders")
+                .font(.system(size: 12, weight: .bold))
+                .tracking(0.5)
+                .foregroundStyle(AppTheme.textTertiary)
+                .textCase(.uppercase)
+                .padding(.horizontal, 12)
+                .padding(.top, 10)
+
+            Divider()
+
+            ScrollView {
+                VStack(spacing: 2) {
+                    compactFolderPickerRow(
+                        name: ScratchpadViewModel.allNotesFolder,
+                        icon: "tray.full"
+                    )
+
+                    ForEach(viewModel.folders, id: \.self) { folder in
+                        compactFolderPickerRow(
+                            name: folder,
+                            icon: ScratchpadViewModel.iconForFolder(folder)
+                        )
+                    }
+                }
+                .padding(6)
+            }
+        }
+        .frame(width: 220, height: 260)
+        .background(AppTheme.cardBackground)
+    }
+
+    private func compactFolderPickerRow(name: String, icon: String) -> some View {
+        let isSelected = viewModel.selectedFolder.caseInsensitiveCompare(name) == .orderedSame
+
+        return Button {
+            withAnimation(.spring(response: 0.25)) {
+                viewModel.selectFolder(name)
+            }
+            showingCompactFolderPicker = false
+        } label: {
+            HStack(spacing: 9) {
+                Image(systemName: icon)
+                    .font(.system(size: 12))
+                    .foregroundStyle(isSelected ? AppTheme.accent : AppTheme.textSecondary)
+
+                Text(name)
+                    .font(.system(size: 13, weight: isSelected ? .semibold : .regular))
+                    .lineLimit(1)
+
+                Spacer(minLength: 8)
+
+                if isSelected {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(AppTheme.accent)
+                }
+            }
+            .foregroundStyle(AppTheme.textPrimary)
+            .padding(.horizontal, 9)
+            .padding(.vertical, 8)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(isSelected ? AppTheme.accent.opacity(0.12) : Color.clear)
+            .clipShape(RoundedRectangle(cornerRadius: 6))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Note Card Row
