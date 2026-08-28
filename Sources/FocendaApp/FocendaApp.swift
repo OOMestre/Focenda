@@ -4,16 +4,27 @@ import FocendaCore
 
 @main
 struct FocendaApp: App {
-    @State private var appState = AppState()
-    @State private var timerVM = FocusTimerViewModel()
-    @State private var taskVM = TaskListViewModel()
-    @State private var scratchpadVM = ScratchpadViewModel()
-    @State private var bookmarkVM = BookmarkViewModel()
-    @State private var recurringReminderVM = RecurringReminderViewModel()
-    @State private var updateManager = AppUpdateManager()
+    private let secureStore: SecureStore
+    @State private var appState: AppState
+    @State private var timerVM: FocusTimerViewModel
+    @State private var taskVM: TaskListViewModel
+    @State private var scratchpadVM: ScratchpadViewModel
+    @State private var bookmarkVM: BookmarkViewModel
+    @State private var recurringReminderVM: RecurringReminderViewModel
+    @State private var updateManager: AppUpdateManager
     @State private var isReminderAlertActive: Bool = false
 
     init() {
+        let secureStore = SecureStore.shared
+        self.secureStore = secureStore
+        _appState = State(initialValue: AppState(secureStore: secureStore))
+        _timerVM = State(initialValue: FocusTimerViewModel())
+        _taskVM = State(initialValue: TaskListViewModel(secureStore: secureStore))
+        _scratchpadVM = State(initialValue: ScratchpadViewModel(secureStore: secureStore))
+        _bookmarkVM = State(initialValue: BookmarkViewModel(secureStore: secureStore))
+        _recurringReminderVM = State(initialValue: RecurringReminderViewModel(secureStore: secureStore))
+        _updateManager = State(initialValue: AppUpdateManager(secureStore: secureStore))
+
         OwlBrandAssets.configureDockIcon()
         NotificationManager.shared.requestAuthorization()
     }
@@ -139,7 +150,8 @@ struct FocendaApp: App {
                 taskVM: taskVM,
                 scratchpadVM: scratchpadVM,
                 recurringReminderVM: recurringReminderVM,
-                appState: appState
+                appState: appState,
+                secureStore: secureStore
             )
         } label: {
             HStack(spacing: 4) {

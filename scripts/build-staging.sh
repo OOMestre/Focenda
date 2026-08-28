@@ -8,8 +8,10 @@ APP_NAME="${FOCENDA_APP_NAME:-Focenda Staging}"
 PRODUCT_NAME="FocendaApp"
 BUNDLE_IDENTIFIER="${FOCENDA_BUNDLE_IDENTIFIER:-com.oomestre.focenda.staging}"
 VERSION_FILE="$REPOSITORY_ROOT/VERSION"
+ENTITLEMENTS_FILE="$REPOSITORY_ROOT/Resources/Focenda.entitlements"
 BUILD_CONFIGURATION="${FOCENDA_BUILD_CONFIGURATION:-release}"
 RELEASE_TAG="${FOCENDA_RELEASE_TAG:-}"
+SIGNING_IDENTITY="${FOCENDA_SIGNING_IDENTITY:--}"
 DIST_DIRECTORY="$REPOSITORY_ROOT/dist"
 APP_BUNDLE="$DIST_DIRECTORY/$APP_NAME.app"
 
@@ -26,6 +28,8 @@ fi
 [ "$(uname -s)" = "Darwin" ] || fail "staging builds require macOS (Darwin)."
 [ -f "$REPOSITORY_ROOT/Package.swift" ] || fail "Package.swift was not found at $REPOSITORY_ROOT."
 [ -f "$VERSION_FILE" ] || fail "VERSION was not found at $VERSION_FILE."
+[ -f "$ENTITLEMENTS_FILE" ] || fail "Focenda entitlements were not found at $ENTITLEMENTS_FILE."
+command -v codesign >/dev/null 2>&1 || fail "The macOS codesign tool is not available."
 
 VERSION=$(sed -n "1p" "$VERSION_FILE")
 if ! printf "%s\n" "$VERSION" | grep -Eq "^[0-9]+\.[0-9]+\.[0-9]+$"; then
@@ -115,8 +119,15 @@ cat > "$TEMP_APP/Contents/Info.plist" <<PLIST_EOF
 </plist>
 PLIST_EOF
 
-# Codesign locally
-codesign --force --sign - "$TEMP_APP" 2>/dev/null || true
+# Sign every generated bundle with the Focenda entitlements and hardened runtime.
+# A Developer ID identity should be supplied for distributable builds through
+# FOCENDA_SIGNING_IDENTITY; ad-hoc signing remains useful for local staging.
+if [ "$SIGNING_IDENTITY" = "-" ]; then
+  codesign --force --options runtime --entitlements "$ENTITLEMENTS_FILE" --sign - "$TEMP_APP"
+else
+  codesign --force --options runtime --timestamp --entitlements "$ENTITLEMENTS_FILE" --sign "$SIGNING_IDENTITY" "$TEMP_APP"
+fi
+codesign --verify --deep --strict "$TEMP_APP"
 
 mv "$TEMP_APP" "$APP_BUNDLE"
 

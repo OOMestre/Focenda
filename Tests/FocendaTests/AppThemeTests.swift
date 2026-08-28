@@ -60,11 +60,11 @@ final class AppThemeTests: XCTestCase {
         XCTAssertEqual(AppTheme.storageKey, "focenda_selected_theme")
 
         AppTheme.current = .nordicFrost
-        XCTAssertEqual(UserDefaults.standard.string(forKey: "focenda_selected_theme"), AppThemeOption.nordicFrost.rawValue)
+        XCTAssertEqual(SecureStore.shared.string(forKey: "focenda_selected_theme"), AppThemeOption.nordicFrost.rawValue)
         XCTAssertEqual(AppTheme.current, .nordicFrost)
 
         AppTheme.current = .forestMatcha
-        XCTAssertEqual(UserDefaults.standard.string(forKey: "focenda_selected_theme"), AppThemeOption.forestMatcha.rawValue)
+        XCTAssertEqual(SecureStore.shared.string(forKey: "focenda_selected_theme"), AppThemeOption.forestMatcha.rawValue)
         XCTAssertEqual(AppTheme.current, .forestMatcha)
     }
 

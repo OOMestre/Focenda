@@ -433,7 +433,7 @@ public final class AppUpdateManager {
 
     private let provider: AppUpdateProviding
     private let currentReleaseIdentifier: String
-    private let userDefaults: UserDefaults
+    private let secureStore: SecureStore
     private let notificationManager: NotificationManagerProtocol
 
     private var checkTask: Task<Void, Never>?
@@ -444,13 +444,14 @@ public final class AppUpdateManager {
         provider: AppUpdateProviding = AppUpdateService.shared,
         currentReleaseIdentifier: String = AppRuntime.currentReleaseIdentifier,
         userDefaults: UserDefaults = .standard,
+        secureStore: SecureStore? = nil,
         notificationManager: NotificationManagerProtocol = NotificationManager.shared
     ) {
         self.provider = provider
         self.currentReleaseIdentifier = currentReleaseIdentifier
-        self.userDefaults = userDefaults
+        self.secureStore = secureStore ?? SecureStore(defaults: userDefaults)
         self.notificationManager = notificationManager
-        self.lastCheckedAt = userDefaults.object(forKey: AppUpdatePreferences.lastCheckDateKey) as? Date
+        self.lastCheckedAt = self.secureStore.date(forKey: AppUpdatePreferences.lastCheckDateKey)
     }
 
     /// Starts a manual check without blocking the Settings view.
@@ -491,7 +492,7 @@ public final class AppUpdateManager {
 
     public func setAutomaticChecksEnabled(_ enabled: Bool) {
         if enabled {
-            userDefaults.removeObject(forKey: AppUpdatePreferences.lastAutomaticCheckDateKey)
+            secureStore.removeObject(forKey: AppUpdatePreferences.lastAutomaticCheckDateKey)
         }
         startAutomaticChecks(enabled: enabled)
     }
@@ -515,7 +516,7 @@ public final class AppUpdateManager {
                 try await self.provider.install(update: update)
                 self.availableUpdate = nil
                 self.status = .idle
-                self.userDefaults.removeObject(forKey: AppUpdatePreferences.pendingUpdateTagKey)
+                self.secureStore.removeObject(forKey: AppUpdatePreferences.pendingUpdateTagKey)
             } catch is CancellationError {
                 self.status = .available
             } catch {
@@ -547,20 +548,20 @@ public final class AppUpdateManager {
             let update = try await provider.checkForUpdates(currentReleaseIdentifier: currentReleaseIdentifier)
             let now = Date()
             lastCheckedAt = now
-            userDefaults.set(now, forKey: AppUpdatePreferences.lastCheckDateKey)
+            secureStore.set(now, forKey: AppUpdatePreferences.lastCheckDateKey)
             if isAutomatic {
-                userDefaults.set(now, forKey: AppUpdatePreferences.lastAutomaticCheckDateKey)
+                secureStore.set(now, forKey: AppUpdatePreferences.lastAutomaticCheckDateKey)
             }
 
             if let update {
                 availableUpdate = update
                 status = .available
-                userDefaults.set(update.release.tagName, forKey: AppUpdatePreferences.pendingUpdateTagKey)
+                secureStore.set(update.release.tagName, forKey: AppUpdatePreferences.pendingUpdateTagKey)
                 notifyIfNeeded(for: update)
             } else {
                 availableUpdate = nil
                 status = .upToDate
-                userDefaults.removeObject(forKey: AppUpdatePreferences.pendingUpdateTagKey)
+                secureStore.removeObject(forKey: AppUpdatePreferences.pendingUpdateTagKey)
             }
             return update
         } catch is CancellationError {
@@ -575,20 +576,20 @@ public final class AppUpdateManager {
 
     @MainActor
     private func notifyIfNeeded(for update: AppUpdate) {
-        let lastNotifiedVersion = userDefaults.string(forKey: AppUpdatePreferences.lastNotifiedVersionKey)
+        let lastNotifiedVersion = secureStore.string(forKey: AppUpdatePreferences.lastNotifiedVersionKey)
         guard lastNotifiedVersion != update.release.tagName else { return }
 
         notificationManager.notifyUpdateAvailable(version: update.version.description)
-        userDefaults.set(update.release.tagName, forKey: AppUpdatePreferences.lastNotifiedVersionKey)
+        secureStore.set(update.release.tagName, forKey: AppUpdatePreferences.lastNotifiedVersionKey)
     }
 
     private var isAutomaticCheckDue: Bool {
         if availableUpdate == nil,
-           userDefaults.string(forKey: AppUpdatePreferences.pendingUpdateTagKey) != nil {
+           secureStore.string(forKey: AppUpdatePreferences.pendingUpdateTagKey) != nil {
             return true
         }
 
-        guard let lastDate = userDefaults.object(forKey: AppUpdatePreferences.lastAutomaticCheckDateKey) as? Date else {
+        guard let lastDate = secureStore.date(forKey: AppUpdatePreferences.lastAutomaticCheckDateKey) else {
             return true
         }
         return Date().timeIntervalSince(lastDate) >= Self.automaticCheckInterval
@@ -716,13 +717,18 @@ public final class AppUpdateInstaller: AppUpdateInstalling {
             let replacementURL = targetURL.deletingLastPathComponent()
                 .appendingPathComponent(".\(targetURL.lastPathComponent).update-\(UUID().uuidString)", isDirectory: true)
             do {
-                try fileManager.copyItem(at: candidateAppURL, to: replacementURL)
-                _ = try fileManager.replaceItemAt(
-                    targetURL,
-                    withItemAt: replacementURL,
-                    backupItemName: nil,
-                    options: .usingNewMetadataOnly
-                )
+                try withApplicationDirectoryWriteAccess(for: targetURL) {
+                    try fileManager.copyItem(at: candidateAppURL, to: replacementURL)
+                    _ = try fileManager.replaceItemAt(
+                        targetURL,
+                        withItemAt: replacementURL,
+                        backupItemName: nil,
+                        options: .usingNewMetadataOnly
+                    )
+                }
+            } catch let error as AppUpdateError {
+                try? fileManager.removeItem(at: replacementURL)
+                throw error
             } catch {
                 try? fileManager.removeItem(at: replacementURL)
                 throw AppUpdateError.installationFailed(error.localizedDescription)
@@ -741,6 +747,66 @@ public final class AppUpdateInstaller: AppUpdateInstalling {
 
         try? fileManager.removeItem(at: temporaryDirectory)
     }
+
+    private func withApplicationDirectoryWriteAccess<Result>(
+        for targetURL: URL,
+        operation: () throws -> Result
+    ) throws -> Result {
+        #if canImport(AppKit)
+        guard Self.isRunningInAppSandbox else {
+            return try operation()
+        }
+
+        if Thread.isMainThread {
+            return try performApplicationDirectoryWriteAccess(for: targetURL, operation: operation)
+        }
+
+        return try DispatchQueue.main.sync {
+            try performApplicationDirectoryWriteAccess(for: targetURL, operation: operation)
+        }
+        #else
+        return try operation()
+        #endif
+    }
+
+    #if canImport(AppKit)
+    private func performApplicationDirectoryWriteAccess<Result>(
+        for targetURL: URL,
+        operation: () throws -> Result
+    ) throws -> Result {
+        precondition(Thread.isMainThread)
+
+        let applicationDirectory = targetURL.deletingLastPathComponent().standardizedFileURL
+        let panel = NSOpenPanel()
+        panel.title = "Allow Focenda to Install the Update"
+        panel.message = "Choose the folder containing Focenda.app to allow this update to replace the current app."
+        panel.prompt = "Allow Update"
+        panel.allowsMultipleSelection = false
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.directoryURL = applicationDirectory
+
+        guard panel.runModal() == .OK,
+              let selectedDirectory = panel.url?.standardizedFileURL,
+              selectedDirectory == applicationDirectory else {
+            throw AppUpdateError.installationFailed("Update access was not granted for the Focenda application folder.")
+        }
+
+        let didStartAccessing = selectedDirectory.startAccessingSecurityScopedResource()
+        defer {
+            if didStartAccessing {
+                selectedDirectory.stopAccessingSecurityScopedResource()
+            }
+        }
+        return try operation()
+    }
+    #endif
+
+    #if canImport(AppKit)
+    private static var isRunningInAppSandbox: Bool {
+        ProcessInfo.processInfo.environment["APP_SANDBOX_CONTAINER_ID"] != nil
+    }
+    #endif
 
     private func extract(_ archiveURL: URL, to destinationURL: URL) throws {
         #if os(macOS)

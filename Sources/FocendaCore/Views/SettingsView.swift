@@ -253,7 +253,7 @@ public struct SettingsView: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
-                Text("Privacy: Focenda contacts only GitHub's public release service for update metadata and the selected app archive. Your tasks, notes, and preferences never leave this Mac.")
+                Text("Privacy: Tasks, notes, reminders, bookmarks, and preferences stay on this Mac in encrypted local storage. Focenda contacts only GitHub's public release service for update metadata and the selected app archive. macOS may display reminder content in its notification system. See docs/PRIVACY.md for details.")
                     .font(.system(size: 10))
                     .foregroundStyle(AppTheme.textTertiary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -481,6 +481,11 @@ public struct SettingsView: View {
         if panel.runModal() == .OK, let url = panel.url {
             appState.reminderCustomSoundPath = url.path
             appState.reminderCustomSoundName = url.lastPathComponent
+            appState.reminderCustomSoundBookmarkData = try? url.bookmarkData(
+                options: .withSecurityScope,
+                includingResourceValuesForKeys: nil,
+                relativeTo: nil
+            )
         }
         #endif
     }

@@ -38,10 +38,10 @@ public final class BookmarkViewModel {
     public var selectedCategory: String = "All"
     public var selectedBookmarkId: UUID?
 
-    private let userDefaults: UserDefaults
+    private let secureStore: SecureStore
 
-    public init(userDefaults: UserDefaults = .standard) {
-        self.userDefaults = userDefaults
+    public init(userDefaults: UserDefaults = .standard, secureStore: SecureStore? = nil) {
+        self.secureStore = secureStore ?? SecureStore(defaults: userDefaults)
         loadFromUserDefaults()
     }
 
@@ -251,7 +251,7 @@ public final class BookmarkViewModel {
 
     /// Loads bookmarks from persistent storage or initializes default seed
     public func loadFromUserDefaults() {
-        if let data = userDefaults.data(forKey: Self.userDefaultsKey),
+        if let data = secureStore.data(forKey: Self.userDefaultsKey),
            let decoded = try? JSONDecoder().decode([BookmarkItem].self, from: data),
            !decoded.isEmpty {
             self.bookmarks = decoded
@@ -263,7 +263,7 @@ public final class BookmarkViewModel {
     /// Saves bookmarks to persistent storage
     public func saveToUserDefaults() {
         if let data = try? JSONEncoder().encode(bookmarks) {
-            userDefaults.set(data, forKey: Self.userDefaultsKey)
+            secureStore.setData(data, forKey: Self.userDefaultsKey)
         }
     }
 }

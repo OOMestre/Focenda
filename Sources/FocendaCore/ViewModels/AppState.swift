@@ -58,6 +58,13 @@ public final class AppState {
             savePreferences()
         }
     }
+    /// Security-scoped bookmark for the user-selected custom reminder sound.
+    /// The bookmark is encrypted together with the other local preferences.
+    public var reminderCustomSoundBookmarkData: Data? {
+        didSet {
+            savePreferences()
+        }
+    }
     public var reminderSoundRepeatCount: Int = 3 {
         didSet {
             let clamped = max(ReminderSoundType.minRepeatCount, min(ReminderSoundType.maxRepeatCount, reminderSoundRepeatCount))
@@ -94,7 +101,7 @@ public final class AppState {
     }
     public var selectedTheme: AppThemeOption {
         didSet {
-            UserDefaults.standard.set(selectedTheme.rawValue, forKey: AppTheme.storageKey)
+            secureStore.set(selectedTheme.rawValue, forKey: AppTheme.storageKey)
             AppTheme.current = selectedTheme
             #if os(macOS)
             DispatchQueue.main.async {
@@ -107,54 +114,63 @@ public final class AppState {
         }
     }
 
-    public init() {
-        let savedGoal = UserDefaults.standard.integer(forKey: "dailyFocusGoalMinutes")
-        self.dailyFocusGoalMinutes = savedGoal == 0 ? 120 : savedGoal
-        self.soundEnabled = UserDefaults.standard.object(forKey: "soundEnabled") == nil ? true : UserDefaults.standard.bool(forKey: "soundEnabled")
-        self.reminderSoundEnabled = UserDefaults.standard.object(forKey: "reminderSoundEnabled") == nil ? true : UserDefaults.standard.bool(forKey: "reminderSoundEnabled")
+    private let secureStore: SecureStore
 
-        if let savedSoundTypeRaw = UserDefaults.standard.string(forKey: "reminderSoundType"),
+    public init(secureStore: SecureStore = .shared) {
+        self.secureStore = secureStore
+        let savedGoal = secureStore.integer(forKey: "dailyFocusGoalMinutes") ?? 0
+        self.dailyFocusGoalMinutes = savedGoal == 0 ? 120 : savedGoal
+        self.soundEnabled = secureStore.bool(forKey: "soundEnabled") ?? true
+        self.reminderSoundEnabled = secureStore.bool(forKey: "reminderSoundEnabled") ?? true
+
+        if let savedSoundTypeRaw = secureStore.string(forKey: "reminderSoundType"),
            let soundType = ReminderSoundType(rawValue: savedSoundTypeRaw) {
             self.reminderSoundType = soundType
         } else {
             self.reminderSoundType = .hero
         }
 
-        self.reminderCustomSoundPath = UserDefaults.standard.string(forKey: "reminderCustomSoundPath") ?? ""
-        self.reminderCustomSoundName = UserDefaults.standard.string(forKey: "reminderCustomSoundName") ?? ""
+        self.reminderCustomSoundPath = secureStore.string(forKey: "reminderCustomSoundPath") ?? ""
+        self.reminderCustomSoundName = secureStore.string(forKey: "reminderCustomSoundName") ?? ""
+        self.reminderCustomSoundBookmarkData = secureStore.data(forKey: "reminderCustomSoundBookmarkData")
 
-        let savedRepeatCount = UserDefaults.standard.integer(forKey: "reminderSoundRepeatCount")
+        let savedRepeatCount = secureStore.integer(forKey: "reminderSoundRepeatCount") ?? 0
         self.reminderSoundRepeatCount = savedRepeatCount == 0 ? ReminderSoundType.defaultRepeatCount : max(ReminderSoundType.minRepeatCount, min(ReminderSoundType.maxRepeatCount, savedRepeatCount))
         
-        self.globalShortcutsEnabled = UserDefaults.standard.object(forKey: "globalShortcutsEnabled") == nil ? true : UserDefaults.standard.bool(forKey: "globalShortcutsEnabled")
-        if let savedPresetRaw = UserDefaults.standard.string(forKey: "shortcutPreset"),
+        self.globalShortcutsEnabled = secureStore.bool(forKey: "globalShortcutsEnabled") ?? true
+        if let savedPresetRaw = secureStore.string(forKey: "shortcutPreset"),
            let preset = GlobalShortcutPreset(rawValue: savedPresetRaw) {
             self.shortcutPreset = preset
         } else {
             self.shortcutPreset = .standard
         }
-        self.showShortcutFeedback = UserDefaults.standard.object(forKey: "showShortcutFeedback") == nil ? true : UserDefaults.standard.bool(forKey: "showShortcutFeedback")
-        self.automaticUpdateChecksEnabled = UserDefaults.standard.object(forKey: AppUpdatePreferences.automaticChecksEnabledKey) == nil ? true : UserDefaults.standard.bool(forKey: AppUpdatePreferences.automaticChecksEnabledKey)
+        self.showShortcutFeedback = secureStore.bool(forKey: "showShortcutFeedback") ?? true
+        self.automaticUpdateChecksEnabled = secureStore.bool(forKey: AppUpdatePreferences.automaticChecksEnabledKey) ?? true
 
-        let storedTheme = UserDefaults.standard.string(forKey: AppTheme.storageKey)
+        let storedTheme = secureStore.string(forKey: AppTheme.storageKey)
         let resolvedTheme = AppThemeOption.from(storedValue: storedTheme)
         self.selectedTheme = resolvedTheme
         AppTheme.current = resolvedTheme
     }
 
     public func savePreferences() {
-        UserDefaults.standard.set(dailyFocusGoalMinutes, forKey: "dailyFocusGoalMinutes")
-        UserDefaults.standard.set(soundEnabled, forKey: "soundEnabled")
-        UserDefaults.standard.set(reminderSoundEnabled, forKey: "reminderSoundEnabled")
-        UserDefaults.standard.set(reminderSoundType.rawValue, forKey: "reminderSoundType")
-        UserDefaults.standard.set(reminderCustomSoundPath, forKey: "reminderCustomSoundPath")
-        UserDefaults.standard.set(reminderCustomSoundName, forKey: "reminderCustomSoundName")
-        UserDefaults.standard.set(reminderSoundRepeatCount, forKey: "reminderSoundRepeatCount")
-        UserDefaults.standard.set(globalShortcutsEnabled, forKey: "globalShortcutsEnabled")
-        UserDefaults.standard.set(shortcutPreset.rawValue, forKey: "shortcutPreset")
-        UserDefaults.standard.set(showShortcutFeedback, forKey: "showShortcutFeedback")
-        UserDefaults.standard.set(automaticUpdateChecksEnabled, forKey: AppUpdatePreferences.automaticChecksEnabledKey)
-        UserDefaults.standard.set(selectedTheme.rawValue, forKey: AppTheme.storageKey)
+        secureStore.set(dailyFocusGoalMinutes, forKey: "dailyFocusGoalMinutes")
+        secureStore.set(soundEnabled, forKey: "soundEnabled")
+        secureStore.set(reminderSoundEnabled, forKey: "reminderSoundEnabled")
+        secureStore.set(reminderSoundType.rawValue, forKey: "reminderSoundType")
+        secureStore.set(reminderCustomSoundPath, forKey: "reminderCustomSoundPath")
+        secureStore.set(reminderCustomSoundName, forKey: "reminderCustomSoundName")
+        if let reminderCustomSoundBookmarkData {
+            secureStore.setData(reminderCustomSoundBookmarkData, forKey: "reminderCustomSoundBookmarkData")
+        } else {
+            secureStore.removeObject(forKey: "reminderCustomSoundBookmarkData")
+        }
+        secureStore.set(reminderSoundRepeatCount, forKey: "reminderSoundRepeatCount")
+        secureStore.set(globalShortcutsEnabled, forKey: "globalShortcutsEnabled")
+        secureStore.set(shortcutPreset.rawValue, forKey: "shortcutPreset")
+        secureStore.set(showShortcutFeedback, forKey: "showShortcutFeedback")
+        secureStore.set(automaticUpdateChecksEnabled, forKey: AppUpdatePreferences.automaticChecksEnabledKey)
+        secureStore.set(selectedTheme.rawValue, forKey: AppTheme.storageKey)
         AppTheme.current = selectedTheme
     }
 }

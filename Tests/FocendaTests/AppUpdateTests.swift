@@ -173,8 +173,9 @@ final class AppUpdateTests: XCTestCase {
         XCTAssertEqual(manager.status, .available)
         XCTAssertNotNil(manager.lastCheckedAt)
         XCTAssertEqual(notificationManager.updateVersions, ["1.2.0"])
-        XCTAssertEqual(defaults.string(forKey: AppUpdatePreferences.lastNotifiedVersionKey), "v1.2.0")
-        XCTAssertEqual(defaults.string(forKey: AppUpdatePreferences.pendingUpdateTagKey), "v1.2.0")
+        let secureStore = SecureStore(defaults: defaults)
+        XCTAssertEqual(secureStore.string(forKey: AppUpdatePreferences.lastNotifiedVersionKey), "v1.2.0")
+        XCTAssertEqual(secureStore.string(forKey: AppUpdatePreferences.pendingUpdateTagKey), "v1.2.0")
     }
 
     func testInstallerReplacesOnlyTheCompatibleAppBundle() throws {

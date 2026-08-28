@@ -45,7 +45,7 @@ Focenda follows a **two-tier release cadence**:
 | **Bundle ID** | `com.oomestre.focenda.staging` | `com.oomestre.focenda` |
 | **Target Audience** | Core team, QA, beta testers | All macOS users |
 | **GitHub Release Status** | `Prerelease: true` | `Prerelease: false` (Latest Stable) |
-| **Required Gates** | • `make test` passing<br>• Validated `VERSION`<br>• Clean local/CI build | • All staging beta criteria met<br>• Approved PR into `main`<br>• Updated `CHANGELOG.md`<br>• Clean CI run on `main` |
+| **Required Gates** | • `make test` passing<br>• Validated `VERSION`<br>• Clean local/CI build<br>• Sandbox + hardened runtime verified | • All staging beta criteria met<br>• Approved PR into `main`<br>• Updated `CHANGELOG.md`<br>• Clean CI run on `main`<br>• Developer ID signing + notarization |
 
 ---
 
@@ -97,6 +97,11 @@ This command automatically:
 3. Determines the next beta counter (e.g., `v0.1.0-beta.1`, `v0.1.0-beta.2`).
 4. Creates an annotated git tag (`v0.1.0-beta.N`).
 5. Builds the local bundle `dist/Focenda Staging.app`.
+
+The bundle is signed with the App Sandbox entitlement and hardened runtime.
+For a distributable artifact, set `FOCENDA_SIGNING_IDENTITY` to a Developer ID
+Application identity; without it, the script intentionally uses an ad-hoc
+signature for local/CI staging only.
 
 #### Advanced Beta Options
 You can also run `./scripts/release-staging-beta.sh` directly with flags:
@@ -167,7 +172,7 @@ Focenda includes a set of Makefile convenience commands:
 | :--- | :--- | :--- |
 | `make test` | `swift test` | Runs the full XCTest unit test suite. |
 | `make build` | `swift build -c release` | Builds release binary executable. |
-| `make staging` | `./scripts/build-staging.sh` | Builds and signs `dist/Focenda Staging.app`. |
+| `make staging` | `./scripts/build-staging.sh` | Builds and signs `dist/Focenda Staging.app` with App Sandbox and hardened runtime. |
 | `make release-beta` | `./scripts/release-staging-beta.sh` | Runs tests, increments beta tag, creates git tag, and builds staging bundle. |
 | `make release-notes` | `./scripts/generate-release-notes.sh` | Extracts commit changes into formatted markdown release notes. |
 | `make clean` | `rm -rf .build dist` | Cleans build caches and output artifacts. |
@@ -240,6 +245,8 @@ Focenda checks the public GitHub Releases API from the Mac. The client sends no 
 - [ ] `VERSION` matches intended target release number.
 - [ ] `CHANGELOG.md` reflects all notable user-facing changes.
 - [ ] Local staging app builds and launches cleanly (`make staging`).
+- [ ] `codesign --verify --deep --strict` passes and the bundle contains App Sandbox + hardened runtime.
+- [ ] Public artifacts use Developer ID signing and notarization (`FOCENDA_SIGNING_IDENTITY` configured).
 - [ ] UI appearance verified in both Light and Dark macOS system appearance.
 
 ### Rollback / Hotfix Procedure

@@ -16,8 +16,10 @@ public final class TaskListViewModel {
     public var searchQuery: String = ""
 
     private let storageKey = "focenda_saved_tasks"
+    private let secureStore: SecureStore
 
-    public init() {
+    public init(secureStore: SecureStore = .shared) {
+        self.secureStore = secureStore
         loadTasks()
         if tasks.isEmpty {
             loadSampleTasks()
@@ -244,12 +246,12 @@ public final class TaskListViewModel {
 
     public func saveTasks() {
         if let encoded = try? JSONEncoder().encode(tasks) {
-            UserDefaults.standard.set(encoded, forKey: storageKey)
+            secureStore.setData(encoded, forKey: storageKey)
         }
     }
 
     public func loadTasks() {
-        if let data = UserDefaults.standard.data(forKey: storageKey),
+        if let data = secureStore.data(forKey: storageKey),
            let decoded = try? JSONDecoder().decode([TaskItem].self, from: data) {
             self.tasks = decoded
         }

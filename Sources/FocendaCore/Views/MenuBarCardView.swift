@@ -64,6 +64,7 @@ public struct MenuBarCardView: View {
     @State private var isAddingLink: Bool = false
 
     private let customLinksStorageKey = "focenda_custom_quick_links"
+    private let secureStore: SecureStore
 
     public init(
         timerVM: FocusTimerViewModel,
@@ -71,6 +72,7 @@ public struct MenuBarCardView: View {
         scratchpadVM: ScratchpadViewModel = ScratchpadViewModel(),
         recurringReminderVM: RecurringReminderViewModel = RecurringReminderViewModel(),
         appState: AppState? = nil,
+        secureStore: SecureStore = .shared,
         initialSection: MenuBarSection = .focus
     ) {
         self.timerVM = timerVM
@@ -78,6 +80,7 @@ public struct MenuBarCardView: View {
         self.scratchpadVM = scratchpadVM
         self.recurringReminderVM = recurringReminderVM
         self.appState = appState
+        self.secureStore = secureStore
         self._selectedSection = State(initialValue: initialSection)
     }
 
@@ -1370,12 +1373,12 @@ public struct MenuBarCardView: View {
 
     private func saveCustomLinks() {
         if let data = try? JSONEncoder().encode(customLinks) {
-            UserDefaults.standard.set(data, forKey: customLinksStorageKey)
+            secureStore.setData(data, forKey: customLinksStorageKey)
         }
     }
 
     private func loadCustomLinks() {
-        if let data = UserDefaults.standard.data(forKey: customLinksStorageKey),
+        if let data = secureStore.data(forKey: customLinksStorageKey),
            let decoded = try? JSONDecoder().decode([QuickLink].self, from: data) {
             self.customLinks = decoded
         }
