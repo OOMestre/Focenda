@@ -76,11 +76,6 @@ public struct MainView: View {
                         ScratchpadView(viewModel: scratchpadVM)
                     case .bookmarks:
                         BookmarksView(viewModel: bookmarkVM)
-                    case .stats:
-                        StatsView(
-                            timerVM: timerVM,
-                            taskVM: taskVM
-                        )
                     case .settings:
                         SettingsView(
                             appState: appState,

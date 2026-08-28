@@ -95,16 +95,6 @@ final class WindowMinimumSizeTests: XCTestCase {
         XCTAssertNotNil(dashboard.body)
     }
 
-    func testStatsViewResilienceAtMinimumWidth() {
-        let statsView = StatsView(
-            timerVM: timerVM,
-            taskVM: taskVM
-        )
-
-        XCTAssertNotNil(statsView)
-        XCTAssertNotNil(statsView.body)
-    }
-
     func testFocusTimerViewResilienceAtMinimumDimensions() {
         let timerView = FocusTimerView(timerVM: timerVM)
 
