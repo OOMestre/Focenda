@@ -25,6 +25,12 @@ public extension NotificationManagerProtocol {
     func snoozeReminder(title: String, subtitle: String = "Snoozed Reminder", notes: String = "", minutes: Int = 5) {}
 }
 
+struct AlertSoundConfiguration: Equatable {
+    let soundName: String
+    let customFilePath: String?
+    let repeatCount: Int
+}
+
 /// Service managing native macOS system notifications, rich audible alerts, and in-app banner broadcasts
 public final class NotificationManager: NSObject, UNUserNotificationCenterDelegate, NotificationManagerProtocol {
     public static let shared = NotificationManager()
@@ -80,12 +86,16 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
         self.center?.delegate = self
     }
 
+    private static var isRunningUnitTests: Bool {
+        NSClassFromString("XCTestCase") != nil ||
+        NSClassFromString("XCTest") != nil ||
+        ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil ||
+        ProcessInfo.processInfo.environment["XCTestBundlePath"] != nil ||
+        ProcessInfo.processInfo.arguments.contains(where: { $0.contains("xctest") || $0.contains("test") })
+    }
+
     private static var isNotificationAvailable: Bool {
-        guard NSClassFromString("XCTestCase") == nil,
-              NSClassFromString("XCTest") == nil,
-              ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil,
-              ProcessInfo.processInfo.environment["XCTestBundlePath"] == nil,
-              !ProcessInfo.processInfo.arguments.contains(where: { $0.contains("xctest") || $0.contains("test") }),
+        guard !isRunningUnitTests,
               let bundleId = Bundle.main.bundleIdentifier,
               bundleId != "com.apple.dt.xctest.tool",
               bundleId != "FocendaPackageTests",
@@ -95,13 +105,17 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
         return true
     }
 
+    private static var isAudioPlaybackAvailable: Bool {
+        !isRunningUnitTests || ProcessInfo.processInfo.environment["ENABLE_TEST_AUDIO"] == "1"
+    }
+
     // MARK: - Rich Audible Alerts
 
     /// Plays a single rich native macOS alert chime sequence (e.g. Hero, Ping, Glass) with fallback
     public func playRichAlertChime(soundName: String = "Hero") {
         #if canImport(AppKit)
         // Guard against playing sound in headless unit test environments unless explicitly enabled
-        guard Self.isNotificationAvailable || ProcessInfo.processInfo.environment["ENABLE_TEST_AUDIO"] == "1" else {
+        guard Self.isAudioPlaybackAvailable else {
             return
         }
         stopActiveSound()
@@ -119,7 +133,7 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
         #if canImport(AppKit)
         stopActiveSound()
 
-        guard Self.isNotificationAvailable || ProcessInfo.processInfo.environment["ENABLE_TEST_AUDIO"] == "1" else {
+        guard Self.isAudioPlaybackAvailable else {
             return
         }
 
@@ -154,21 +168,45 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
         isPlayingSound = false
     }
 
-    /// Plays user-configured reminder sound with configured repetition count
+    static func configuredAlertSound(from defaults: UserDefaults = .standard) -> AlertSoundConfiguration {
+        let soundTypeRaw = defaults.string(forKey: "reminderSoundType") ?? Self.standardNotificationSoundName
+        let customPath = defaults.string(forKey: "reminderCustomSoundPath")
+        let savedRepeatCount = defaults.integer(forKey: "reminderSoundRepeatCount")
+        let repeatCount = savedRepeatCount == 0
+            ? ReminderSoundType.defaultRepeatCount
+            : max(ReminderSoundType.minRepeatCount, min(ReminderSoundType.maxRepeatCount, savedRepeatCount))
+
+        if soundTypeRaw == ReminderSoundType.custom.rawValue {
+            return AlertSoundConfiguration(
+                soundName: Self.standardNotificationSoundName,
+                customFilePath: customPath,
+                repeatCount: repeatCount
+            )
+        } else {
+            return AlertSoundConfiguration(
+                soundName: soundTypeRaw,
+                customFilePath: nil,
+                repeatCount: repeatCount
+            )
+        }
+    }
+
+    /// Plays the sound selected in Settings with the configured repetition count.
+    private func playConfiguredAlertSound() {
+        let configuration = Self.configuredAlertSound()
+        playReminderAlertChime(
+            soundName: configuration.soundName,
+            customFilePath: configuration.customFilePath,
+            repeatCount: configuration.repeatCount
+        )
+    }
+
+    /// Plays the user-configured reminder sound when audible reminders are enabled.
     public func playUserReminderSound() {
         let isEnabled = UserDefaults.standard.object(forKey: "reminderSoundEnabled") == nil ? true : UserDefaults.standard.bool(forKey: "reminderSoundEnabled")
         guard isEnabled else { return }
 
-        let soundTypeRaw = UserDefaults.standard.string(forKey: "reminderSoundType") ?? "Hero"
-        let customPath = UserDefaults.standard.string(forKey: "reminderCustomSoundPath")
-        let savedRepeatCount = UserDefaults.standard.integer(forKey: "reminderSoundRepeatCount")
-        let repeatCount = savedRepeatCount == 0 ? 3 : max(1, min(5, savedRepeatCount))
-
-        if soundTypeRaw == ReminderSoundType.custom.rawValue, let customPath = customPath, !customPath.isEmpty {
-            playReminderAlertChime(soundName: "Hero", customFilePath: customPath, repeatCount: repeatCount)
-        } else {
-            playReminderAlertChime(soundName: soundTypeRaw, customFilePath: nil, repeatCount: repeatCount)
-        }
+        playConfiguredAlertSound()
     }
 
     private func playSoundOnce(soundName: String, customFilePath: String?) {
@@ -179,21 +217,32 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
            let sound = NSSound(contentsOfFile: customPath, byReference: true) {
             self.activeSound = sound
             sound.stop()
-            sound.play()
-            return
+            if sound.play() {
+                return
+            }
+            self.activeSound = nil
         }
 
         if let sound = NSSound(named: NSSound.Name(soundName)) {
             self.activeSound = sound
             sound.stop()
-            sound.play()
-        } else if let fallbackSound = NSSound(named: NSSound.Name("Ping")) {
+            if sound.play() {
+                return
+            }
+            self.activeSound = nil
+        }
+
+        if let fallbackSound = NSSound(named: NSSound.Name("Ping")) {
             self.activeSound = fallbackSound
             fallbackSound.stop()
-            fallbackSound.play()
-        } else {
-            NSSound.beep()
+            if fallbackSound.play() {
+                return
+            }
+            self.activeSound = nil
         }
+
+        // Keep an audible fallback even when a named system sound cannot start.
+        NSSound.beep()
         #endif
     }
 
@@ -267,18 +316,31 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
         }
     }
 
+    /// Builds the local notification content for a completed Pomodoro session.
+    /// The in-app player owns playback so the selected Settings sound can be used
+    /// without adding a second, different system sound to the notification.
+    static func sessionCompletionNotificationContent(for mode: FocusMode) -> UNMutableNotificationContent {
+        let content = UNMutableNotificationContent()
+        content.title = Self.notificationTitle(for: mode)
+        content.body = Self.notificationBody(for: mode)
+        content.sound = nil
+        return content
+    }
+
     // MARK: - Focus Session Completed
 
-    /// Presents the focus completion alert without activating Focenda in front of the user's current app.
+    /// Presents the focus completion alert and plays the selected Settings chime without activating Focenda in front of the user's current app.
     public func notifySessionCompleted(mode: FocusMode) {
         self.lastNotifiedMode = mode
 
         let soundEnabled = UserDefaults.standard.object(forKey: "soundEnabled") == nil
             ? true
             : UserDefaults.standard.bool(forKey: "soundEnabled")
+
+        // Keep the Pomodoro toggle separate from the Reminder toggle, while sharing
+        // the selected sound, custom file, and repetition count from Settings.
         if soundEnabled {
-            // The HUD owns the completion alert, so play the shared sound exactly once.
-            playRichAlertChime(soundName: Self.standardNotificationSoundName)
+            playConfiguredAlertSound()
         }
 
         #if canImport(AppKit)
@@ -304,11 +366,7 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
             return
         }
 
-        let content = UNMutableNotificationContent()
-        content.title = Self.notificationTitle(for: mode)
-        content.body = Self.notificationBody(for: mode)
-        // Avoid a second system sound. The shared Hero chime above is the only completion sound.
-        content.sound = nil
+        let content = Self.sessionCompletionNotificationContent(for: mode)
 
         let request = UNNotificationRequest(
             identifier: UUID().uuidString,
