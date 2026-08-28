@@ -11,9 +11,13 @@ public final class RecurringReminderViewModel {
     private let storageKey = "focenda_saved_recurring_reminders"
 
     public init() {
-        loadReminders()
-        if reminders.isEmpty {
+        // An empty array is a valid persisted state. Only seed sample reminders
+        // when no value has ever been stored; a failed decode must not replace
+        // the user's data with samples.
+        if UserDefaults.standard.object(forKey: storageKey) == nil {
             loadSampleReminders()
+        } else {
+            loadReminders()
         }
     }
 

@@ -268,4 +268,24 @@ final class TaskListViewModelTests: XCTestCase {
         XCTAssertNil(nonExistentDuplicate)
         XCTAssertEqual(viewModel.tasks.count, 2)
     }
+
+    func testCorruptedSavedTasksAreNotReplacedWithSamples() {
+        let corruptedData = Data("not valid task JSON".utf8)
+        UserDefaults.standard.set(corruptedData, forKey: "focenda_saved_tasks")
+
+        let reloadedViewModel = TaskListViewModel()
+
+        XCTAssertTrue(reloadedViewModel.tasks.isEmpty)
+        XCTAssertEqual(UserDefaults.standard.data(forKey: "focenda_saved_tasks"), corruptedData)
+    }
+
+    func testEmptySavedTasksRemainEmpty() throws {
+        let emptyTasksData = try JSONEncoder().encode([TaskItem]())
+        UserDefaults.standard.set(emptyTasksData, forKey: "focenda_saved_tasks")
+
+        let reloadedViewModel = TaskListViewModel()
+
+        XCTAssertTrue(reloadedViewModel.tasks.isEmpty)
+        XCTAssertEqual(UserDefaults.standard.data(forKey: "focenda_saved_tasks"), emptyTasksData)
+    }
 }
