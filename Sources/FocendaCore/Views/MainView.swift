@@ -9,6 +9,7 @@ public struct MainView: View {
     /// without opening the app in full screen. Users can still resize down to the minimum.
     public static let defaultWindowWidth: CGFloat = 1360
     public static let defaultWindowHeight: CGFloat = 900
+    private static let initialSizePreferenceKey = "focenda_applied_comfortable_window_size_v1"
 
     @Bindable var appState: AppState
     @State private var timerVM: FocusTimerViewModel
@@ -202,7 +203,10 @@ public struct MainView: View {
         )
         .enforceMinimumWindowSize(
             width: Self.minimumWindowWidth,
-            height: Self.minimumWindowHeight
+            height: Self.minimumWindowHeight,
+            initialWidth: Self.defaultWindowWidth,
+            initialHeight: Self.defaultWindowHeight,
+            initialSizePreferenceKey: Self.initialSizePreferenceKey
         )
         .background(AppTheme.background)
         .preferredColorScheme(appState.selectedTheme.colorScheme)

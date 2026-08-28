@@ -49,10 +49,16 @@ final class WindowMinimumSizeTests: XCTestCase {
     func testWindowMinSizeConfiguratorInitialization() {
         let configurator = WindowMinSizeConfigurator(
             minWidth: MainView.minimumWindowWidth,
-            minHeight: MainView.minimumWindowHeight
+            minHeight: MainView.minimumWindowHeight,
+            initialWidth: MainView.defaultWindowWidth,
+            initialHeight: MainView.defaultWindowHeight,
+            initialSizePreferenceKey: "test_initial_window_size"
         )
         XCTAssertEqual(configurator.minWidth, 800)
         XCTAssertEqual(configurator.minHeight, 560)
+        XCTAssertEqual(configurator.initialWidth, 1360)
+        XCTAssertEqual(configurator.initialHeight, 900)
+        XCTAssertEqual(configurator.initialSizePreferenceKey, "test_initial_window_size")
     }
 
     func testViewEnforceMinimumWindowSizeModifier() {
