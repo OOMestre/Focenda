@@ -16,12 +16,14 @@ public final class TaskListViewModel {
     public var searchQuery: String = ""
 
     private let storageKey = "focenda_saved_tasks"
+    private let secureStore: SecureStore
 
-    public init() {
+    public init(secureStore: SecureStore = .shared) {
+        self.secureStore = secureStore
         // An empty array is a valid persisted state. Only seed sample tasks
         // when no value has ever been stored; a failed decode must not replace
         // the user's data with samples.
-        if UserDefaults.standard.object(forKey: storageKey) == nil {
+        if secureStore.data(forKey: storageKey) == nil {
             loadSampleTasks()
         } else {
             loadTasks()
@@ -248,12 +250,12 @@ public final class TaskListViewModel {
 
     public func saveTasks() {
         if let encoded = try? JSONEncoder().encode(tasks) {
-            UserDefaults.standard.set(encoded, forKey: storageKey)
+            secureStore.setData(encoded, forKey: storageKey)
         }
     }
 
     public func loadTasks() {
-        if let data = UserDefaults.standard.data(forKey: storageKey),
+        if let data = secureStore.data(forKey: storageKey),
            let decoded = try? JSONDecoder().decode([TaskItem].self, from: data) {
             self.tasks = decoded
         }

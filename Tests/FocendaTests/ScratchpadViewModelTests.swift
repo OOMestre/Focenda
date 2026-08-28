@@ -247,7 +247,8 @@ final class ScratchpadViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.notes.first?.title, "")
         XCTAssertEqual(viewModel.notes.first?.displayTitle, "Keep this note")
 
-        let savedData = try XCTUnwrap(testDefaults.data(forKey: ScratchpadViewModel.userDefaultsKey))
+        let secureStore = SecureStore(defaults: testDefaults)
+        let savedData = try XCTUnwrap(secureStore.data(forKey: ScratchpadViewModel.userDefaultsKey))
         let savedJSON = try XCTUnwrap(JSONSerialization.jsonObject(with: savedData) as? [[String: Any]])
         XCTAssertNil(savedJSON.first?["color"])
     }

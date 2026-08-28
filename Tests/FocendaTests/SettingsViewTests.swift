@@ -25,19 +25,19 @@ final class SettingsViewTests: XCTestCase {
         XCTAssertEqual(appState.selectedTheme, .zenCalm)
 
         appState.selectedTheme = .obsidianMinimal
-        XCTAssertEqual(UserDefaults.standard.string(forKey: AppTheme.storageKey), AppThemeOption.obsidianMinimal.rawValue)
+        XCTAssertEqual(SecureStore.shared.string(forKey: AppTheme.storageKey), AppThemeOption.obsidianMinimal.rawValue)
         XCTAssertEqual(AppTheme.current, .obsidianMinimal)
 
         appState.selectedTheme = .warmSandstone
-        XCTAssertEqual(UserDefaults.standard.string(forKey: AppTheme.storageKey), AppThemeOption.warmSandstone.rawValue)
+        XCTAssertEqual(SecureStore.shared.string(forKey: AppTheme.storageKey), AppThemeOption.warmSandstone.rawValue)
         XCTAssertEqual(AppTheme.current, .warmSandstone)
 
         appState.selectedTheme = .nordicFrost
-        XCTAssertEqual(UserDefaults.standard.string(forKey: AppTheme.storageKey), AppThemeOption.nordicFrost.rawValue)
+        XCTAssertEqual(SecureStore.shared.string(forKey: AppTheme.storageKey), AppThemeOption.nordicFrost.rawValue)
         XCTAssertEqual(AppTheme.current, .nordicFrost)
 
         appState.selectedTheme = .forestMatcha
-        XCTAssertEqual(UserDefaults.standard.string(forKey: AppTheme.storageKey), AppThemeOption.forestMatcha.rawValue)
+        XCTAssertEqual(SecureStore.shared.string(forKey: AppTheme.storageKey), AppThemeOption.forestMatcha.rawValue)
         XCTAssertEqual(AppTheme.current, .forestMatcha)
     }
 
@@ -67,12 +67,12 @@ final class SettingsViewTests: XCTestCase {
         appState.showShortcutFeedback = false
         appState.savePreferences()
 
-        XCTAssertEqual(UserDefaults.standard.integer(forKey: "dailyFocusGoalMinutes"), 180)
-        XCTAssertFalse(UserDefaults.standard.bool(forKey: "soundEnabled"))
-        XCTAssertEqual(UserDefaults.standard.string(forKey: AppTheme.storageKey), AppThemeOption.obsidianMinimal.rawValue)
-        XCTAssertFalse(UserDefaults.standard.bool(forKey: "globalShortcutsEnabled"))
-        XCTAssertEqual(UserDefaults.standard.string(forKey: "shortcutPreset"), GlobalShortcutPreset.powerUser.rawValue)
-        XCTAssertFalse(UserDefaults.standard.bool(forKey: "showShortcutFeedback"))
+        XCTAssertEqual(SecureStore.shared.integer(forKey: "dailyFocusGoalMinutes") ?? 0, 180)
+        XCTAssertFalse(SecureStore.shared.bool(forKey: "soundEnabled") ?? true)
+        XCTAssertEqual(SecureStore.shared.string(forKey: AppTheme.storageKey), AppThemeOption.obsidianMinimal.rawValue)
+        XCTAssertFalse(SecureStore.shared.bool(forKey: "globalShortcutsEnabled") ?? true)
+        XCTAssertEqual(SecureStore.shared.string(forKey: "shortcutPreset"), GlobalShortcutPreset.powerUser.rawValue)
+        XCTAssertFalse(SecureStore.shared.bool(forKey: "showShortcutFeedback") ?? true)
     }
 
     func testAutomaticUpdateChecksDefaultToEnabledAndPersist() {
@@ -81,7 +81,7 @@ final class SettingsViewTests: XCTestCase {
         XCTAssertTrue(appState.automaticUpdateChecksEnabled)
 
         appState.automaticUpdateChecksEnabled = false
-        XCTAssertFalse(UserDefaults.standard.bool(forKey: AppUpdatePreferences.automaticChecksEnabledKey))
+        XCTAssertFalse(SecureStore.shared.bool(forKey: AppUpdatePreferences.automaticChecksEnabledKey) ?? true)
 
         let reloadedAppState = AppState()
         XCTAssertFalse(reloadedAppState.automaticUpdateChecksEnabled)
@@ -106,11 +106,11 @@ final class SettingsViewTests: XCTestCase {
         appState.reminderCustomSoundName = "custom.mp3"
         appState.savePreferences()
 
-        XCTAssertTrue(UserDefaults.standard.bool(forKey: "reminderSoundEnabled"))
-        XCTAssertEqual(UserDefaults.standard.string(forKey: "reminderSoundType"), ReminderSoundType.glass.rawValue)
-        XCTAssertEqual(UserDefaults.standard.integer(forKey: "reminderSoundRepeatCount"), 4)
-        XCTAssertEqual(UserDefaults.standard.string(forKey: "reminderCustomSoundPath"), "/path/to/custom.mp3")
-        XCTAssertEqual(UserDefaults.standard.string(forKey: "reminderCustomSoundName"), "custom.mp3")
+        XCTAssertTrue(SecureStore.shared.bool(forKey: "reminderSoundEnabled") ?? false)
+        XCTAssertEqual(SecureStore.shared.string(forKey: "reminderSoundType"), ReminderSoundType.glass.rawValue)
+        XCTAssertEqual(SecureStore.shared.integer(forKey: "reminderSoundRepeatCount") ?? 0, 4)
+        XCTAssertEqual(SecureStore.shared.string(forKey: "reminderCustomSoundPath"), "/path/to/custom.mp3")
+        XCTAssertEqual(SecureStore.shared.string(forKey: "reminderCustomSoundName"), "custom.mp3")
 
         let reloadedAppState = AppState()
         XCTAssertTrue(reloadedAppState.reminderSoundEnabled)

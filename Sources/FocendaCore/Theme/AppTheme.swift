@@ -110,7 +110,7 @@ public enum AppThemeOption: String, CaseIterable, Identifiable, Codable {
 /// Centralized theme definition for Focenda providing a calm, organic, and distraction-free design system.
 public enum AppTheme {
 
-    /// Storage key used in UserDefaults
+    /// Storage key used by the encrypted local store.
     public static let storageKey = "focenda_selected_theme"
 
     private static var _cachedTheme: AppThemeOption? = nil
@@ -121,14 +121,14 @@ public enum AppTheme {
             if let cached = _cachedTheme {
                 return cached
             }
-            let stored = UserDefaults.standard.string(forKey: storageKey)
+            let stored = SecureStore.shared.string(forKey: storageKey)
             let resolved = AppThemeOption.from(storedValue: stored)
             _cachedTheme = resolved
             return resolved
         }
         set {
             _cachedTheme = newValue
-            UserDefaults.standard.set(newValue.rawValue, forKey: storageKey)
+            SecureStore.shared.set(newValue.rawValue, forKey: storageKey)
         }
     }
 

@@ -21,6 +21,7 @@
 [Installation](#installation) |
 [Local Development](#local-development) |
 [Contributing](#contributing) |
+[Privacy & Security](docs/PRIVACY.md) |
 [License](#license)
 
 ---
@@ -46,7 +47,7 @@ Combining structured focus cycles (Pomodoro and deep work timers), visual Kanban
 - **Menu Bar Control Center:** Floating, top-down animated macOS menu bar utility providing timer controls, quick note capture into user folders, instant task addition, and bookmarks access.
 - **Customizable Visual Themes:** Five refined aesthetic themes selectable in Settings (Zen Calm Light, Obsidian Minimal Dark, Warm Sandstone, Nordic Frost, Forest Matcha) without disruptive automatic color shifts.
 - **Private In-App Updates:** Settings can check GitHub Releases manually or once a day, show native macOS update notifications, and install validated Focenda archives locally without sending personal data or app content anywhere.
-- **100% Local & Private:** All state persists strictly on device via macOS storage primitives. Zero telemetry, no third-party accounts, and zero cloud tracking.
+- **100% Local & Private:** Tasks, notes, reminders, bookmarks, and preferences stay on device in authenticated encrypted local storage. Zero telemetry, no third-party accounts, and zero cloud tracking.
 
 ---
 
@@ -96,6 +97,12 @@ make clean
 ## Contributing
 
 Contributions are welcome. Please consult [CONTRIBUTING.md](CONTRIBUTING.md) for code style standards, testing requirements, and submission guidelines.
+
+## Privacy & Security
+
+See the [Focenda Privacy and Security Policy](docs/PRIVACY.md) for local
+encryption, macOS sandbox and hardened-runtime behavior, notification handling,
+and update-service details.
 
 ---
 

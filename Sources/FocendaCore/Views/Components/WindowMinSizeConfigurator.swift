@@ -49,7 +49,7 @@ public struct WindowMinSizeConfigurator: NSViewRepresentable {
             let initialWidth,
             let initialHeight,
             let initialSizePreferenceKey,
-            !UserDefaults.standard.bool(forKey: initialSizePreferenceKey)
+            !(SecureStore.shared.bool(forKey: initialSizePreferenceKey) ?? false)
         else {
             return
         }
@@ -61,7 +61,7 @@ public struct WindowMinSizeConfigurator: NSViewRepresentable {
         )
         window.setContentSize(preferredSize)
         window.center()
-        UserDefaults.standard.set(true, forKey: initialSizePreferenceKey)
+        SecureStore.shared.set(true, forKey: initialSizePreferenceKey)
     }
 
     private func fittedInitialContentSize(width: CGFloat, height: CGFloat, for window: NSWindow) -> NSSize {

@@ -9,8 +9,10 @@ public final class RecurringReminderViewModel {
     public var searchQuery: String = ""
 
     private let storageKey = "focenda_saved_recurring_reminders"
+    private let secureStore: SecureStore
 
-    public init() {
+    public init(secureStore: SecureStore = .shared) {
+        self.secureStore = secureStore
         loadReminders()
     }
 
@@ -103,16 +105,16 @@ public final class RecurringReminderViewModel {
         }
     }
 
-    /// Persists reminders to standard UserDefaults
+    /// Persists reminders as encrypted local data.
     public func saveReminders() {
         if let encoded = try? JSONEncoder().encode(reminders) {
-            UserDefaults.standard.set(encoded, forKey: storageKey)
+            secureStore.setData(encoded, forKey: storageKey)
         }
     }
 
-    /// Loads reminders from standard UserDefaults
+    /// Loads reminders from encrypted local data, migrating the legacy payload when needed.
     public func loadReminders() {
-        if let data = UserDefaults.standard.data(forKey: storageKey),
+        if let data = secureStore.data(forKey: storageKey),
            let decoded = try? JSONDecoder().decode([RecurringReminder].self, from: data) {
             self.reminders = decoded
         }

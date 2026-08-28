@@ -158,10 +158,10 @@ public final class ScratchpadViewModel {
     public var showFoldersSidebar: Bool = true
     public var showNotesSidebar: Bool = true
 
-    private let userDefaults: UserDefaults
+    private let secureStore: SecureStore
 
-    public init(userDefaults: UserDefaults = .standard) {
-        self.userDefaults = userDefaults
+    public init(userDefaults: UserDefaults = .standard, secureStore: SecureStore? = nil) {
+        self.secureStore = secureStore ?? SecureStore(defaults: userDefaults)
         loadFromUserDefaults()
     }
 
@@ -456,7 +456,7 @@ public final class ScratchpadViewModel {
 
     public func loadFromUserDefaults() {
         // Load folders
-        if let savedFolders = userDefaults.stringArray(forKey: Self.foldersUserDefaultsKey), !savedFolders.isEmpty {
+        if let savedFolders = secureStore.stringArray(forKey: Self.foldersUserDefaultsKey), !savedFolders.isEmpty {
             self.folders = savedFolders
         } else {
             self.folders = Self.defaultFolders
@@ -464,7 +464,7 @@ public final class ScratchpadViewModel {
 
         // Load notes. An explicitly saved empty array is a valid state: the
         // Scratchpad should remain empty until the user creates a note.
-        if let data = userDefaults.data(forKey: Self.userDefaultsKey),
+        if let data = secureStore.data(forKey: Self.userDefaultsKey),
            let decoded = try? JSONDecoder().decode([ScratchpadNote].self, from: data) {
             let migrated = Self.migrateLegacyNotes(decoded)
             self.notes = migrated
@@ -501,11 +501,11 @@ public final class ScratchpadViewModel {
 
     public func saveToUserDefaults() {
         if let data = try? JSONEncoder().encode(notes) {
-            userDefaults.set(data, forKey: Self.userDefaultsKey)
+            secureStore.setData(data, forKey: Self.userDefaultsKey)
         }
     }
 
     public func saveFoldersToUserDefaults() {
-        userDefaults.set(folders, forKey: Self.foldersUserDefaultsKey)
+        secureStore.set(folders, forKey: Self.foldersUserDefaultsKey)
     }
 }

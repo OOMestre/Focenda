@@ -279,9 +279,10 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
     }
 
     static func configuredAlertSound(from defaults: UserDefaults = .standard) -> AlertSoundConfiguration {
-        let soundTypeRaw = defaults.string(forKey: "reminderSoundType") ?? Self.standardNotificationSoundName
-        let customPath = defaults.string(forKey: "reminderCustomSoundPath")
-        let savedRepeatCount = defaults.integer(forKey: "reminderSoundRepeatCount")
+        let secureStore = SecureStore(defaults: defaults)
+        let soundTypeRaw = secureStore.string(forKey: "reminderSoundType") ?? Self.standardNotificationSoundName
+        let customPath = secureStore.string(forKey: "reminderCustomSoundPath")
+        let savedRepeatCount = secureStore.integer(forKey: "reminderSoundRepeatCount") ?? 0
         let repeatCount = savedRepeatCount == 0
             ? ReminderSoundType.defaultRepeatCount
             : max(ReminderSoundType.minRepeatCount, min(ReminderSoundType.maxRepeatCount, savedRepeatCount))
@@ -313,7 +314,7 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
 
     /// Plays the user-configured reminder sound when audible reminders are enabled.
     public func playUserReminderSound() {
-        let isEnabled = UserDefaults.standard.object(forKey: "reminderSoundEnabled") == nil ? true : UserDefaults.standard.bool(forKey: "reminderSoundEnabled")
+        let isEnabled = SecureStore.shared.bool(forKey: "reminderSoundEnabled") ?? true
         guard isEnabled else { return }
 
         playConfiguredAlertSound()
@@ -323,14 +324,23 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
         #if canImport(AppKit)
         if let customPath = customFilePath,
            !customPath.isEmpty,
-           FileManager.default.fileExists(atPath: customPath),
-           let sound = NSSound(contentsOfFile: customPath, byReference: true) {
-            self.activeSound = sound
-            sound.stop()
-            if sound.play() {
-                return
+           let customURL = resolvedCustomSoundURL(path: customPath) {
+            let didStartAccessing = customURL.startAccessingSecurityScopedResource()
+            defer {
+                if didStartAccessing {
+                    customURL.stopAccessingSecurityScopedResource()
+                }
             }
-            self.activeSound = nil
+
+            if FileManager.default.fileExists(atPath: customURL.path),
+               let sound = NSSound(contentsOfFile: customURL.path, byReference: false) {
+                self.activeSound = sound
+                sound.stop()
+                if sound.play() {
+                    return
+                }
+                self.activeSound = nil
+            }
         }
 
         if let sound = NSSound(named: NSSound.Name(soundName)) {
@@ -355,6 +365,25 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
         NSSound.beep()
         #endif
     }
+
+    #if canImport(AppKit)
+    private func resolvedCustomSoundURL(path: String) -> URL? {
+        let bookmarkData = SecureStore.shared.data(forKey: "reminderCustomSoundBookmarkData")
+        if let bookmarkData {
+            var isStale = false
+            if let bookmarkedURL = try? URL(
+                resolvingBookmarkData: bookmarkData,
+                options: [.withSecurityScope],
+                relativeTo: nil,
+                bookmarkDataIsStale: &isStale
+            ), !isStale {
+                return bookmarkedURL
+            }
+        }
+
+        return URL(fileURLWithPath: path)
+    }
+    #endif
 
     // MARK: - Authorization
 
@@ -443,9 +472,7 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
     public func notifySessionCompleted(mode: FocusMode) {
         self.lastNotifiedMode = mode
 
-        let soundEnabled = UserDefaults.standard.object(forKey: "soundEnabled") == nil
-            ? true
-            : UserDefaults.standard.bool(forKey: "soundEnabled")
+        let soundEnabled = SecureStore.shared.bool(forKey: "soundEnabled") ?? true
 
         // Keep the Pomodoro toggle separate from the Reminder toggle, while sharing
         // the selected sound, custom file, and repetition count from Settings.
