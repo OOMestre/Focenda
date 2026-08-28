@@ -11,6 +11,7 @@ struct FocendaApp: App {
     @State private var scratchpadVM: ScratchpadViewModel
     @State private var bookmarkVM: BookmarkViewModel
     @State private var recurringReminderVM: RecurringReminderViewModel
+    @State private var productivityProfileVM: ProductivityProfileViewModel
     @State private var updateManager: AppUpdateManager
     @State private var isReminderAlertActive: Bool = false
 
@@ -23,6 +24,7 @@ struct FocendaApp: App {
         _scratchpadVM = State(initialValue: ScratchpadViewModel(secureStore: secureStore))
         _bookmarkVM = State(initialValue: BookmarkViewModel(secureStore: secureStore))
         _recurringReminderVM = State(initialValue: RecurringReminderViewModel(secureStore: secureStore))
+        _productivityProfileVM = State(initialValue: ProductivityProfileViewModel(secureStore: secureStore))
         _updateManager = State(initialValue: AppUpdateManager(secureStore: secureStore))
 
         OwlBrandAssets.configureDockIcon()
@@ -38,6 +40,7 @@ struct FocendaApp: App {
                 scratchpadVM: scratchpadVM,
                 bookmarkVM: bookmarkVM,
                 recurringReminderVM: recurringReminderVM,
+                productivityProfileVM: productivityProfileVM,
                 updateManager: updateManager
             )
             .task {
@@ -50,6 +53,10 @@ struct FocendaApp: App {
             }
             .onReceive(NotificationCenter.default.publisher(for: .focusShortcutTriggered)) { _ in
                 // Visual feedback or state synchronization handled reactively
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .productivityProfileShortcutTriggered)) { notification in
+                guard let profileID = notification.userInfo?["profileID"] as? UUID else { return }
+                productivityProfileVM.activateProfile(id: profileID)
             }
             .onReceive(NotificationCenter.default.publisher(for: NotificationManager.openFocusTabNotification)) { _ in
                 appState.selectedTab = .timer

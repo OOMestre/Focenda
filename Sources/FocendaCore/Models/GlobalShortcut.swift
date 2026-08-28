@@ -83,7 +83,7 @@ public enum FocusShortcutAction: String, CaseIterable, Identifiable, Codable {
 }
 
 /// Modifier keys supported by global shortcuts
-public enum ShortcutModifier: String, CaseIterable, Codable {
+public enum ShortcutModifier: String, CaseIterable, Codable, Sendable {
     case command = "command"
     case option = "option"
     case control = "control"

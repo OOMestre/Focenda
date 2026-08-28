@@ -44,6 +44,7 @@ Combining structured focus cycles (Pomodoro and deep work timers), visual Kanban
 - **Recurring Reminders:** Dedicated scheduler for daily, weekday, weekly, and monthly recurring tasks with native macOS banner alerts and rich chime notifications.
 - **Multi-Notebook Scratchpad:** Master-detail quick notes system organized into custom folders (General, Projects, Work, Personal, Ideas) with live character/word counters and keystroke persistence.
 - **Focus Hub & Bookmarks:** Responsive quick-launch directory for essential development references, tools, and documentation with 1-click browser integration.
+- **Productivity Profiles:** Save a complete workspace with selected applications, per-window monitor/position/size layouts, and a global shortcut that opens and organizes it on demand.
 - **Menu Bar Control Center:** Floating, top-down animated macOS menu bar utility providing timer controls, quick note capture into user folders, instant task addition, and bookmarks access.
 - **Customizable Visual Themes:** Five refined aesthetic themes selectable in Settings (Zen Calm Light, Obsidian Minimal Dark, Warm Sandstone, Nordic Frost, Forest Matcha) without disruptive automatic color shifts.
 - **Private In-App Updates:** Settings can check GitHub Releases manually or once a day, show native macOS update notifications, and install validated Focenda archives locally without sending personal data or app content anywhere.
@@ -57,6 +58,7 @@ Combining structured focus cycles (Pomodoro and deep work timers), visual Kanban
 2. **Manage Tasks in Kanban:** Navigate to Tasks & Kanban to organize items across columns, set priority levels (High, Medium, Low), or switch to the linear list view.
 3. **Inspect Schedule in Calendar:** Open Calendar and hover over any date to preview scheduled items; click a date to keep the preview open and use its quick actions.
 4. **Capture Notes:** Use Scratchpad or the Menu Bar popover to take quick notes into dedicated notebooks.
+5. **Restore a Workspace:** Open Profiles, add your applications, capture or edit each window layout, record a shortcut, and activate the profile whenever you want to return to that setup.
 
 ---
 

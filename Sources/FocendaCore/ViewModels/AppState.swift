@@ -14,6 +14,7 @@ public enum AppTab: String, CaseIterable, Identifiable {
     case reminders = "Reminders"
     case scratchpad = "Scratchpad"
     case bookmarks = "Bookmarks"
+    case profiles = "Profiles"
     case settings = "Settings"
     case support = "Support"
 
@@ -28,6 +29,7 @@ public enum AppTab: String, CaseIterable, Identifiable {
         case .reminders: return "bell.badge"
         case .scratchpad: return "square.and.pencil"
         case .bookmarks: return "bookmark.fill"
+        case .profiles: return "rectangle.3.group"
         case .settings: return "gearshape"
         case .support: return "heart.fill"
         }

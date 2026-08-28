@@ -9,7 +9,8 @@ server.
 ## Data stored on this Mac
 
 Focenda stores tasks, task notes, reminders, scratchpad notes, bookmarks,
-quick links, and app preferences locally. Before these values are written to
+quick links, productivity profiles, saved app layouts, and app preferences
+locally. Before these values are written to
 the app's local preference domain, they are encrypted with authenticated
 AES-GCM encryption. The 256-bit encryption key is stored in the macOS
 Keychain, separately from the encrypted values.
@@ -43,12 +44,22 @@ If you choose a custom alert sound, Focenda stores an encrypted security-scoped
 bookmark and the local path needed to access that file. The audio file itself
 stays where you selected it; Focenda does not upload or copy it to a server.
 
+For productivity profiles, Focenda stores the selected application's bundle
+identifier, local path, a security-scoped bookmark, the saved window layout,
+and the profile shortcut in the same encrypted local storage. Activating a
+profile uses macOS Accessibility permission to move and resize windows in
+other applications. Focenda does not read or upload the contents of those
+applications.
+
 ## Runtime protections
 
 Generated Focenda app bundles enable the macOS App Sandbox and hardened runtime.
 The sandbox grants network-client access for update checks, read access to files
-explicitly selected for custom sounds, and write access only to a folder the
-user explicitly selects when installing an update. For public distribution,
+explicitly selected for custom sounds and productivity profiles, and write
+access only to a folder the user explicitly selects when installing an update.
+Window organization also
+requires the user to approve Focenda under System Settings > Privacy & Security
+> Accessibility. For public distribution,
 the bundle should also be signed with a Developer ID identity and notarized;
 an ad-hoc signature is intended only for local staging or CI artifacts.
 

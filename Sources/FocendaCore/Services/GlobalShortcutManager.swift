@@ -9,6 +9,7 @@ import Carbon.HIToolbox
 
 public extension Notification.Name {
     static let focusShortcutTriggered = Notification.Name("FocendaFocusShortcutTriggeredNotification")
+    static let productivityProfileShortcutTriggered = Notification.Name("FocendaProductivityProfileShortcutTriggeredNotification")
 }
 
 /// Protocol defining global shortcut management operations
@@ -17,10 +18,13 @@ public protocol GlobalShortcutManagerProtocol: AnyObject {
     var preset: GlobalShortcutPreset { get }
     var registeredCombinations: [ShortcutKeyCombination] { get }
     var lastTriggeredAction: FocusShortcutAction? { get }
+    var lastTriggeredProfileID: UUID? { get }
     func setup(timerVM: FocusTimerViewModel, appState: AppState?)
+    func setProductivityProfileShortcuts(_ profiles: [ProductivityProfile])
     func registerAll()
     func unregisterAll()
     func triggerAction(_ action: FocusShortcutAction)
+    func triggerProductivityProfile(_ profileID: UUID)
 }
 
 #if canImport(Carbon) && canImport(AppKit)
@@ -47,6 +51,10 @@ private func focendaHotKeyCallback(
         DispatchQueue.main.async {
             GlobalShortcutManager.shared.triggerAction(action)
         }
+    } else {
+        DispatchQueue.main.async {
+            GlobalShortcutManager.shared.triggerProductivityProfile(forNumericID: hotKeyID.id)
+        }
     }
     return noErr
 }
@@ -60,11 +68,17 @@ public final class GlobalShortcutManager: GlobalShortcutManagerProtocol {
     public private(set) var preset: GlobalShortcutPreset = .standard
     public private(set) var registeredCombinations: [ShortcutKeyCombination] = []
     public private(set) var lastTriggeredAction: FocusShortcutAction?
+    public private(set) var lastTriggeredProfileID: UUID?
 
     public var onActionTriggered: ((FocusShortcutAction) -> Void)?
 
     private weak var timerVM: FocusTimerViewModel?
     private weak var appState: AppState?
+    private var hasBeenSetup = false
+    private var productivityProfileShortcuts: [(profileID: UUID, shortcut: ProductivityProfileShortcut)] = []
+    private var registeredProfileHotKeyIDs: [UInt32: UUID] = [:]
+
+    private static let profileHotKeyBaseID: UInt32 = 20_000
 
     #if canImport(Carbon) && canImport(AppKit)
     private var eventHandlerRef: EventHandlerRef?
@@ -83,6 +97,7 @@ public final class GlobalShortcutManager: GlobalShortcutManagerProtocol {
     public func setup(timerVM: FocusTimerViewModel, appState: AppState? = nil) {
         self.timerVM = timerVM
         self.appState = appState
+        self.hasBeenSetup = true
 
         if let state = appState {
             self.isEnabled = state.globalShortcutsEnabled
@@ -92,6 +107,8 @@ public final class GlobalShortcutManager: GlobalShortcutManagerProtocol {
 
         if isEnabled {
             registerAll()
+        } else {
+            unregisterAll()
         }
     }
 
@@ -99,7 +116,7 @@ public final class GlobalShortcutManager: GlobalShortcutManagerProtocol {
     public func setEnabled(_ enabled: Bool) {
         guard self.isEnabled != enabled else { return }
         self.isEnabled = enabled
-        if enabled {
+        if enabled && hasBeenSetup {
             registerAll()
         } else {
             unregisterAll()
@@ -110,7 +127,19 @@ public final class GlobalShortcutManager: GlobalShortcutManagerProtocol {
     public func setPreset(_ newPreset: GlobalShortcutPreset) {
         self.preset = newPreset
         self.registeredCombinations = ShortcutKeyCombination.defaultCombinations(for: newPreset)
-        if isEnabled {
+        if isEnabled && hasBeenSetup {
+            registerAll()
+        }
+    }
+
+    /// Updates the profile shortcuts registered alongside the built-in focus shortcuts.
+    public func setProductivityProfileShortcuts(_ profiles: [ProductivityProfile]) {
+        productivityProfileShortcuts = profiles.compactMap { profile in
+            guard let shortcut = profile.globalShortcut, shortcut.isUsable else { return nil }
+            return (profileID: profile.id, shortcut: shortcut)
+        }
+
+        if isEnabled && hasBeenSetup {
             registerAll()
         }
     }
@@ -166,6 +195,28 @@ public final class GlobalShortcutManager: GlobalShortcutManagerProtocol {
                 print("⚠️ [GlobalShortcutManager] Failed to register HotKey for \(combo.action.rawValue): \(status)")
             }
         }
+
+        for (index, profileShortcut) in productivityProfileShortcuts.enumerated() {
+            let numericID = Self.profileHotKeyBaseID + UInt32(index)
+            registeredProfileHotKeyIDs[numericID] = profileShortcut.profileID
+
+            var hotKeyRef: EventHotKeyRef?
+            let hotKeyID = EventHotKeyID(signature: signature, id: numericID)
+            let status = RegisterEventHotKey(
+                profileShortcut.shortcut.keyCode,
+                profileShortcut.shortcut.carbonModifiers,
+                hotKeyID,
+                GetEventDispatcherTarget(),
+                0,
+                &hotKeyRef
+            )
+
+            if status == noErr, let ref = hotKeyRef {
+                registeredHotKeyRefs[numericID] = ref
+            } else {
+                print("⚠️ [GlobalShortcutManager] Failed to register profile HotKey for \(profileShortcut.profileID): \(status)")
+            }
+        }
         #endif
     }
 
@@ -176,6 +227,7 @@ public final class GlobalShortcutManager: GlobalShortcutManagerProtocol {
             UnregisterEventHotKey(ref)
         }
         registeredHotKeyRefs.removeAll()
+        registeredProfileHotKeyIDs.removeAll()
 
         if let handler = eventHandlerRef {
             RemoveEventHandler(handler)
@@ -225,6 +277,27 @@ public final class GlobalShortcutManager: GlobalShortcutManagerProtocol {
 
         notifyTriggered(action: action)
         onActionTriggered?(action)
+    }
+
+    /// Activates a productivity profile shortcut and publishes it for the app layer.
+    public func triggerProductivityProfile(_ profileID: UUID) {
+        lastTriggeredProfileID = profileID
+        NotificationCenter.default.post(
+            name: .productivityProfileShortcutTriggered,
+            object: self,
+            userInfo: ["profileID": profileID]
+        )
+
+        #if canImport(AppKit)
+        if let appState = appState, appState.showShortcutFeedback {
+            NotificationManager.shared.playRichAlertChime(soundName: "Ping")
+        }
+        #endif
+    }
+
+    fileprivate func triggerProductivityProfile(forNumericID numericID: UInt32) {
+        guard let profileID = registeredProfileHotKeyIDs[numericID] else { return }
+        triggerProductivityProfile(profileID)
     }
 
     private func notifyTriggered(action: FocusShortcutAction) {
