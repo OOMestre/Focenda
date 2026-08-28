@@ -1026,10 +1026,7 @@ public struct CalendarView: View {
                 )
 
             HStack(spacing: 8) {
-                DatePicker("Time:", selection: $newReminderTime, displayedComponents: [.hourAndMinute])
-                    .font(.caption)
-                    .foregroundStyle(AppTheme.textPrimary)
-                    .labelsHidden()
+                IntuitiveTimePicker("Reminder Time", selection: $newReminderTime, style: .compact)
 
                 Picker("Frequency", selection: $newReminderFrequency) {
                     ForEach(RepeatFrequency.allCases) { freq in

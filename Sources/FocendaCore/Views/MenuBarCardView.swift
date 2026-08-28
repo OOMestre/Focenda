@@ -629,11 +629,7 @@ public struct MenuBarCardView: View {
                         )
 
                     HStack(spacing: 6) {
-                        DatePicker("", selection: $newReminderTime, displayedComponents: [.hourAndMinute])
-                            .font(.caption)
-                            .foregroundStyle(AppTheme.textPrimary)
-                            .tint(AppTheme.accent)
-                            .labelsHidden()
+                        IntuitiveTimePicker(selection: $newReminderTime, style: .compact)
 
                         Picker("", selection: $newReminderFrequency) {
                             ForEach(RepeatFrequency.allCases) { freq in

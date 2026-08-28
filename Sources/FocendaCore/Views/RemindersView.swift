@@ -733,9 +733,7 @@ public struct RemindersView: View {
                             .font(.system(size: 12, weight: .semibold))
                             .foregroundStyle(AppTheme.textPrimary)
 
-                        DatePicker("", selection: $formTime, displayedComponents: [.hourAndMinute])
-                            .labelsHidden()
-                            .font(.system(size: 13))
+                        IntuitiveTimePicker("Reminder Time", selection: $formTime, style: .standard)
                     }
 
                     VStack(alignment: .leading, spacing: 4) {

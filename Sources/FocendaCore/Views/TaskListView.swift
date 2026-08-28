@@ -313,8 +313,8 @@ public struct TaskListView: View {
                 }
 
                 if newTaskHasReminder {
-                    HStack {
-                        Text("Reminder Date & Time:")
+                    HStack(spacing: 8) {
+                        Text("Reminder:")
                             .font(.subheadline)
                             .foregroundStyle(AppTheme.textSecondary)
                         Spacer()
@@ -322,10 +322,12 @@ public struct TaskListView: View {
                             "",
                             selection: $newTaskReminderDate,
                             in: Date()...,
-                            displayedComponents: [.date, .hourAndMinute]
+                            displayedComponents: [.date]
                         )
                         .labelsHidden()
                         .datePickerStyle(.compact)
+
+                        IntuitiveTimePicker(selection: $newTaskReminderDate, style: .compact)
                     }
                     .padding(.top, 2)
                 }
