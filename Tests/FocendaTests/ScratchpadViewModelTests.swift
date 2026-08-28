@@ -22,47 +22,29 @@ final class ScratchpadViewModelTests: XCTestCase {
         super.tearDown()
     }
 
-    func testInitializationCreatesFiveColors() {
+    func testInitializationStartsWithoutNotes() {
         let viewModel = ScratchpadViewModel(userDefaults: testDefaults)
 
-        XCTAssertEqual(viewModel.notes.count, 5)
-        XCTAssertEqual(viewModel.selectedColor, .amber)
-        XCTAssertEqual(viewModel.selectedNoteId, viewModel.notes.first?.id)
-
-        let expectedColors: [ScratchpadColor] = [.amber, .lavender, .sky, .emerald, .rose]
-        for (index, color) in expectedColors.enumerated() {
-            XCTAssertEqual(viewModel.notes[index].color, color)
-            XCTAssertTrue(viewModel.notes[index].content.isEmpty)
-            XCTAssertEqual(viewModel.notes[index].title, "\(color.rawValue) Scratchpad")
-            XCTAssertEqual(viewModel.notes[index].folder, "General")
-        }
-    }
-
-    func testSelectColorChangesActiveNote() {
-        let viewModel = ScratchpadViewModel(userDefaults: testDefaults)
-
-        viewModel.selectColor(.lavender)
-        XCTAssertEqual(viewModel.selectedColor, .lavender)
-        XCTAssertEqual(viewModel.currentNote.color, .lavender)
-
-        viewModel.selectColor(.emerald)
-        XCTAssertEqual(viewModel.selectedColor, .emerald)
-        XCTAssertEqual(viewModel.currentNote.color, .emerald)
+        XCTAssertTrue(viewModel.notes.isEmpty)
+        XCTAssertNil(viewModel.selectedNoteId)
+        XCTAssertEqual(viewModel.filteredNotes.count, 0)
+        XCTAssertEqual(viewModel.currentNote.displayTitle, "Untitled Note")
     }
 
     func testUpdateContentAndPersistence() {
         let viewModel1 = ScratchpadViewModel(userDefaults: testDefaults)
-        viewModel1.selectColor(.amber)
+        let focusNote = viewModel1.createNote(title: "Focus Notes")
+        viewModel1.selectNote(focusNote)
         viewModel1.updateContent("Amber test content")
 
-        viewModel1.selectColor(.sky)
+        let ideasNote = viewModel1.createNote(title: "Ideas")
+        viewModel1.selectNote(ideasNote)
         viewModel1.updateContent("Sky test ideas")
 
         // Create new viewmodel instance backed by same UserDefaults to verify persistence
         let viewModel2 = ScratchpadViewModel(userDefaults: testDefaults)
-        XCTAssertEqual(viewModel2.note(for: .amber)?.content, "Amber test content")
-        XCTAssertEqual(viewModel2.note(for: .sky)?.content, "Sky test ideas")
-        XCTAssertEqual(viewModel2.note(for: .rose)?.content, "")
+        XCTAssertEqual(viewModel2.notes.first(where: { $0.title == "Focus Notes" })?.content, "Amber test content")
+        XCTAssertEqual(viewModel2.notes.first(where: { $0.title == "Ideas" })?.content, "Sky test ideas")
     }
 
     func testKeystrokePersistence() {
@@ -102,10 +84,9 @@ final class ScratchpadViewModelTests: XCTestCase {
         let viewModel = ScratchpadViewModel(userDefaults: testDefaults)
         let initialCount = viewModel.notes.count
 
-        let newNote = viewModel.createNote(color: .rose, title: "Sprint Backlog", content: "Refactor engine", folder: "Projects")
+        let newNote = viewModel.createNote(title: "Sprint Backlog", content: "Refactor engine", folder: "Projects")
         XCTAssertEqual(viewModel.notes.count, initialCount + 1)
         XCTAssertEqual(viewModel.selectedNoteId, newNote.id)
-        XCTAssertEqual(viewModel.selectedColor, .rose)
         XCTAssertEqual(viewModel.currentNote.title, "Sprint Backlog")
         XCTAssertEqual(viewModel.currentNote.content, "Refactor engine")
         XCTAssertEqual(viewModel.currentNote.folder, "Projects")
@@ -119,63 +100,63 @@ final class ScratchpadViewModelTests: XCTestCase {
 
     func testDeleteNote() {
         let viewModel = ScratchpadViewModel(userDefaults: testDefaults)
+        let firstNote = viewModel.createNote(title: "First")
+        let targetNote = viewModel.createNote(title: "Target")
+        _ = viewModel.createNote(title: "Last")
         let initialCount = viewModel.notes.count
 
-        let targetNote = viewModel.notes[1]
         viewModel.deleteNote(id: targetNote.id)
         XCTAssertEqual(viewModel.notes.count, initialCount - 1)
         XCTAssertNil(viewModel.notes.first(where: { $0.id == targetNote.id }))
 
-        // Delete notes until single note remains, then delete it to test graceful fallback
+        // Deleting the final note leaves the Scratchpad empty.
         let notesToDelete = viewModel.notes
         for note in notesToDelete {
             viewModel.deleteNote(id: note.id)
         }
-        XCTAssertEqual(viewModel.notes.count, 1)
-        XCTAssertNotNil(viewModel.selectedNoteId)
+        XCTAssertTrue(viewModel.notes.isEmpty)
+        XCTAssertNil(viewModel.selectedNoteId)
+        XCTAssertEqual(viewModel.currentNote.displayTitle, "Untitled Note")
+        XCTAssertFalse(viewModel.notes.contains(where: { $0.id == firstNote.id }))
+
+        let reloadedViewModel = ScratchpadViewModel(userDefaults: testDefaults)
+        XCTAssertTrue(reloadedViewModel.notes.isEmpty)
     }
 
     func testClearCurrentNote() {
         let viewModel = ScratchpadViewModel(userDefaults: testDefaults)
-        viewModel.selectColor(.emerald)
+        _ = viewModel.createNote(title: "Temporary")
         viewModel.updateContent("Temporary scratch note")
-        XCTAssertFalse(viewModel.isNoteEmpty(for: .emerald))
+        XCTAssertEqual(viewModel.currentContent, "Temporary scratch note")
 
         viewModel.clearCurrentNote()
-        XCTAssertTrue(viewModel.isNoteEmpty(for: .emerald))
         XCTAssertEqual(viewModel.currentContent, "")
     }
 
     func testUpdateTitle() {
         let viewModel = ScratchpadViewModel(userDefaults: testDefaults)
-        viewModel.selectColor(.rose)
         viewModel.updateTitle("Meeting Notes")
 
         XCTAssertEqual(viewModel.currentNote.title, "Meeting Notes")
 
         let viewModel2 = ScratchpadViewModel(userDefaults: testDefaults)
-        XCTAssertEqual(viewModel2.note(for: .rose)?.title, "Meeting Notes")
+        XCTAssertEqual(viewModel2.notes.first?.title, "Meeting Notes")
     }
 
-    func testUpdateColor() {
+    func testNewNotesUseUntitledTitleUntilNamed() {
         let viewModel = ScratchpadViewModel(userDefaults: testDefaults)
-        XCTAssertEqual(viewModel.currentNote.color, .amber)
+        let note = viewModel.createNote()
 
-        viewModel.updateColor(.lavender)
-        XCTAssertEqual(viewModel.currentNote.color, .lavender)
-        XCTAssertEqual(viewModel.selectedColor, .lavender)
-
-        let viewModel2 = ScratchpadViewModel(userDefaults: testDefaults)
-        XCTAssertEqual(viewModel2.notes.first?.color, .lavender)
+        XCTAssertEqual(note.title, "")
+        XCTAssertEqual(note.displayTitle, "Untitled Note")
+        XCTAssertFalse(note.title.contains("Amber"))
+        XCTAssertFalse(note.title.contains("Lavender"))
     }
 
     func testSearchAndFilterNotes() {
         let viewModel = ScratchpadViewModel(userDefaults: testDefaults)
-        viewModel.notes[0].title = "Swift Architecture"
-        viewModel.notes[0].content = "Explore Observation framework"
-
-        viewModel.notes[1].title = "Grocery List"
-        viewModel.notes[1].content = "Apples and oranges"
+        _ = viewModel.createNote(title: "Swift Architecture", content: "Explore Observation framework")
+        _ = viewModel.createNote(title: "Grocery List", content: "Apples and oranges")
 
         viewModel.searchQuery = "Architecture"
         XCTAssertEqual(viewModel.filteredNotes.count, 1)
@@ -186,14 +167,15 @@ final class ScratchpadViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.filteredNotes.first?.title, "Grocery List")
 
         viewModel.searchQuery = ""
-        viewModel.selectedFilterColor = .amber
-        XCTAssertEqual(viewModel.filteredNotes.count, 1)
-        XCTAssertEqual(viewModel.filteredNotes.first?.color, .amber)
+        XCTAssertEqual(viewModel.filteredNotes.count, 2)
+
+        viewModel.searchQuery = "Amber"
+        XCTAssertTrue(viewModel.filteredNotes.isEmpty)
     }
 
     func testTogglePin() {
         let viewModel = ScratchpadViewModel(userDefaults: testDefaults)
-        let lastNote = viewModel.notes.last!
+        let lastNote = viewModel.createNote(title: "Pinned Note")
         XCTAssertFalse(lastNote.isPinned)
 
         viewModel.togglePin(for: lastNote)
@@ -202,7 +184,7 @@ final class ScratchpadViewModelTests: XCTestCase {
     }
 
     func testRelativeFormattedDate() {
-        var note = ScratchpadNote(color: .sky, title: "Quick Note", content: "Content")
+        var note = ScratchpadNote(title: "Quick Note", content: "Content")
         note.updatedAt = Date()
         XCTAssertEqual(note.relativeFormattedDate, "Just now")
 
@@ -219,8 +201,8 @@ final class ScratchpadViewModelTests: XCTestCase {
     }
 
     func testDisplayTitleAndSnippet() {
-        var note = ScratchpadNote(color: .emerald, title: "", content: "")
-        XCTAssertEqual(note.displayTitle, "Emerald Note")
+        var note = ScratchpadNote(title: "", content: "")
+        XCTAssertEqual(note.displayTitle, "Untitled Note")
 
         note.content = "First line header\nSecond line content"
         XCTAssertEqual(note.displayTitle, "First line header")
@@ -243,10 +225,31 @@ final class ScratchpadViewModelTests: XCTestCase {
 
         let viewModel = ScratchpadViewModel(userDefaults: testDefaults)
         XCTAssertEqual(viewModel.notes.count, 2)
-        XCTAssertEqual(viewModel.notes[0].color, .amber)
         XCTAssertEqual(viewModel.notes[0].title, "Old Amber")
         XCTAssertEqual(viewModel.notes[0].content, "Legacy content")
         XCTAssertEqual(viewModel.notes[0].folder, "General")
+    }
+
+    func testLegacyColorCategoryPlaceholdersAreRemoved() throws {
+        let legacyJson = """
+        [
+            {"color": "Amber", "title": "Amber Scratchpad", "content": "", "updatedAt": 1724630000},
+            {"color": "Lavender", "title": "Lavender Scratchpad", "content": "", "updatedAt": 1724630000},
+            {"color": "Sky", "title": "Sky Scratchpad", "content": "Keep this note", "updatedAt": 1724630000}
+        ]
+        """.data(using: .utf8)!
+
+        testDefaults.set(legacyJson, forKey: ScratchpadViewModel.userDefaultsKey)
+
+        let viewModel = ScratchpadViewModel(userDefaults: testDefaults)
+        XCTAssertEqual(viewModel.notes.count, 1)
+        XCTAssertEqual(viewModel.notes.first?.content, "Keep this note")
+        XCTAssertEqual(viewModel.notes.first?.title, "")
+        XCTAssertEqual(viewModel.notes.first?.displayTitle, "Keep this note")
+
+        let savedData = try XCTUnwrap(testDefaults.data(forKey: ScratchpadViewModel.userDefaultsKey))
+        let savedJSON = try XCTUnwrap(JSONSerialization.jsonObject(with: savedData) as? [[String: Any]])
+        XCTAssertNil(savedJSON.first?["color"])
     }
 
     func testTimerAdjustTime() {
@@ -270,7 +273,7 @@ final class ScratchpadViewModelTests: XCTestCase {
         let viewModel = ScratchpadViewModel(userDefaults: testDefaults)
         XCTAssertEqual(viewModel.folders, ["General", "Projects", "Work", "Personal", "Ideas"])
         XCTAssertEqual(viewModel.selectedFolder, ScratchpadViewModel.allNotesFolder)
-        XCTAssertEqual(viewModel.noteCount(for: "General"), 5)
+        XCTAssertEqual(viewModel.noteCount(for: "General"), 0)
         XCTAssertEqual(viewModel.noteCount(for: "Projects"), 0)
     }
 
@@ -306,19 +309,19 @@ final class ScratchpadViewModelTests: XCTestCase {
         // The note should be reassigned to General
         let reassignedNote = viewModel.notes.first(where: { $0.id == note.id })
         XCTAssertEqual(reassignedNote?.folder, "General")
-        XCTAssertEqual(viewModel.noteCount(for: "General"), 6)
+        XCTAssertEqual(viewModel.noteCount(for: "General"), 1)
     }
 
     func testMoveNoteToFolder() {
         let viewModel = ScratchpadViewModel(userDefaults: testDefaults)
-        let note = viewModel.notes[0]
+        let note = viewModel.createNote(title: "Move Me")
         XCTAssertEqual(note.folder, "General")
 
         viewModel.moveNote(note, to: "Work")
         let updatedNote = viewModel.notes.first(where: { $0.id == note.id })
         XCTAssertEqual(updatedNote?.folder, "Work")
         XCTAssertEqual(viewModel.noteCount(for: "Work"), 1)
-        XCTAssertEqual(viewModel.noteCount(for: "General"), 4)
+        XCTAssertEqual(viewModel.noteCount(for: "General"), 0)
 
         // Verify persistence
         let viewModel2 = ScratchpadViewModel(userDefaults: testDefaults)
@@ -332,7 +335,7 @@ final class ScratchpadViewModelTests: XCTestCase {
 
         // In All Notes, both are visible
         viewModel.selectFolder(ScratchpadViewModel.allNotesFolder)
-        XCTAssertEqual(viewModel.filteredNotes.count, 7)
+        XCTAssertEqual(viewModel.filteredNotes.count, 2)
 
         // In Work, only Work notes are visible
         viewModel.selectFolder("Work")
@@ -349,9 +352,8 @@ final class ScratchpadViewModelTests: XCTestCase {
         let viewModel = ScratchpadViewModel(userDefaults: testDefaults)
         viewModel.createFolder("Research")
 
-        let note = viewModel.createNote(color: .emerald, title: "AI Survey", content: "Transformer analysis", folder: "Research")
+        let note = viewModel.createNote(title: "AI Survey", content: "Transformer analysis", folder: "Research")
         XCTAssertEqual(note.folder, "Research")
-        XCTAssertEqual(note.color, .emerald)
         XCTAssertEqual(viewModel.noteCount(for: "Research"), 1)
         XCTAssertEqual(viewModel.notes.first?.id, note.id)
     }

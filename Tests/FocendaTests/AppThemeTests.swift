@@ -105,13 +105,6 @@ final class AppThemeTests: XCTestCase {
         XCTAssertNotNil(TaskPriority.high.color)
     }
 
-    func testScratchpadColors() {
-        for color in ScratchpadColor.allCases {
-            XCTAssertNotNil(color.color)
-            XCTAssertFalse(color.iconName.isEmpty)
-        }
-    }
-
     func testColorHexInitializer() {
         // 6-digit hex without #
         let charcoal = Color(hex: "1C1917")

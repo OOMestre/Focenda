@@ -1,48 +1,14 @@
 import Foundation
-import SwiftUI
 import Observation
 import AppKit
 
-/// Five color-coded scratchpad categories in calm organic tones
-public enum ScratchpadColor: String, CaseIterable, Identifiable, Codable, Sendable {
-    case amber = "Amber"
-    case lavender = "Lavender"
-    case sky = "Sky"
-    case emerald = "Emerald"
-    case rose = "Rose"
-
-    public var id: String { rawValue }
-
-    public var color: Color {
-        switch self {
-        case .amber:
-            return Color(red: 0.72, green: 0.52, blue: 0.28)
-        case .lavender:
-            return Color(red: 0.48, green: 0.45, blue: 0.56)
-        case .sky:
-            return Color(red: 0.33, green: 0.48, blue: 0.56)
-        case .emerald:
-            return Color(red: 0.28, green: 0.45, blue: 0.36)
-        case .rose:
-            return Color(red: 0.68, green: 0.38, blue: 0.32)
-        }
-    }
-
-    public var iconName: String {
-        switch self {
-        case .amber: return "sun.max.fill"
-        case .lavender: return "sparkles"
-        case .sky: return "cloud.fill"
-        case .emerald: return "leaf.fill"
-        case .rose: return "heart.fill"
-        }
-    }
-}
-
-/// Represents an individual scratchpad note item with folder organization
+/// Represents an individual scratchpad note item with folder organization.
+///
+/// Older versions stored a color category alongside each note. The custom
+/// decoder intentionally ignores that legacy field so existing note content
+/// remains readable after categories are removed.
 public struct ScratchpadNote: Identifiable, Codable, Equatable, Sendable {
     public var id: UUID
-    public var color: ScratchpadColor
     public var title: String
     public var content: String
     public var createdAt: Date
@@ -52,7 +18,6 @@ public struct ScratchpadNote: Identifiable, Codable, Equatable, Sendable {
 
     public init(
         id: UUID = UUID(),
-        color: ScratchpadColor = .amber,
         title: String = "",
         content: String = "",
         createdAt: Date = Date(),
@@ -61,7 +26,6 @@ public struct ScratchpadNote: Identifiable, Codable, Equatable, Sendable {
         folder: String = "General"
     ) {
         self.id = id
-        self.color = color
         self.title = title
         self.content = content
         self.createdAt = createdAt
@@ -71,12 +35,11 @@ public struct ScratchpadNote: Identifiable, Codable, Equatable, Sendable {
     }
 
     enum CodingKeys: String, CodingKey {
-        case id, color, title, content, createdAt, updatedAt, isPinned, folder
+        case id, title, content, createdAt, updatedAt, isPinned, folder
     }
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        self.color = try container.decode(ScratchpadColor.self, forKey: .color)
         self.title = try container.decodeIfPresent(String.self, forKey: .title) ?? ""
         self.content = try container.decodeIfPresent(String.self, forKey: .content) ?? ""
         self.updatedAt = try container.decodeIfPresent(Date.self, forKey: .updatedAt) ?? Date()
@@ -105,7 +68,7 @@ public struct ScratchpadNote: Identifiable, Codable, Equatable, Sendable {
         if !firstLine.isEmpty {
             return String(firstLine.prefix(40))
         }
-        return "\(color.rawValue) Note"
+        return "Untitled Note"
     }
 
     public var snippet: String {
@@ -171,7 +134,7 @@ public struct ScratchpadNote: Identifiable, Codable, Equatable, Sendable {
     }
 }
 
-/// Manages quick distraction-free scratchpads with folders/notebooks, color coding, and multi-note persistence
+/// Manages quick distraction-free scratchpads with folders/notebooks and multi-note persistence.
 @Observable
 public final class ScratchpadViewModel {
     public static let userDefaultsKey = "focenda_scratchpads"
@@ -179,14 +142,19 @@ public final class ScratchpadViewModel {
 
     public static let defaultFolders = ["General", "Projects", "Work", "Personal", "Ideas"]
     public static let allNotesFolder = "All Notes"
+    private static let legacyGeneratedTitles = [
+        "Amber Scratchpad",
+        "Lavender Scratchpad",
+        "Sky Scratchpad",
+        "Emerald Scratchpad",
+        "Rose Scratchpad"
+    ]
 
     public var folders: [String] = ScratchpadViewModel.defaultFolders
     public var selectedFolder: String = ScratchpadViewModel.allNotesFolder
     public var notes: [ScratchpadNote] = []
     public var selectedNoteId: UUID?
-    public var selectedColor: ScratchpadColor = .amber
     public var searchQuery: String = ""
-    public var selectedFilterColor: ScratchpadColor?
     public var showFoldersSidebar: Bool = true
     public var showNotesSidebar: Bool = true
 
@@ -221,7 +189,7 @@ public final class ScratchpadViewModel {
         return notes.filter { $0.folder.caseInsensitiveCompare(folder) == .orderedSame }.count
     }
 
-    /// Notes filtered by active folder, color category, and search query
+    /// Notes filtered by active folder and search query
     public var filteredNotes: [ScratchpadNote] {
         notes.filter { note in
             let matchesFolder: Bool
@@ -231,7 +199,6 @@ public final class ScratchpadViewModel {
                 matchesFolder = note.folder.caseInsensitiveCompare(selectedFolder) == .orderedSame
             }
 
-            let matchesColor = selectedFilterColor == nil || note.color == selectedFilterColor
             let matchesSearch: Bool
             if searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 matchesSearch = true
@@ -239,10 +206,9 @@ public final class ScratchpadViewModel {
                 let query = searchQuery.lowercased()
                 matchesSearch = note.title.lowercased().contains(query) ||
                     note.content.lowercased().contains(query) ||
-                    note.folder.lowercased().contains(query) ||
-                    note.color.rawValue.lowercased().contains(query)
+                    note.folder.lowercased().contains(query)
             }
-            return matchesFolder && matchesColor && matchesSearch
+            return matchesFolder && matchesSearch
         }
         .sorted { (lhs: ScratchpadNote, rhs: ScratchpadNote) -> Bool in
             if lhs.isPinned != rhs.isPinned {
@@ -263,29 +229,16 @@ public final class ScratchpadViewModel {
             if let firstFiltered = filteredNotes.first {
                 return firstFiltered
             }
-            if selectedFolder == Self.allNotesFolder {
-                if let note = notes.first(where: { $0.color == selectedColor }) {
-                    return note
-                }
-                if let first = notes.first {
-                    return first
-                }
-            }
             let activeFolder = selectedFolder == Self.allNotesFolder ? "General" : selectedFolder
-            return ScratchpadNote(color: selectedColor, folder: activeFolder)
+            return ScratchpadNote(folder: activeFolder)
         }
         set {
             if let index = notes.firstIndex(where: { $0.id == newValue.id }) {
-                notes[index] = newValue
-                selectedColor = newValue.color
-                saveToUserDefaults()
-            } else if let index = notes.firstIndex(where: { $0.color == selectedColor }) {
                 notes[index] = newValue
                 saveToUserDefaults()
             } else {
                 notes.insert(newValue, at: 0)
                 selectedNoteId = newValue.id
-                selectedColor = newValue.color
                 saveToUserDefaults()
             }
         }
@@ -327,7 +280,6 @@ public final class ScratchpadViewModel {
         selectedFolder = folder
         if let firstInFolder = filteredNotes.first {
             selectedNoteId = firstInFolder.id
-            selectedColor = firstInFolder.color
         } else {
             selectedNoteId = nil
         }
@@ -398,34 +350,18 @@ public final class ScratchpadViewModel {
 
     public func selectNote(_ note: ScratchpadNote) {
         selectedNoteId = note.id
-        selectedColor = note.color
     }
 
     public func selectNote(id: UUID) {
         selectedNoteId = id
-        if let note = notes.first(where: { $0.id == id }) {
-            selectedColor = note.color
-        }
-    }
-
-    public func selectColor(_ color: ScratchpadColor) {
-        selectedColor = color
-        if let note = notes.first(where: { $0.color == color }) {
-            selectedNoteId = note.id
-        } else {
-            let newNote = createNote(color: color)
-            selectedNoteId = newNote.id
-        }
     }
 
     @discardableResult
     public func createNote(
-        color: ScratchpadColor? = nil,
         title: String = "",
         content: String = "",
         folder: String? = nil
     ) -> ScratchpadNote {
-        let noteColor = color ?? selectedFilterColor ?? selectedColor
         let targetFolder: String
         if let folder = folder, !folder.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             targetFolder = folder
@@ -435,36 +371,22 @@ public final class ScratchpadViewModel {
             targetFolder = "General"
         }
 
-        let newTitle = title.isEmpty ? "\(noteColor.rawValue) Scratchpad" : title
+        let newTitle = title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "" : title
         let note = ScratchpadNote(
-            color: noteColor,
             title: newTitle,
             content: content,
             folder: targetFolder
         )
         notes.insert(note, at: 0)
         selectedNoteId = note.id
-        selectedColor = noteColor
         saveToUserDefaults()
         return note
     }
 
     public func deleteNote(id: UUID) {
         notes.removeAll(where: { $0.id == id })
-        if notes.isEmpty {
-            let activeFolder = selectedFolder == Self.allNotesFolder ? "General" : selectedFolder
-            let fallback = ScratchpadNote(
-                color: selectedColor,
-                title: "\(selectedColor.rawValue) Scratchpad",
-                folder: activeFolder
-            )
-            notes.append(fallback)
-            selectedNoteId = fallback.id
-        } else if selectedNoteId == id {
+        if selectedNoteId == id {
             selectedNoteId = filteredNotes.first?.id ?? notes.first?.id
-            if let selected = notes.first(where: { $0.id == selectedNoteId }) {
-                selectedColor = selected.color
-            }
         }
         saveToUserDefaults()
     }
@@ -491,15 +413,9 @@ public final class ScratchpadViewModel {
             notes[index].content = text
             notes[index].updatedAt = Date()
             saveToUserDefaults()
-        } else if selectedFolder == Self.allNotesFolder, let index = notes.firstIndex(where: { $0.color == selectedColor }) {
-            notes[index].content = text
-            notes[index].updatedAt = Date()
-            saveToUserDefaults()
         } else {
             let activeFolder = selectedFolder == Self.allNotesFolder ? "General" : selectedFolder
             var newNote = ScratchpadNote(
-                color: selectedColor,
-                title: "\(selectedColor.rawValue) Scratchpad",
                 content: text,
                 folder: activeFolder
             )
@@ -516,29 +432,13 @@ public final class ScratchpadViewModel {
             notes[index].title = title
             notes[index].updatedAt = Date()
             saveToUserDefaults()
-        } else if selectedFolder == Self.allNotesFolder, let index = notes.firstIndex(where: { $0.color == selectedColor }) {
-            notes[index].title = title
-            notes[index].updatedAt = Date()
-            saveToUserDefaults()
         } else {
             let activeFolder = selectedFolder == Self.allNotesFolder ? "General" : selectedFolder
-            var newNote = ScratchpadNote(color: selectedColor, title: title, folder: activeFolder)
+            var newNote = ScratchpadNote(title: title, folder: activeFolder)
             newNote.updatedAt = Date()
             notes.insert(newNote, at: 0)
             selectedNoteId = newNote.id
             saveToUserDefaults()
-        }
-    }
-
-    public func updateColor(_ color: ScratchpadColor) {
-        let targetId = currentNote.id
-        if let index = notes.firstIndex(where: { $0.id == targetId }) {
-            notes[index].color = color
-            notes[index].updatedAt = Date()
-            selectedColor = color
-            saveToUserDefaults()
-        } else {
-            selectedColor = color
         }
     }
 
@@ -552,15 +452,6 @@ public final class ScratchpadViewModel {
         pasteboard.setString(currentContent, forType: .string)
     }
 
-    public func note(for color: ScratchpadColor) -> ScratchpadNote? {
-        notes.first(where: { $0.color == color })
-    }
-
-    public func isNoteEmpty(for color: ScratchpadColor) -> Bool {
-        guard let note = note(for: color) else { return true }
-        return note.content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-    }
-
     // MARK: - Persistence
 
     public func loadFromUserDefaults() {
@@ -571,21 +462,40 @@ public final class ScratchpadViewModel {
             self.folders = Self.defaultFolders
         }
 
-        // Load notes
+        // Load notes. An explicitly saved empty array is a valid state: the
+        // Scratchpad should remain empty until the user creates a note.
         if let data = userDefaults.data(forKey: Self.userDefaultsKey),
-           let decoded = try? JSONDecoder().decode([ScratchpadNote].self, from: data),
-           !decoded.isEmpty {
-            self.notes = decoded
-            self.selectedNoteId = decoded.first?.id
-            if let firstColor = decoded.first?.color {
-                self.selectedColor = firstColor
+           let decoded = try? JSONDecoder().decode([ScratchpadNote].self, from: data) {
+            let migrated = Self.migrateLegacyNotes(decoded)
+            self.notes = migrated
+            self.selectedNoteId = migrated.first?.id
+
+            if migrated != decoded {
+                saveToUserDefaults()
             }
         } else {
-            self.notes = ScratchpadColor.allCases.map {
-                ScratchpadNote(color: $0, title: "\($0.rawValue) Scratchpad", folder: "General")
+            self.notes = []
+            self.selectedNoteId = nil
+        }
+    }
+
+    private static func migrateLegacyNotes(_ notes: [ScratchpadNote]) -> [ScratchpadNote] {
+        notes.compactMap { note in
+            guard legacyGeneratedTitles.contains(note.title) else {
+                return note
             }
-            self.selectedNoteId = self.notes.first?.id
-            self.selectedColor = .amber
+
+            // The original five empty placeholders were categories, not user
+            // notes. Remove them during migration. If a user wrote content in
+            // one before upgrading, keep the content but discard the generic
+            // generated title.
+            if note.content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                return nil
+            }
+
+            var migratedNote = note
+            migratedNote.title = ""
+            return migratedNote
         }
     }
 

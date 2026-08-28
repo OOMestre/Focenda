@@ -100,7 +100,6 @@ public struct ScratchpadView: View {
                 sidebarToggleButton
                 titleView
                 searchBarView
-                categoryChipsView
                 Spacer(minLength: 4)
                 newNoteButton
             }
@@ -114,9 +113,9 @@ public struct ScratchpadView: View {
                     newNoteButton
                 }
 
-                HStack(spacing: 8) {
+                HStack {
                     searchBarView
-                    categoryChipsView
+                    Spacer(minLength: 0)
                 }
             }
         }
@@ -196,22 +195,10 @@ public struct ScratchpadView: View {
         )
     }
 
-    private var categoryChipsView: some View {
-        FlowLayout(spacing: 6, lineSpacing: 6) {
-            categoryChip(title: "All", color: nil)
-            ForEach(ScratchpadColor.allCases) { color in
-                categoryChip(title: color.rawValue, color: color)
-            }
-        }
-        .padding(.vertical, 2)
-        .frame(minWidth: 0, maxWidth: .infinity)
-    }
-
     private var newNoteButton: some View {
         Button {
             withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
-                let targetColor = viewModel.selectedFilterColor ?? viewModel.selectedColor
-                _ = viewModel.createNote(color: targetColor)
+                _ = viewModel.createNote()
                 isTitleFocused = true
             }
         } label: {
@@ -224,44 +211,6 @@ public struct ScratchpadView: View {
         .controlSize(.regular)
         .fixedSize(horizontal: true, vertical: false)
         .help("Create a new note in active folder")
-    }
-
-    // MARK: - Category Chip
-    private func categoryChip(title: String, color: ScratchpadColor?) -> some View {
-        let isSelected = viewModel.selectedFilterColor == color
-
-        return Button {
-            withAnimation(.spring(response: 0.25)) {
-                viewModel.selectedFilterColor = color
-            }
-        } label: {
-            HStack(spacing: 5) {
-                if let color = color {
-                    Circle()
-                        .fill(color.color)
-                        .frame(width: 8, height: 8)
-                }
-                Text(title)
-                    .font(.system(size: 12, weight: isSelected ? .semibold : .regular))
-                    .foregroundStyle(isSelected ? (color?.color ?? AppTheme.textPrimary) : AppTheme.textSecondary)
-                    .lineLimit(1)
-            }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 5)
-            .background(
-                Capsule()
-                    .fill(isSelected ? (color?.color.opacity(0.12) ?? AppTheme.accent.opacity(0.12)) : Color.clear)
-            )
-            .overlay(
-                Capsule()
-                    .stroke(
-                        isSelected ? (color?.color.opacity(0.35) ?? AppTheme.border) : AppTheme.subtleBorder,
-                        lineWidth: 1
-                    )
-            )
-        }
-        .buttonStyle(.plain)
-        .help(color == nil ? "Show all notes" : "Filter by \(color!.rawValue)")
     }
 
     // MARK: - Folders Sidebar Pane (Leftmost Column)
@@ -617,12 +566,11 @@ public struct ScratchpadView: View {
             }
         } label: {
             VStack(alignment: .leading, spacing: 6) {
-                // Header: Color dot + Title + Pin
+                // Header: Note icon + Title + Pin
                 HStack(alignment: .center, spacing: 7) {
-                    Circle()
-                        .fill(note.color.color)
-                        .frame(width: 9, height: 9)
-                        .shadow(color: note.color.color.opacity(0.3), radius: 1.5, x: 0, y: 1)
+                    Image(systemName: "doc.text")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(AppTheme.accent)
 
                     Text(note.displayTitle)
                         .font(.system(size: 14.5, weight: isSelected ? .bold : .semibold))
@@ -635,7 +583,7 @@ public struct ScratchpadView: View {
                     if note.isPinned {
                         Image(systemName: "pin.fill")
                             .font(.system(size: 11))
-                            .foregroundStyle(note.color.color)
+                            .foregroundStyle(AppTheme.accent)
                     }
                 }
 
@@ -683,12 +631,12 @@ public struct ScratchpadView: View {
             .padding(.vertical, 10)
             .background(
                 RoundedRectangle(cornerRadius: 9, style: .continuous)
-                    .fill(isSelected ? note.color.color.opacity(0.12) : AppTheme.cardBackgroundSubtle)
+                    .fill(isSelected ? AppTheme.accent.opacity(0.12) : AppTheme.cardBackgroundSubtle)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 9, style: .continuous)
                     .stroke(
-                        isSelected ? note.color.color.opacity(0.4) : AppTheme.subtleBorder,
+                        isSelected ? AppTheme.accent.opacity(0.4) : AppTheme.subtleBorder,
                         lineWidth: 1
                     )
             )
@@ -723,21 +671,6 @@ public struct ScratchpadView: View {
 
             Divider()
 
-            Menu("Change Category") {
-                ForEach(ScratchpadColor.allCases) { color in
-                    Button {
-                        if let index = viewModel.notes.firstIndex(where: { $0.id == note.id }) {
-                            viewModel.notes[index].color = color
-                            viewModel.saveToUserDefaults()
-                        }
-                    } label: {
-                        Label(color.rawValue, systemImage: color.iconName)
-                    }
-                }
-            }
-
-            Divider()
-
             Button(role: .destructive) {
                 viewModel.deleteNote(note)
             } label: {
@@ -754,7 +687,6 @@ public struct ScratchpadView: View {
                 // Wide single-row toolbar
                 HStack(spacing: 8) {
                     noteFolderMenu
-                    noteColorMenu
                     noteTitleField
                     Spacer(minLength: 4)
                     notePinButton
@@ -766,7 +698,6 @@ public struct ScratchpadView: View {
                 VStack(alignment: .leading, spacing: 6) {
                     HStack(spacing: 6) {
                         noteFolderMenu
-                        noteColorMenu
                         Spacer(minLength: 4)
                         notePinButton
                         noteCopyButton
@@ -780,7 +711,6 @@ public struct ScratchpadView: View {
                 VStack(alignment: .leading, spacing: 6) {
                     HStack(spacing: 6) {
                         noteFolderIconMenu
-                        noteColorIconMenu
                         Spacer(minLength: 4)
                         notePinButton
                         noteCopyIconButton
@@ -868,44 +798,6 @@ public struct ScratchpadView: View {
         .help("Move note to another folder")
     }
 
-    private var noteColorMenu: some View {
-        Menu {
-            ForEach(ScratchpadColor.allCases) { color in
-                Button {
-                    withAnimation(.spring(response: 0.25)) {
-                        viewModel.updateColor(color)
-                    }
-                } label: {
-                    Label(color.rawValue, systemImage: color.iconName)
-                }
-            }
-        } label: {
-            HStack(spacing: 5) {
-                Circle()
-                    .fill(viewModel.currentNote.color.color)
-                    .frame(width: 9, height: 9)
-                Text(viewModel.currentNote.color.rawValue)
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(AppTheme.textSecondary)
-                    .lineLimit(1)
-                Image(systemName: "chevron.up.chevron.down")
-                    .font(.system(size: 9))
-                    .foregroundStyle(AppTheme.textTertiary)
-            }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 5)
-            .background(AppTheme.cardBackground)
-            .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .stroke(AppTheme.border, lineWidth: 1)
-            )
-        }
-        .menuStyle(.borderlessButton)
-        .fixedSize(horizontal: true, vertical: false)
-        .help("Change category color")
-    }
-
     private var noteFolderIconMenu: some View {
         Menu {
             ForEach(viewModel.folders, id: \.self) { folder in
@@ -933,33 +825,6 @@ public struct ScratchpadView: View {
         .help("Move note to another folder")
     }
 
-    private var noteColorIconMenu: some View {
-        Menu {
-            ForEach(ScratchpadColor.allCases) { color in
-                Button {
-                    withAnimation(.spring(response: 0.25)) {
-                        viewModel.updateColor(color)
-                    }
-                } label: {
-                    Label(color.rawValue, systemImage: color.iconName)
-                }
-            }
-        } label: {
-            Circle()
-                .fill(viewModel.currentNote.color.color)
-                .frame(width: 12, height: 12)
-                .frame(width: 28, height: 28)
-                .background(AppTheme.cardBackground)
-                .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 6, style: .continuous)
-                        .stroke(AppTheme.border, lineWidth: 1)
-                )
-        }
-        .menuStyle(.borderlessButton)
-        .help("Change category color")
-    }
-
     private var noteTitleField: some View {
         TextField("Untitled Note", text: $viewModel.currentTitle)
             .font(.system(size: 18, weight: .bold, design: .rounded))
@@ -979,17 +844,18 @@ public struct ScratchpadView: View {
         } label: {
             Image(systemName: viewModel.currentNote.isPinned ? "pin.fill" : "pin")
                 .font(.system(size: 12))
-                .foregroundStyle(viewModel.currentNote.isPinned ? viewModel.currentNote.color.color : AppTheme.textSecondary)
+                .foregroundStyle(viewModel.currentNote.isPinned ? AppTheme.accent : AppTheme.textSecondary)
                 .padding(6)
-                .background(viewModel.currentNote.isPinned ? viewModel.currentNote.color.color.opacity(0.15) : AppTheme.cardBackground)
+                .background(viewModel.currentNote.isPinned ? AppTheme.accent.opacity(0.15) : AppTheme.cardBackground)
                 .clipShape(RoundedRectangle(cornerRadius: 6))
                 .overlay(
                     RoundedRectangle(cornerRadius: 6)
-                        .stroke(viewModel.currentNote.isPinned ? viewModel.currentNote.color.color.opacity(0.3) : AppTheme.border, lineWidth: 1)
+                        .stroke(viewModel.currentNote.isPinned ? AppTheme.accent.opacity(0.3) : AppTheme.border, lineWidth: 1)
                 )
         }
         .buttonStyle(.plain)
         .fixedSize(horizontal: true, vertical: false)
+        .disabled(viewModel.selectedNoteId == nil)
         .help(viewModel.currentNote.isPinned ? "Unpin Note" : "Pin Note")
     }
 
@@ -1066,6 +932,7 @@ public struct ScratchpadView: View {
         }
         .buttonStyle(.plain)
         .fixedSize(horizontal: true, vertical: false)
+        .disabled(viewModel.selectedNoteId == nil)
         .help("Delete note")
     }
 
@@ -1075,7 +942,6 @@ public struct ScratchpadView: View {
             // Full Status Bar
             HStack(spacing: 10) {
                 folderBadge
-                categoryBadge
                 editedTimestamp
                 Spacer(minLength: 4)
                 countersView
@@ -1085,7 +951,6 @@ public struct ScratchpadView: View {
             // Medium Status Bar
             HStack(spacing: 8) {
                 folderBadge
-                categoryBadge
                 Spacer(minLength: 4)
                 countersView
                 savedIndicator
@@ -1127,19 +992,6 @@ public struct ScratchpadView: View {
         .padding(.vertical, 2.5)
         .background(AppTheme.cardBackground)
         .clipShape(Capsule())
-    }
-
-    private var categoryBadge: some View {
-        HStack(spacing: 5) {
-            Circle()
-                .fill(viewModel.currentNote.color.color)
-                .frame(width: 7, height: 7)
-
-            Text(viewModel.currentNote.color.rawValue)
-                .font(.caption.weight(.medium))
-                .foregroundStyle(AppTheme.textSecondary)
-                .lineLimit(1)
-        }
     }
 
     private var editedTimestamp: some View {

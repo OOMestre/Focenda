@@ -11,6 +11,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 - **Global Shortcuts Settings & Custom Presets:** Added a dedicated Keyboard Shortcuts preferences section in Settings with Apple-style keycap badges, scheme presets (Standard `⌥ ⌘`, Power User `⌃ ⌥ ⌘`, Compact `⌃ ⌥`), and audio feedback options.
 - **macOS Menu Bar Focus Commands:** Integrated a native `CommandMenu("Focus")` with standard keyboard shortcuts in the macOS menu bar.
 
+### Fixed & Changed
+- **Simplified Scratchpad Notes:** Removed the generic color categories and their filter controls. The Scratchpad now starts empty, allows the final note to be deleted, uses neutral untitled notes, and migrates old category placeholders without losing user-written content.
+
 ---
 
 ## [0.1.0-beta.5] - 2026-08-26
@@ -68,4 +71,3 @@ Focenda v0.1.0-beta.5 consolidates task management into a single Tasks & Kanban 
 - Master-detail Scratchpad note editor.
 - Floating MenuBarExtra utility with timer controls and live countdown.
 - Initial Zen minimalist theme and design tokens.
-
