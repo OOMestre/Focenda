@@ -157,7 +157,7 @@ public struct CalendarView: View {
             }
         }
         .background(AppTheme.background)
-        .navigationTitle("Calendar & Agenda")
+        .navigationTitle("Calendar & Schedule")
         .onReceive(NotificationCenter.default.publisher(for: NotificationManager.reminderAlertBannerNotification)) { notif in
             let title = notif.userInfo?["title"] as? String ?? "Reminder"
             let subtitle = notif.userInfo?["subtitle"] as? String ?? "Focenda Alert"
