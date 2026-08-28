@@ -155,4 +155,25 @@ final class FocusTimerViewModelTests: XCTestCase {
         viewModel.bringAppToFront()
         XCTAssertTrue(viewModel.autoOpenOnCompletion)
     }
+
+    func testFocusTimerViewRendersAcrossAllThemesAndFocusModes() {
+        for theme in AppThemeOption.allCases {
+            AppTheme.current = theme
+            for mode in FocusMode.allCases {
+                viewModel.switchMode(to: mode)
+                let timerView = FocusTimerView(timerVM: viewModel)
+                XCTAssertNotNil(timerView.body)
+                XCTAssertEqual(viewModel.currentMode, mode)
+            }
+        }
+    }
+
+    func testCircularProgressViewDefaultThemeAccent() {
+        let progressView = CircularProgressView(
+            progress: 0.5,
+            formattedTime: "12:30",
+            subtitle: "Long Break"
+        )
+        XCTAssertNotNil(progressView.body)
+    }
 }

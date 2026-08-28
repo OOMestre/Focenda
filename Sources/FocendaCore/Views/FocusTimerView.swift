@@ -30,7 +30,7 @@ public struct FocusTimerView: View {
                     progress: timerVM.progress,
                     formattedTime: timerVM.formattedTimeRemaining,
                     subtitle: timerVM.currentMode.rawValue,
-                    themeColor: timerVM.currentMode.themeColor,
+                    themeColor: AppTheme.accent,
                     isRunning: timerVM.status == .running
                 )
                 .padding(.vertical, 8)
@@ -55,7 +55,7 @@ public struct FocusTimerView: View {
                         Circle()
                             .fill(
                                 isCompleted
-                                    ? timerVM.currentMode.themeColor
+                                    ? AppTheme.accent
                                     : AppTheme.border
                             )
                             .frame(width: isCompleted ? 9 : 7, height: isCompleted ? 9 : 7)
@@ -78,7 +78,7 @@ public struct FocusTimerView: View {
 
                     PrimaryPlayPauseButton(
                         isRunning: timerVM.status == .running,
-                        themeColor: timerVM.currentMode.themeColor
+                        themeColor: AppTheme.accent
                     ) {
                         withAnimation(.spring(response: 0.35, dampingFraction: 0.65)) {
                             if timerVM.status == .running {
@@ -132,7 +132,7 @@ private struct ModeSelectorButton: View {
             .padding(.vertical, 8)
             .background(
                 isSelected
-                    ? mode.themeColor
+                    ? AppTheme.accent
                     : (isHovered ? AppTheme.cardBackgroundSubtle : AppTheme.cardBackground)
             )
             .foregroundStyle(

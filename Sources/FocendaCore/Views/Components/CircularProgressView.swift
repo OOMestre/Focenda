@@ -14,7 +14,7 @@ public struct CircularProgressView: View {
         progress: Double,
         formattedTime: String,
         subtitle: String,
-        themeColor: Color = AppTheme.deepFocus,
+        themeColor: Color = AppTheme.accent,
         isRunning: Bool = false
     ) {
         self.progress = progress
