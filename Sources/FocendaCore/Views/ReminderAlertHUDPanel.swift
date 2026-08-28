@@ -148,10 +148,9 @@ public struct ReminderAlertHUDView: View {
         VStack(alignment: .leading, spacing: 10) {
             // Header Bar
             HStack(spacing: 8) {
-                // Calm Badge
+                // Animated notification badge
                 HStack(spacing: 4) {
-                    Image(systemName: "bell.badge.fill")
-                        .font(.system(size: 10, weight: .bold))
+                    ReminderNotificationBell()
 
                     Text("Reminder")
                         .font(.system(size: 10, weight: .bold, design: .rounded))
@@ -304,6 +303,38 @@ public struct ReminderAlertHUDView: View {
             withAnimation(.linear(duration: timeoutSeconds)) {
                 timeRemainingRatio = 0.0
             }
+        }
+    }
+}
+
+/// Small animated bell that makes an active reminder feel present without moving the card itself.
+private struct ReminderNotificationBell: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var rotation: Double = 0
+
+    var body: some View {
+        Image(systemName: "bell.badge.fill")
+            .font(.system(size: 10, weight: .bold))
+            .rotationEffect(.degrees(rotation), anchor: .bottom)
+            .onAppear {
+                startWiggleIfNeeded()
+            }
+            .onChange(of: reduceMotion) { _, shouldReduceMotion in
+                if shouldReduceMotion {
+                    rotation = 0
+                } else {
+                    startWiggleIfNeeded()
+                }
+            }
+    }
+
+    private func startWiggleIfNeeded() {
+        guard !reduceMotion else { return }
+
+        // Start from a slight tilt so the repeated animation rocks naturally from side to side.
+        rotation = -7
+        withAnimation(.easeInOut(duration: 0.18).repeatForever(autoreverses: true)) {
+            rotation = 7
         }
     }
 }
