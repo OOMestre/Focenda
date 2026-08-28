@@ -68,6 +68,25 @@ final class ReminderAlertHUDTests: XCTestCase {
         XCTAssertFalse(panel.isShowingAlert)
     }
 
+    func testReminderAlertHUDPanelDismissalPublishesNotification() {
+        let panel = ReminderAlertHUDPanel.shared
+        let expectation = expectation(description: "Reminder alert dismissal notification posted")
+
+        let observer = NotificationCenter.default.addObserver(
+            forName: NotificationManager.reminderAlertDismissedNotification,
+            object: nil,
+            queue: .main
+        ) { _ in
+            expectation.fulfill()
+        }
+
+        panel.show(title: "Team Standup", timeoutSeconds: 0)
+        panel.dismiss()
+
+        wait(for: [expectation], timeout: 2.0)
+        NotificationCenter.default.removeObserver(observer)
+    }
+
     func testReminderAlertHUDViewRendersCorrectly() {
         var snoozeCalled = false
         var completeCalled = false

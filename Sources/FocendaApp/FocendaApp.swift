@@ -70,9 +70,6 @@ struct FocendaApp: App {
             }
             .onReceive(NotificationCenter.default.publisher(for: NotificationManager.reminderAlertBannerNotification)) { _ in
                 isReminderAlertActive = true
-                DispatchQueue.main.asyncAfter(deadline: .now() + 25.0) {
-                    isReminderAlertActive = false
-                }
             }
             .onReceive(NotificationCenter.default.publisher(for: NotificationManager.reminderAlertDismissedNotification)) { _ in
                 isReminderAlertActive = false

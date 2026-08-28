@@ -106,10 +106,17 @@ public final class ReminderAlertHUDPanel: NSPanel {
 
     /// Dismisses the floating HUD panel
     public func dismiss() {
+        guard isShowingAlert else { return }
+
         autoDismissTimer?.invalidate()
         autoDismissTimer = nil
         isShowingAlert = false
         self.orderOut(nil)
+
+        NotificationCenter.default.post(
+            name: NotificationManager.reminderAlertDismissedNotification,
+            object: nil
+        )
     }
 }
 
