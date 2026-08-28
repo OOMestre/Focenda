@@ -15,6 +15,7 @@ public enum AppTab: String, CaseIterable, Identifiable {
     case scratchpad = "Scratchpad"
     case bookmarks = "Bookmarks"
     case settings = "Settings"
+    case support = "Support"
 
     public var id: String { rawValue }
 
@@ -28,6 +29,7 @@ public enum AppTab: String, CaseIterable, Identifiable {
         case .scratchpad: return "square.and.pencil"
         case .bookmarks: return "bookmark.fill"
         case .settings: return "gearshape"
+        case .support: return "heart.fill"
         }
     }
 }
