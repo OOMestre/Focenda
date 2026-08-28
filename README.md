@@ -81,7 +81,7 @@ make staging
 
 ### Development Commands
 ```bash
-# Run unit test suite (154+ automated tests)
+# Run unit test suite (294 automated tests)
 make test
 
 # Build staging application bundle and launch

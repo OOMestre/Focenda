@@ -21,6 +21,61 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 
 ---
 
+## [0.1.0-beta.9] - 2026-08-26
+
+### Summary
+Focenda v0.1.0-beta.9 removes remaining right-edge clipping from dense layouts and adds direct navigation between Kanban columns.
+
+### Added
+- **Kanban Column Navigator:** Added one-click status buttons and directional controls to jump between the To Do, In Progress, and Done columns.
+
+### Fixed & Changed
+- **Elastic Kanban Layout:** Made columns and task rows adapt to the available width without clipping.
+- **Compact Reminder Rows:** Tightened reminder cards so times, recurrence details, next-fire information, and actions remain visible in constrained layouts.
+
+---
+
+## [0.1.0-beta.8] - 2026-08-26
+
+### Summary
+Focenda v0.1.0-beta.8 improves mouse discoverability and responsive behavior across Calendar, Tasks, and Reminders.
+
+### Fixed & Changed
+- **Visible Horizontal Scrollbars:** Kept horizontal scrollbars available for mouse navigation in wide calendar and Kanban content.
+- **Responsive Calendar Layout:** Reworked the monthly calendar and agenda pane to preserve their usable widths while allowing horizontal navigation.
+- **Responsive Reminders Layout:** Adapted the Reminders & Alerts header, cards, and summary grid for narrower window sizes.
+
+---
+
+## [0.1.0-beta.7] - 2026-08-26
+
+### Summary
+Focenda v0.1.0-beta.7 adds a dedicated Reminders & Alerts workspace and strengthens navigation across the app.
+
+### Added
+- **Reminders & Alerts Workspace:** Added a dedicated sidebar view for searching, creating, editing, enabling, disabling, and deleting recurring reminders.
+- **Reminder Verification Tools:** Added per-reminder sound testing and a view of timed task reminders and upcoming alert information.
+
+### Fixed & Changed
+- **Sidebar Navigation:** Added the Reminders destination and improved navigation split-view behavior.
+- **Cross-Screen Scrolling:** Prevented sidebar text clipping and enabled horizontal scrolling where wide content requires it.
+
+---
+
+## [0.1.0-beta.6] - 2026-08-26
+
+### Summary
+Focenda v0.1.0-beta.6 refines calendar previews, improves light-theme readability, and simplifies task navigation.
+
+### Added
+- **Click-to-Pin Calendar Preview:** Added a one-second hover delay and lets users click a date to keep its preview open while using quick actions.
+- **Compact Tasks Switcher:** Renamed the sidebar destination to Tasks and added a compact board/list view switcher with horizontal navigation.
+
+### Fixed & Changed
+- **Light-Theme Contrast:** Increased contrast for primary, secondary, and tertiary text, form fields, and controls across light themes.
+
+---
+
 ## [0.1.0-beta.5] - 2026-08-26
 
 ### Summary
