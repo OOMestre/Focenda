@@ -14,7 +14,6 @@ public enum AppTab: String, CaseIterable, Identifiable {
     case reminders = "Reminders"
     case scratchpad = "Scratchpad"
     case bookmarks = "Bookmarks"
-    case stats = "Statistics"
     case settings = "Settings"
 
     public var id: String { rawValue }
@@ -28,7 +27,6 @@ public enum AppTab: String, CaseIterable, Identifiable {
         case .reminders: return "bell.badge"
         case .scratchpad: return "square.and.pencil"
         case .bookmarks: return "bookmark.fill"
-        case .stats: return "chart.bar.xaxis"
         case .settings: return "gearshape"
         }
     }
