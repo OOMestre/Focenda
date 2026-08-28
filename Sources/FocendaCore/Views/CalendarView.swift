@@ -87,6 +87,7 @@ public struct CalendarView: View {
     @FocusState private var focusedQuickActionField: QuickActionField?
     @State private var hoveredDate: Date? = nil
     @State private var hoveredPopoverDay: CalendarDay? = nil
+    @State private var pinnedPopoverDate: Date? = nil
     @State private var hoverDebounceTask: Task<Void, Never>? = nil
 
     // Recurring reminder creation state
@@ -356,13 +357,15 @@ public struct CalendarView: View {
 
     private func calendarDayCell(day: CalendarDay) -> some View {
         let isHovered = hoveredDate != nil && calendar.isDate(hoveredDate!, inSameDayAs: day.date)
-        let isPopoverPresented = hoveredPopoverDay?.id == day.id
+        let isPopoverPresented = isDayPopoverPresented(for: day)
 
         return Button {
             withAnimation(.spring(response: 0.28, dampingFraction: 0.75)) {
                 selectedDate = day.date
                 hoverDebounceTask?.cancel()
-                hoveredPopoverDay = day
+                hoverDebounceTask = nil
+                hoveredPopoverDay = nil
+                pinnedPopoverDate = day.date
                 if !day.isCurrentMonth {
                     displayedMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: day.date)) ?? displayedMonth
                 }
@@ -462,6 +465,11 @@ public struct CalendarView: View {
         }
         .buttonStyle(.plain)
         .onHover { hovering in
+            if pinnedPopoverDate != nil {
+                hoveredDate = nil
+                return
+            }
+
             hoveredDate = hovering ? day.date : nil
             if hovering {
                 hoverDebounceTask?.cancel()
@@ -476,6 +484,7 @@ public struct CalendarView: View {
             } else {
                 hoverDebounceTask?.cancel()
                 hoverDebounceTask = nil
+                guard !keepsDayPopoverOpen(for: day.date, pinnedDate: pinnedPopoverDate) else { return }
                 withAnimation(.spring(response: 0.25, dampingFraction: 0.75)) {
                     hoveredPopoverDay = nil
                 }
@@ -487,6 +496,9 @@ public struct CalendarView: View {
                 set: { presenting in
                     if !presenting {
                         hoverDebounceTask?.cancel()
+                        if keepsDayPopoverOpen(for: day.date, pinnedDate: pinnedPopoverDate) {
+                            pinnedPopoverDate = nil
+                        }
                         if hoveredPopoverDay?.id == day.id {
                             hoveredPopoverDay = nil
                         }
@@ -500,11 +512,25 @@ public struct CalendarView: View {
         .help("\(formattedFullDate(day.date)): \(day.focusMinutes)m focus, \(day.tasksCount) tasks\(day.dueTasksCount > 0 ? ", \(day.dueTasksCount) due" : "")\(day.recurringRemindersCount > 0 ? ", \(day.recurringRemindersCount) reminders" : "")")
     }
 
+    private func isDayPopoverPresented(for day: CalendarDay) -> Bool {
+        keepsDayPopoverOpen(for: day.date, pinnedDate: pinnedPopoverDate)
+            || hoveredPopoverDay?.id == day.id
+    }
+
+    /// A clicked day remains open while the pointer travels from the cell to its popover.
+    /// This is internal so the interaction contract can be covered by unit tests.
+    func keepsDayPopoverOpen(for date: Date, pinnedDate: Date?) -> Bool {
+        guard let pinnedDate else { return false }
+        return calendar.isDate(pinnedDate, inSameDayAs: date)
+    }
+
     // MARK: - Day Hover Popover Preview Card
     private func dayHoverPreviewCard(for day: CalendarDay) -> some View {
         let dayTasks = tasks(for: day.date)
         let dayReminders = recurringReminderVM.reminders(for: day.date, calendar: calendar)
         let daySessions = sessions(for: day.date)
+        let completedTaskCount = dayTasks.filter(\.isCompleted).count
+        let isPinned = keepsDayPopoverOpen(for: day.date, pinnedDate: pinnedPopoverDate)
 
         return VStack(alignment: .leading, spacing: 10) {
             // Header
@@ -521,151 +547,145 @@ public struct CalendarView: View {
 
                 Spacer(minLength: 12)
 
-                Text(relativeDayLabel(day.date))
-                    .font(.system(size: 8, weight: .heavy))
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(AppTheme.accent.opacity(0.15))
-                    .foregroundStyle(AppTheme.accent)
-                    .clipShape(Capsule())
+                HStack(spacing: 6) {
+                    if isPinned {
+                        Image(systemName: "pin.fill")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundStyle(AppTheme.accent)
+                            .help("Preview pinned")
+                    }
+
+                    Text(relativeDayLabel(day.date))
+                        .font(.system(size: 8, weight: .heavy))
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(AppTheme.accent.opacity(0.15))
+                        .foregroundStyle(AppTheme.accent)
+                        .clipShape(Capsule())
+
+                    Button {
+                        dismissDayPopover()
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundStyle(AppTheme.textTertiary)
+                            .frame(width: 20, height: 20)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .help("Close day preview")
+                }
             }
 
             Divider()
 
-            // Metrics Summary Bar
-            HStack(spacing: 8) {
-                HStack(spacing: 3) {
-                    Image(systemName: "timer")
-                        .font(.system(size: 9, weight: .bold))
-                        .foregroundStyle(AppTheme.deepFocus)
-                    Text("\(day.focusMinutes)m focus")
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(AppTheme.textPrimary)
-                }
+            // Compact metrics summary
+            HStack(spacing: 0) {
+                dayPreviewMetric(
+                    icon: "timer",
+                    value: "\(day.focusMinutes)m",
+                    label: "Focus",
+                    color: AppTheme.deepFocus
+                )
 
-                HStack(spacing: 3) {
-                    Image(systemName: "checklist")
-                        .font(.system(size: 9, weight: .bold))
-                        .foregroundStyle(AppTheme.success)
-                    Text("\(dayTasks.filter(\.isCompleted).count)/\(dayTasks.count) tasks")
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(AppTheme.textPrimary)
+                Divider()
+                    .frame(height: 24)
+
+                dayPreviewMetric(
+                    icon: "checklist",
+                    value: "\(completedTaskCount)/\(dayTasks.count)",
+                    label: "Tasks",
+                    color: AppTheme.success
+                )
+
+                if !dayReminders.isEmpty {
+                    Divider()
+                        .frame(height: 24)
+
+                    dayPreviewMetric(
+                        icon: "repeat",
+                        value: "\(dayReminders.count)",
+                        label: "Reminders",
+                        color: AppTheme.accent
+                    )
                 }
             }
 
-            // Recurring Reminders Preview
+            // Compact recurring reminder preview
             if !dayReminders.isEmpty {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 4) {
                         Image(systemName: "repeat")
                             .font(.system(size: 9, weight: .bold))
                             .foregroundStyle(AppTheme.accent)
-                        Text("Recurring Reminders (\(dayReminders.count))")
+                        Text("Reminders")
                             .font(.system(size: 10, weight: .bold))
                             .foregroundStyle(AppTheme.textSecondary)
                     }
 
-                    ForEach(dayReminders.prefix(3)) { reminder in
-                        HStack(spacing: 6) {
-                            Text(reminder.formattedTime)
-                                .font(.system(size: 9, weight: .semibold, design: .monospaced))
-                                .padding(.horizontal, 4)
-                                .padding(.vertical, 1)
-                                .background(AppTheme.accent.opacity(0.12))
-                                .foregroundStyle(AppTheme.accent)
-                                .clipShape(RoundedRectangle(cornerRadius: 3))
+                    ForEach(dayReminders.prefix(2)) { reminder in
+                        dayPreviewRow(
+                            icon: "bell.fill",
+                            title: reminder.title,
+                            detail: reminder.formattedTime,
+                            color: AppTheme.accent
+                        )
+                    }
 
-                            Text(reminder.title)
-                                .font(.system(size: 10))
-                                .foregroundStyle(AppTheme.textPrimary)
-                                .lineLimit(1)
-
-                            Spacer()
-
-                            Text(reminder.repeatFrequency.rawValue)
-                                .font(.system(size: 8, weight: .medium))
-                                .foregroundStyle(AppTheme.textTertiary)
-                        }
+                    if dayReminders.count > 2 {
+                        Text("+\(dayReminders.count - 2) more reminders")
+                            .font(.system(size: 9, weight: .medium))
+                            .foregroundStyle(AppTheme.textTertiary)
                     }
                 }
-                .padding(6)
-                .background(
-                    RoundedRectangle(cornerRadius: 6)
-                        .fill(AppTheme.cardBackgroundSubtle.opacity(0.5))
-                )
             }
 
-            // Scheduled Tasks Preview
+            // Compact scheduled task preview
             if !dayTasks.isEmpty {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 4) {
                         Image(systemName: "checklist")
                             .font(.system(size: 9, weight: .bold))
                             .foregroundStyle(AppTheme.success)
-                        Text("Scheduled Tasks")
+                        Text("Tasks")
                             .font(.system(size: 10, weight: .bold))
                             .foregroundStyle(AppTheme.textSecondary)
                     }
 
-                    ForEach(dayTasks.prefix(3)) { task in
-                        HStack(spacing: 6) {
-                            Image(systemName: task.isCompleted ? "checkmark.circle.fill" : "circle")
-                                .font(.system(size: 9))
-                                .foregroundStyle(task.isCompleted ? AppTheme.success : AppTheme.textTertiary)
+                    ForEach(dayTasks.prefix(2)) { task in
+                        dayPreviewRow(
+                            icon: task.isCompleted ? "checkmark.circle.fill" : "circle",
+                            title: task.title,
+                            detail: task.priority.rawValue,
+                            color: task.isCompleted ? AppTheme.success : task.priority.color,
+                            isCompleted: task.isCompleted
+                        )
+                    }
 
-                            Text(task.title)
-                                .font(.system(size: 10))
-                                .strikethrough(task.isCompleted, color: AppTheme.textSecondary)
-                                .foregroundStyle(task.isCompleted ? AppTheme.textSecondary : AppTheme.textPrimary)
-                                .lineLimit(1)
-
-                            Spacer()
-
-                            Text(task.priority.rawValue)
-                                .font(.system(size: 8, weight: .bold))
-                                .padding(.horizontal, 4)
-                                .padding(.vertical, 1)
-                                .background(task.priority.color.opacity(0.15))
-                                .foregroundStyle(task.priority.color)
-                                .clipShape(Capsule())
-                        }
+                    if dayTasks.count > 2 {
+                        Text("+\(dayTasks.count - 2) more tasks")
+                            .font(.system(size: 9, weight: .medium))
+                            .foregroundStyle(AppTheme.textTertiary)
                     }
                 }
             } else if dayReminders.isEmpty && daySessions.isEmpty {
-                Text("No scheduled items or recorded sessions for this day.")
+                Text("Nothing scheduled for this day yet.")
                     .font(.caption2)
                     .foregroundStyle(AppTheme.textTertiary)
                     .padding(.vertical, 2)
             }
 
-            // Focus Sessions breakdown
+            // Keep focus history as a single line; the full breakdown lives below.
             if !daySessions.isEmpty {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("Focus Breakdown (\(daySessions.count) sessions)")
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundStyle(AppTheme.textSecondary)
-
-                    HStack(spacing: 4) {
-                        ForEach(daySessions.prefix(4)) { session in
-                            HStack(spacing: 3) {
-                                Circle().fill(session.mode.themeColor).frame(width: 5, height: 5)
-                                Text("\(session.durationSeconds / 60)m")
-                                    .font(.system(size: 9, weight: .semibold))
-                                    .foregroundStyle(AppTheme.textSecondary)
-                            }
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 2)
-                            .background(session.mode.themeColor.opacity(0.12))
-                            .clipShape(Capsule())
-                        }
-                    }
-                }
+                Text("\(daySessions.count) focus session\(daySessions.count == 1 ? "" : "s") recorded")
+                    .font(.system(size: 9, weight: .medium))
+                    .foregroundStyle(AppTheme.textTertiary)
             }
 
             Divider()
 
             HStack(spacing: 6) {
-                Label("Quick add", systemImage: "bolt.fill")
+                Label("Add to day", systemImage: "plus")
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(AppTheme.textSecondary)
 
@@ -692,9 +712,56 @@ public struct CalendarView: View {
                 .tint(AppTheme.sandstone)
             }
         }
-        .padding(12)
-        .frame(width: 280)
+        .padding(14)
+        .frame(width: 300)
         .background(AppTheme.cardBackground)
+    }
+
+    private func dayPreviewMetric(icon: String, value: String, label: String, color: Color) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: 3) {
+                Image(systemName: icon)
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(color)
+
+                Text(label)
+                    .font(.system(size: 9, weight: .medium))
+                    .foregroundStyle(AppTheme.textTertiary)
+            }
+
+            Text(value)
+                .font(.system(size: 12, weight: .bold, design: .rounded))
+                .foregroundStyle(AppTheme.textPrimary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func dayPreviewRow(
+        icon: String,
+        title: String,
+        detail: String,
+        color: Color,
+        isCompleted: Bool = false
+    ) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.system(size: 9, weight: .semibold))
+                .foregroundStyle(color)
+                .frame(width: 13)
+
+            Text(title)
+                .font(.system(size: 10))
+                .strikethrough(isCompleted, color: AppTheme.textSecondary)
+                .foregroundStyle(isCompleted ? AppTheme.textSecondary : AppTheme.textPrimary)
+                .lineLimit(1)
+
+            Spacer(minLength: 4)
+
+            Text(detail)
+                .font(.system(size: 8, weight: .semibold))
+                .foregroundStyle(color)
+                .lineLimit(1)
+        }
     }
 
     private func heatmapDotColor(level: Int, isSelected: Bool) -> Color {
@@ -1561,6 +1628,8 @@ public struct CalendarView: View {
     }
 
     private func openQuickAction(_ action: CalendarQuickAction) {
+        dismissDayPopover()
+
         switch action {
         case .task:
             quickTaskTitle = ""
@@ -1579,8 +1648,15 @@ public struct CalendarView: View {
                 from: calendar.dateComponents([.year, .month], from: selectedDate)
             ) ?? displayedMonth
         }
-        hoveredPopoverDay = nil
         openQuickAction(action)
+    }
+
+    private func dismissDayPopover() {
+        hoverDebounceTask?.cancel()
+        hoverDebounceTask = nil
+        hoveredDate = nil
+        hoveredPopoverDay = nil
+        pinnedPopoverDate = nil
     }
 
     private func closeQuickAction() {

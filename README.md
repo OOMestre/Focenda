@@ -34,7 +34,7 @@ Combining structured focus cycles (Pomodoro and deep work timers), visual Kanban
 
 - **Intelligent Focus Timer:** Configurable intervals for deep focus, short breaks, and long breaks with smooth circular progress animations and custom time adjustments (+5m / -5m).
 - **Unified Tasks & Kanban Board:** Interactive 3-column Kanban workflow with drag-and-drop support, direct status progression pills (To Do, In Progress, Done), Pomodoro counters, due dates, and a seamless toggle to list view.
-- **Interactive Calendar & Day Previews:** Full monthly calendar grid with daily focus heatmaps, scheduled tasks, due date milestone indicators, and animated hover preview popovers to inspect daily commitments without scrolling.
+- **Interactive Calendar & Day Previews:** Full monthly calendar grid with daily focus heatmaps, scheduled tasks, due date milestone indicators, and compact hover previews that stay pinned after clicking a date for quick actions.
 - **Recurring Reminders:** Dedicated scheduler for daily, weekday, weekly, and monthly recurring tasks with native macOS banner alerts and rich chime notifications.
 - **Multi-Notebook Scratchpad:** Master-detail quick notes system organized into custom folders (General, Projects, Work, Personal, Ideas) with live character/word counters and keystroke persistence.
 - **Focus Hub & Bookmarks:** Responsive quick-launch directory for essential development references, tools, and documentation with 1-click browser integration.
@@ -48,7 +48,7 @@ Combining structured focus cycles (Pomodoro and deep work timers), visual Kanban
 
 1. **Start a Focus Session:** Open the Focus Timer and start your target interval with one click or spacebar.
 2. **Manage Tasks in Kanban:** Navigate to Tasks & Kanban to organize items across columns, set priority levels (High, Medium, Low), or switch to the linear list view.
-3. **Inspect Schedule in Calendar:** Open Calendar and hover over any date to inspect scheduled due dates, recurring reminders, and logged focus sessions.
+3. **Inspect Schedule in Calendar:** Open Calendar and hover over any date to preview scheduled items; click a date to keep the preview open and use its quick actions.
 4. **Capture Notes:** Use Scratchpad or the Menu Bar popover to take quick notes into dedicated notebooks.
 
 ---

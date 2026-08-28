@@ -11,6 +11,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 - **Global Shortcuts Settings & Custom Presets:** Added a dedicated Keyboard Shortcuts preferences section in Settings with Apple-style keycap badges, scheme presets (Standard `⌥ ⌘`, Power User `⌃ ⌥ ⌘`, Compact `⌃ ⌥`), and audio feedback options.
 - **macOS Menu Bar Focus Commands:** Integrated a native `CommandMenu("Focus")` with standard keyboard shortcuts in the macOS menu bar.
 
+### Fixed & Changed
+- **Calendar Day Preview:** Clicking a calendar date now pins its preview while the cursor moves to the quick actions, and the preview has been simplified to reduce visual density.
+
 ---
 
 ## [0.1.0-beta.5] - 2026-08-26
@@ -68,4 +71,3 @@ Focenda v0.1.0-beta.5 consolidates task management into a single Tasks & Kanban 
 - Master-detail Scratchpad note editor.
 - Floating MenuBarExtra utility with timer controls and live countdown.
 - Initial Zen minimalist theme and design tokens.
-

@@ -647,4 +647,17 @@ final class CalendarViewTests: XCTestCase {
         XCTAssertFalse(didOpenPopover)
         XCTAssertTrue(task.isCancelled)
     }
+
+    func testPinnedDayPopoverStaysOpenWhenPointerLeavesCell() {
+        let timerVM = FocusTimerViewModel()
+        let taskVM = TaskListViewModel()
+        let calendarView = CalendarView(timerVM: timerVM, taskVM: taskVM)
+
+        let selectedDate = Calendar.current.startOfDay(for: Date())
+        let otherDate = Calendar.current.date(byAdding: .day, value: 1, to: selectedDate)!
+
+        XCTAssertTrue(calendarView.keepsDayPopoverOpen(for: selectedDate, pinnedDate: selectedDate))
+        XCTAssertFalse(calendarView.keepsDayPopoverOpen(for: otherDate, pinnedDate: selectedDate))
+        XCTAssertFalse(calendarView.keepsDayPopoverOpen(for: selectedDate, pinnedDate: nil))
+    }
 }
