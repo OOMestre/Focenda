@@ -1368,8 +1368,8 @@ public struct KanbanTaskFormSheet: View {
                 }
 
                 if hasReminder {
-                    HStack {
-                        Text("Reminder Date & Time:")
+                    HStack(spacing: 8) {
+                        Text("Reminder:")
                             .font(.subheadline)
                             .foregroundStyle(AppTheme.textSecondary)
                         Spacer()
@@ -1377,10 +1377,12 @@ public struct KanbanTaskFormSheet: View {
                             "",
                             selection: $reminderDate,
                             in: Date()...,
-                            displayedComponents: [.date, .hourAndMinute]
+                            displayedComponents: [.date]
                         )
                         .labelsHidden()
                         .datePickerStyle(.compact)
+
+                        IntuitiveTimePicker(selection: $reminderDate, style: .compact)
                     }
                     .padding(.top, 2)
                 }
