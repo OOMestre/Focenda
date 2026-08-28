@@ -238,6 +238,102 @@ final class AppUpdateTests: XCTestCase {
         XCTAssertEqual(installedBundle.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String, "1.0.1")
     }
 
+    func testInstallerRejectsArchiveAboveUncompressedSizeLimit() throws {
+        let fileManager = FileManager.default
+        let root = fileManager.temporaryDirectory.appendingPathComponent("FocendaArchiveSizeTests-\(UUID().uuidString)", isDirectory: true)
+        defer { try? fileManager.removeItem(at: root) }
+
+        let installedApp = root.appendingPathComponent("Focenda Staging.app", isDirectory: true)
+        let updateApp = root.appendingPathComponent("Focenda Staging Update.app", isDirectory: true)
+        let archive = root.appendingPathComponent("Focenda-macOS.zip")
+        try makeAppBundle(at: installedApp, releaseTag: "v1.0.0")
+        try makeAppBundle(at: updateApp, releaseTag: "v1.2.0")
+
+        let resourcesURL = updateApp.appendingPathComponent("Contents/Resources", isDirectory: true)
+        try fileManager.createDirectory(at: resourcesURL, withIntermediateDirectories: true)
+        try Data(repeating: 0, count: 1024).write(to: resourcesURL.appendingPathComponent("large.bin"))
+        try makeArchive(from: updateApp, at: archive)
+
+        let asset = AppUpdateAsset(
+            name: "Focenda-macOS.zip",
+            downloadURL: try XCTUnwrap(URL(string: "https://github.com/OOMestre/Focenda/releases/download/v1.2.0/Focenda-macOS.zip"))
+        )
+        let release = AppUpdateRelease(tagName: "v1.2.0", assets: [asset])
+        let update = try XCTUnwrap(AppUpdate(release: release, asset: asset))
+        let installer = AppUpdateInstaller(
+            applicationURL: installedApp,
+            expectedBundleIdentifier: "com.oomestre.focenda.staging",
+            relaunchAfterInstall: false,
+            archiveLimits: AppUpdateArchiveLimits(maxUncompressedBytes: 128, maxFileCount: 100)
+        )
+
+        do {
+            try installer.install(update: update, downloadedFile: archive)
+            XCTFail("An archive above the uncompressed size limit should be rejected")
+        } catch let error as AppUpdateError {
+            XCTAssertEqual(error, .archiveTooLarge(limit: 128))
+        }
+
+        let installedBundle = try XCTUnwrap(Bundle(url: installedApp))
+        XCTAssertEqual(installedBundle.object(forInfoDictionaryKey: "FocendaReleaseTag") as? String, "v1.0.0")
+    }
+
+    func testInstallerRejectsArchiveAboveFileCountLimit() throws {
+        let fileManager = FileManager.default
+        let root = fileManager.temporaryDirectory.appendingPathComponent("FocendaArchiveFileCountTests-\(UUID().uuidString)", isDirectory: true)
+        defer { try? fileManager.removeItem(at: root) }
+
+        let installedApp = root.appendingPathComponent("Focenda Staging.app", isDirectory: true)
+        let updateApp = root.appendingPathComponent("Focenda Staging Update.app", isDirectory: true)
+        let archive = root.appendingPathComponent("Focenda-macOS.zip")
+        try makeAppBundle(at: installedApp, releaseTag: "v1.0.0")
+        try makeAppBundle(at: updateApp, releaseTag: "v1.2.0")
+        try makeArchive(from: updateApp, at: archive)
+
+        let asset = AppUpdateAsset(
+            name: "Focenda-macOS.zip",
+            downloadURL: try XCTUnwrap(URL(string: "https://github.com/OOMestre/Focenda/releases/download/v1.2.0/Focenda-macOS.zip"))
+        )
+        let release = AppUpdateRelease(tagName: "v1.2.0", assets: [asset])
+        let update = try XCTUnwrap(AppUpdate(release: release, asset: asset))
+        let installer = AppUpdateInstaller(
+            applicationURL: installedApp,
+            expectedBundleIdentifier: "com.oomestre.focenda.staging",
+            relaunchAfterInstall: false,
+            archiveLimits: AppUpdateArchiveLimits(maxUncompressedBytes: 10 * 1024 * 1024, maxFileCount: 1)
+        )
+
+        do {
+            try installer.install(update: update, downloadedFile: archive)
+            XCTFail("An archive above the file count limit should be rejected")
+        } catch let error as AppUpdateError {
+            XCTAssertEqual(error, .archiveTooManyFiles(limit: 1))
+        }
+
+        let installedBundle = try XCTUnwrap(Bundle(url: installedApp))
+        XCTAssertEqual(installedBundle.object(forInfoDictionaryKey: "FocendaReleaseTag") as? String, "v1.0.0")
+    }
+
+    @MainActor
+    func testServiceRunsInstallerOffMainThread() async throws {
+        let asset = AppUpdateAsset(
+            name: "Focenda-macOS.zip",
+            downloadURL: try XCTUnwrap(URL(string: "https://github.com/OOMestre/Focenda/releases/download/v1.2.0/Focenda-macOS.zip"))
+        )
+        let release = AppUpdateRelease(tagName: "v1.2.0", assets: [asset])
+        let update = try XCTUnwrap(AppUpdate(release: release, asset: asset))
+        let installer = RecordingUpdateInstaller()
+        let service = AppUpdateService(
+            configuration: AppUpdateConfiguration(repositoryOwner: "OOMestre", repositoryName: "Focenda"),
+            client: StubUpdateClient(releases: [release]),
+            installer: installer
+        )
+
+        try await service.install(update: update)
+
+        XCTAssertEqual(installer.installedOnMainThread, false)
+    }
+
     private func makeAppBundle(at appURL: URL, releaseTag: String, shortVersion: String? = nil) throws {
         let fileManager = FileManager.default
         let contentsURL = appURL.appendingPathComponent("Contents", isDirectory: true)
@@ -292,10 +388,12 @@ private final class StubUpdateClient: AppUpdateClient {
 private final class RecordingUpdateInstaller: AppUpdateInstalling {
     private(set) var installedUpdate: AppUpdate?
     private(set) var downloadedFile: URL?
+    private(set) var installedOnMainThread: Bool?
 
     func install(update: AppUpdate, downloadedFile: URL) throws {
         installedUpdate = update
         self.downloadedFile = downloadedFile
+        installedOnMainThread = Thread.isMainThread
     }
 }
 
