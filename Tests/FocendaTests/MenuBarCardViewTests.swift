@@ -194,7 +194,7 @@ final class MenuBarCardViewTests: XCTestCase {
         let cardView = MenuBarCardView(
             timerVM: timerVM,
             taskVM: taskVM,
-            scratchpadVM: scratchpadVM,
+            scratchpadVM: scratchpadVM
         )
 
         let body = cardView.body

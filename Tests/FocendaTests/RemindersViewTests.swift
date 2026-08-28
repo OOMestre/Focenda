@@ -2,7 +2,6 @@ import XCTest
 import SwiftUI
 @testable import FocendaCore
 
-@MainActor
 final class RemindersViewTests: XCTestCase {
 
     var recurringReminderVM: RecurringReminderViewModel!

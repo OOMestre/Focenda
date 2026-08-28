@@ -48,6 +48,21 @@ final class ReminderAlertHUDTests: XCTestCase {
         XCTAssertEqual(panel.currentSubtitle, "6:00 PM • Daily")
         XCTAssertEqual(panel.currentNotes, "Review progress and align on daily goals.")
 
+        // Verify callbacks directly
+        let hudView = ReminderAlertHUDView(
+            title: "Team Standup",
+            onSnooze: { didSnooze = true },
+            onComplete: { didComplete = true },
+            onOpenApp: { didOpenApp = true }
+        )
+        hudView.onSnooze?()
+        hudView.onComplete?()
+        hudView.onOpenApp?()
+
+        XCTAssertTrue(didSnooze)
+        XCTAssertTrue(didComplete)
+        XCTAssertTrue(didOpenApp)
+
         panel.dismiss()
         XCTAssertFalse(panel.isShowingAlert)
     }
