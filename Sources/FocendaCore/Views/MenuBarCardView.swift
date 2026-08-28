@@ -52,6 +52,8 @@ public struct MenuBarCardView: View {
     @State public var selectedNoteFolder: String = "General"
     @State private var quickNoteText: String = ""
     @State private var noteSavedFeedback: Bool = false
+    @State public var isAddingNoteFolder: Bool = false
+    @State public var newNoteFolderName: String = ""
 
     // Quick Links state
     @State private var customLinks: [QuickLink] = []
@@ -696,43 +698,148 @@ public struct MenuBarCardView: View {
     // MARK: - 📝 Quick Note Section
     private var quickNoteSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            // Folder Selector Pills
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 6) {
-                    ForEach(scratchpadVM.folders, id: \.self) { folder in
-                        let isSelected = selectedNoteFolder.caseInsensitiveCompare(folder) == .orderedSame
-                        Button {
-                            withAnimation(.spring(response: 0.25, dampingFraction: 0.7)) {
-                                selectedNoteFolder = folder
-                                scratchpadVM.selectFolder(folder)
-                                quickNoteText = scratchpadVM.currentContent
+            // Folder Selector Header & Actions Bar
+            HStack(spacing: 8) {
+                // Folder Dropdown Menu Picker
+                Menu {
+                    Section("Select Folder") {
+                        ForEach(scratchpadVM.folders, id: \.self) { folder in
+                            Button {
+                                withAnimation(.spring(response: 0.25, dampingFraction: 0.72)) {
+                                    selectedNoteFolder = folder
+                                    scratchpadVM.selectFolder(folder)
+                                    quickNoteText = scratchpadVM.currentContent
+                                }
+                            } label: {
+                                HStack {
+                                    Label(folder, systemImage: ScratchpadViewModel.iconForFolder(folder))
+                                    if selectedNoteFolder.caseInsensitiveCompare(folder) == .orderedSame {
+                                        Spacer()
+                                        Image(systemName: "checkmark")
+                                    }
+                                }
                             }
-                        } label: {
-                            HStack(spacing: 4) {
-                                Image(systemName: ScratchpadViewModel.iconForFolder(folder))
-                                    .font(.system(size: 9))
-                                Text(folder)
-                                    .font(.system(size: 10, weight: isSelected ? .semibold : .medium))
-                                    .fixedSize(horizontal: true, vertical: false)
-                            }
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(
-                                isSelected
-                                    ? AppTheme.accent
-                                    : AppTheme.cardBackgroundSubtle
-                            )
-                            .foregroundStyle(
-                                isSelected
-                                    ? .white
-                                    : AppTheme.textSecondary
-                            )
-                            .clipShape(Capsule())
                         }
-                        .buttonStyle(.plain)
                     }
+
+                    Divider()
+
+                    Button {
+                        withAnimation(.spring(response: 0.25, dampingFraction: 0.75)) {
+                            isAddingNoteFolder.toggle()
+                        }
+                    } label: {
+                        Label("New Folder...", systemImage: "folder.badge.plus")
+                    }
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: ScratchpadViewModel.iconForFolder(selectedNoteFolder))
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(AppTheme.accent)
+                        Text(selectedNoteFolder)
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(AppTheme.textPrimary)
+                            .lineLimit(1)
+                        Image(systemName: "chevron.up.chevron.down")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundStyle(AppTheme.textTertiary)
+                    }
+                    .padding(.horizontal, 9)
+                    .padding(.vertical, 5)
+                    .background(AppTheme.cardBackgroundSubtle)
+                    .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 7, style: .continuous)
+                            .stroke(AppTheme.subtleBorder, lineWidth: 1)
+                    )
                 }
-                .padding(.vertical, 2)
+                .menuStyle(.borderlessButton)
+                .fixedSize(horizontal: true, vertical: false)
+                .help("Select Note Folder")
+
+                Spacer()
+
+                // Quick "+ New Folder" / "Cancel" Button
+                Button {
+                    withAnimation(.spring(response: 0.25, dampingFraction: 0.75)) {
+                        isAddingNoteFolder.toggle()
+                    }
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: isAddingNoteFolder ? "xmark" : "plus")
+                            .font(.system(size: 9, weight: .bold))
+                        Text(isAddingNoteFolder ? "Cancel" : "New Folder")
+                            .font(.caption2.weight(.medium))
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4.5)
+                    .background(
+                        isAddingNoteFolder
+                            ? AppTheme.cardBackgroundSubtle
+                            : AppTheme.accent.opacity(0.12)
+                    )
+                    .foregroundStyle(
+                        isAddingNoteFolder
+                            ? AppTheme.textSecondary
+                            : AppTheme.accent
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                            .stroke(
+                                isAddingNoteFolder ? AppTheme.subtleBorder : AppTheme.accent.opacity(0.3),
+                                lineWidth: 1
+                            )
+                    )
+                }
+                .buttonStyle(.plain)
+                .help(isAddingNoteFolder ? "Cancel creating folder" : "Create a new folder for notes")
+            }
+
+            // Inline Folder Creation Form
+            if isAddingNoteFolder {
+                HStack(spacing: 6) {
+                    Image(systemName: "folder.badge.plus")
+                        .font(.system(size: 11))
+                        .foregroundStyle(AppTheme.accent)
+
+                    TextField("New folder name (e.g. Design, Meeting)...", text: $newNoteFolderName)
+                        .textFieldStyle(.plain)
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.textPrimary)
+                        .padding(6)
+                        .background(AppTheme.inputBackground)
+                        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                .stroke(AppTheme.subtleBorder, lineWidth: 1)
+                        )
+                        .onSubmit {
+                            createNewNoteFolder()
+                        }
+
+                    Button("Create") {
+                        createNewNoteFolder()
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(AppTheme.accent)
+                    .foregroundStyle(Color.white)
+                    .controlSize(.small)
+                    .disabled(newNoteFolderName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+                .padding(8)
+                .background(
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(AppTheme.cardBackgroundSubtle.opacity(0.6))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .stroke(AppTheme.accent.opacity(0.35), lineWidth: 1)
+                )
+                .transition(.asymmetric(
+                    insertion: .scale(scale: 0.95).combined(with: .opacity),
+                    removal: .opacity
+                ))
             }
 
             ZStack(alignment: .topLeading) {
@@ -824,13 +931,32 @@ public struct MenuBarCardView: View {
         .padding(.vertical, 2)
     }
 
-    public func saveQuickNote() {
-        let trimmed = quickNoteText.trimmingCharacters(in: .whitespacesAndNewlines)
+    public func createNewNoteFolder(named name: String? = nil) {
+        let nameToUse = name ?? newNoteFolderName
+        let trimmed = nameToUse.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+
+        let success = scratchpadVM.createFolder(trimmed)
+        if success {
+            selectedNoteFolder = trimmed
+            scratchpadVM.selectFolder(trimmed)
+            quickNoteText = scratchpadVM.currentContent
+        }
+        newNoteFolderName = ""
+        withAnimation(.spring(response: 0.25, dampingFraction: 0.75)) {
+            isAddingNoteFolder = false
+        }
+    }
+
+    public func saveQuickNote(content: String? = nil, folder: String? = nil) {
+        let textToUse = content ?? quickNoteText
+        let folderToUse = folder ?? selectedNoteFolder
+        let trimmed = textToUse.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         _ = scratchpadVM.createNote(
             title: "",
             content: trimmed,
-            folder: selectedNoteFolder
+            folder: folderToUse
         )
         withAnimation {
             noteSavedFeedback = true

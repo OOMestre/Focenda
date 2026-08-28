@@ -365,4 +365,22 @@ final class ScratchpadViewModelTests: XCTestCase {
         XCTAssertEqual(ScratchpadViewModel.iconForFolder("Ideas"), "lightbulb")
         XCTAssertEqual(ScratchpadViewModel.iconForFolder("CustomXYZ"), "folder")
     }
+
+    func testSelectingEmptyFolderYieldsCleanFallbackNote() {
+        let viewModel = ScratchpadViewModel(userDefaults: testDefaults)
+        viewModel.createFolder("NewEmptyFolder")
+
+        viewModel.selectFolder("NewEmptyFolder")
+        XCTAssertEqual(viewModel.selectedFolder, "NewEmptyFolder")
+        XCTAssertNil(viewModel.selectedNoteId)
+        XCTAssertEqual(viewModel.filteredNotes.count, 0)
+        XCTAssertEqual(viewModel.currentNote.folder, "NewEmptyFolder")
+        XCTAssertEqual(viewModel.currentContent, "")
+
+        // Now typing in this empty folder should create note in NewEmptyFolder
+        viewModel.updateContent("Initial note in new folder")
+        XCTAssertEqual(viewModel.noteCount(for: "NewEmptyFolder"), 1)
+        XCTAssertEqual(viewModel.currentNote.folder, "NewEmptyFolder")
+        XCTAssertEqual(viewModel.currentContent, "Initial note in new folder")
+    }
 }

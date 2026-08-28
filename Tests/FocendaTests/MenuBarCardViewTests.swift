@@ -256,6 +256,63 @@ final class MenuBarCardViewTests: XCTestCase {
         XCTAssertEqual(scratchpadVM.notes.first?.content, "New architecture note")
     }
 
+    func testMenuBarCardViewCreateNewNoteFolderDirectly() {
+        let timerVM = FocusTimerViewModel()
+        let scratchpadVM = ScratchpadViewModel()
+
+        let cardView = MenuBarCardView(
+            timerVM: timerVM,
+            scratchpadVM: scratchpadVM,
+            initialSection: .quickNote
+        )
+
+        cardView.createNewNoteFolder(named: "Sprint Goals")
+
+        XCTAssertTrue(scratchpadVM.folders.contains("Sprint Goals"))
+        XCTAssertEqual(scratchpadVM.selectedFolder, "Sprint Goals")
+
+        // Save a note to the new folder
+        cardView.saveQuickNote(content: "Deliver release v1.2", folder: "Sprint Goals")
+        XCTAssertEqual(scratchpadVM.noteCount(for: "Sprint Goals"), 1)
+        XCTAssertEqual(scratchpadVM.notes.first?.folder, "Sprint Goals")
+        XCTAssertEqual(scratchpadVM.notes.first?.content, "Deliver release v1.2")
+    }
+
+    func testMenuBarCardViewEmptyFolderCreationValidation() {
+        let timerVM = FocusTimerViewModel()
+        let scratchpadVM = ScratchpadViewModel()
+        let initialFoldersCount = scratchpadVM.folders.count
+
+        let cardView = MenuBarCardView(
+            timerVM: timerVM,
+            scratchpadVM: scratchpadVM,
+            initialSection: .quickNote
+        )
+
+        cardView.createNewNoteFolder(named: "   ")
+
+        XCTAssertEqual(scratchpadVM.folders.count, initialFoldersCount)
+    }
+
+    func testMenuBarCardViewWithNumerousFoldersRendersWithoutOverflow() {
+        let timerVM = FocusTimerViewModel()
+        let scratchpadVM = ScratchpadViewModel()
+        let initialCount = scratchpadVM.folders.count
+
+        for i in 1...20 {
+            scratchpadVM.createFolder("Very Long Folder Name Dimension \(i)")
+        }
+
+        let cardView = MenuBarCardView(
+            timerVM: timerVM,
+            scratchpadVM: scratchpadVM,
+            initialSection: .quickNote
+        )
+
+        XCTAssertNotNil(cardView.body)
+        XCTAssertEqual(scratchpadVM.folders.count, initialCount + 20)
+    }
+
     func testFocusSessionCompletedNotificationTriggersInMenuBarView() {
         let timerVM = FocusTimerViewModel()
         let cardView = MenuBarCardView(timerVM: timerVM)
