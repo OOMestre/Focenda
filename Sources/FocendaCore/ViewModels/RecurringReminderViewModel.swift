@@ -10,6 +10,7 @@ public final class RecurringReminderViewModel {
 
     private let storageKey = "focenda_saved_recurring_reminders"
     private let secureStore: SecureStore
+    private var remindersPersistenceReady = false
 
     public init(secureStore: SecureStore = .shared) {
         self.secureStore = secureStore
@@ -107,6 +108,7 @@ public final class RecurringReminderViewModel {
 
     /// Persists reminders as encrypted local data.
     public func saveReminders() {
+        guard remindersPersistenceReady else { return }
         if let encoded = try? JSONEncoder().encode(reminders) {
             secureStore.setData(encoded, forKey: storageKey)
         }
@@ -114,9 +116,21 @@ public final class RecurringReminderViewModel {
 
     /// Loads reminders from encrypted local data, migrating the legacy payload when needed.
     public func loadReminders() {
-        if let data = secureStore.data(forKey: storageKey),
-           let decoded = try? JSONDecoder().decode([RecurringReminder].self, from: data) {
-            self.reminders = decoded
+        guard secureStore.containsValue(forKey: storageKey) else {
+            remindersPersistenceReady = true
+            return
         }
+
+        guard let data = secureStore.data(forKey: storageKey),
+              let decoded = try? JSONDecoder().decode([RecurringReminder].self, from: data) else {
+            // Do not replace an unreadable saved list with a newly encoded
+            // empty list after an update or migration.
+            reminders = []
+            remindersPersistenceReady = false
+            return
+        }
+
+        self.reminders = decoded
+        remindersPersistenceReady = true
     }
 }

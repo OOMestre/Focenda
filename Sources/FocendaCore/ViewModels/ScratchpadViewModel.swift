@@ -159,6 +159,8 @@ public final class ScratchpadViewModel {
     public var showNotesSidebar: Bool = true
 
     private let secureStore: SecureStore
+    private var notesPersistenceReady = false
+    private var foldersPersistenceReady = false
 
     public init(userDefaults: UserDefaults = .standard, secureStore: SecureStore? = nil) {
         self.secureStore = secureStore ?? SecureStore(defaults: userDefaults)
@@ -456,19 +458,31 @@ public final class ScratchpadViewModel {
 
     public func loadFromUserDefaults() {
         // Load folders
-        if let savedFolders = secureStore.stringArray(forKey: Self.foldersUserDefaultsKey), !savedFolders.isEmpty {
-            self.folders = savedFolders
-        } else {
+        if !secureStore.containsValue(forKey: Self.foldersUserDefaultsKey) {
             self.folders = Self.defaultFolders
+            foldersPersistenceReady = true
+        } else if let savedFolders = secureStore.stringArray(forKey: Self.foldersUserDefaultsKey), !savedFolders.isEmpty {
+            self.folders = savedFolders
+            foldersPersistenceReady = true
+        } else {
+            // Keep the visible defaults when the saved folder payload is
+            // unreadable, but do not allow them to overwrite the payload.
+            self.folders = Self.defaultFolders
+            foldersPersistenceReady = false
         }
 
         // Load notes. An explicitly saved empty array is a valid state: the
         // Scratchpad should remain empty until the user creates a note.
-        if let data = secureStore.data(forKey: Self.userDefaultsKey),
-           let decoded = try? JSONDecoder().decode([ScratchpadNote].self, from: data) {
+        if !secureStore.containsValue(forKey: Self.userDefaultsKey) {
+            self.notes = []
+            self.selectedNoteId = nil
+            notesPersistenceReady = true
+        } else if let data = secureStore.data(forKey: Self.userDefaultsKey),
+                  let decoded = try? JSONDecoder().decode([ScratchpadNote].self, from: data) {
             let migrated = Self.migrateLegacyNotes(decoded)
             self.notes = migrated
             self.selectedNoteId = migrated.first?.id
+            notesPersistenceReady = true
 
             if migrated != decoded {
                 saveToUserDefaults()
@@ -476,6 +490,7 @@ public final class ScratchpadViewModel {
         } else {
             self.notes = []
             self.selectedNoteId = nil
+            notesPersistenceReady = false
         }
     }
 
@@ -500,12 +515,14 @@ public final class ScratchpadViewModel {
     }
 
     public func saveToUserDefaults() {
+        guard notesPersistenceReady else { return }
         if let data = try? JSONEncoder().encode(notes) {
             secureStore.setData(data, forKey: Self.userDefaultsKey)
         }
     }
 
     public func saveFoldersToUserDefaults() {
+        guard foldersPersistenceReady else { return }
         secureStore.set(folders, forKey: Self.foldersUserDefaultsKey)
     }
 }

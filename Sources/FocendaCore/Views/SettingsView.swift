@@ -25,6 +25,13 @@ public struct SettingsView: View {
     public var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
+                if let error = appState.persistenceErrorMessage {
+                    Label(error, systemImage: "exclamationmark.triangle.fill")
+                        .font(.callout)
+                        .foregroundStyle(.orange)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
                 // Appearance & Theme Picker
                 themePickerSection
 

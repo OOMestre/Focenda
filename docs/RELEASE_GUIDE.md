@@ -235,7 +235,7 @@ Focenda checks the public GitHub Releases API from the Mac. The client sends no 
 
 - The Settings page provides **Check Now** and an enabled-by-default **Check for updates automatically** preference. Automatic checks run at most once every 24 hours while the app is open.
 - The distributed Focenda app checks official stable releases only. Releases marked as prerelease or carrying a prerelease tag are ignored, even if their GitHub metadata is inconsistent.
-- Before installation, Focenda requires HTTPS GitHub download URLs, the expected Focenda bundle identifier, and a matching release version. It automatically replaces only the running `.app` bundle and relaunches it; local user data remains in macOS storage.
+- Before installation, Focenda requires HTTPS GitHub download URLs, a compatible Focenda bundle identifier, and a matching release version. Production and staging identifiers are treated as compatible so an update can move between beta and production without splitting the user's data. It automatically replaces only the running `.app` bundle and relaunches it; local user data remains in Focenda's stable encrypted preference store.
 - If the app is running from a development executable or the installed app directory is not writable, the update remains available and Settings shows the reason so the user can install manually from GitHub Releases.
 
 ---
@@ -247,6 +247,7 @@ Focenda checks the public GitHub Releases API from the Mac. The client sends no 
 - [ ] `VERSION` matches intended target release number.
 - [ ] `CHANGELOG.md` reflects all notable user-facing changes.
 - [ ] Local staging app builds and launches cleanly (`make staging`).
+- [ ] Test an update over an existing install and verify tasks, notes, reminders, bookmarks, timer history/settings, and productivity profiles are still present.
 - [ ] `codesign --verify --deep --strict` passes and the bundle contains the hardened runtime.
 - [ ] Public artifacts use Developer ID signing and notarization (`FOCENDA_SIGNING_IDENTITY` configured).
 - [ ] UI appearance verified in both Light and Dark macOS system appearance.

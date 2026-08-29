@@ -103,6 +103,7 @@ public final class AppState {
             savePreferences()
         }
     }
+    public private(set) var persistenceErrorMessage: String?
     public var selectedTheme: AppThemeOption {
         didSet {
             secureStore.set(selectedTheme.rawValue, forKey: AppTheme.storageKey)
@@ -119,6 +120,7 @@ public final class AppState {
     }
 
     private let secureStore: SecureStore
+    private var preferencesPersistenceReady = false
 
     public init(secureStore: SecureStore = .shared) {
         self.secureStore = secureStore
@@ -154,10 +156,21 @@ public final class AppState {
         let storedTheme = secureStore.string(forKey: AppTheme.storageKey)
         let resolvedTheme = AppThemeOption.from(storedValue: storedTheme)
         self.selectedTheme = resolvedTheme
-        AppTheme.current = resolvedTheme
+        // Do not replace an unreadable saved theme with the default while the
+        // app is starting. A missing value is safe to initialize; a present
+        // but unreadable value must remain untouched for migration/recovery.
+        if storedTheme != nil || !secureStore.containsValue(forKey: AppTheme.storageKey) {
+            AppTheme.current = resolvedTheme
+        }
+
+        preferencesPersistenceReady = Self.areStoredPreferencesReadable(in: secureStore)
+        if !preferencesPersistenceReady {
+            persistenceErrorMessage = "Some saved preferences could not be read. They were left untouched."
+        }
     }
 
     public func savePreferences() {
+        guard preferencesPersistenceReady else { return }
         secureStore.set(dailyFocusGoalMinutes, forKey: "dailyFocusGoalMinutes")
         secureStore.set(soundEnabled, forKey: "soundEnabled")
         secureStore.set(reminderSoundEnabled, forKey: "reminderSoundEnabled")
@@ -176,5 +189,24 @@ public final class AppState {
         secureStore.set(automaticUpdateChecksEnabled, forKey: AppUpdatePreferences.automaticChecksEnabledKey)
         secureStore.set(selectedTheme.rawValue, forKey: AppTheme.storageKey)
         AppTheme.current = selectedTheme
+    }
+
+    private static func areStoredPreferencesReadable(in secureStore: SecureStore) -> Bool {
+        let readableValues = [
+            !secureStore.containsValue(forKey: "dailyFocusGoalMinutes") || secureStore.integer(forKey: "dailyFocusGoalMinutes") != nil,
+            !secureStore.containsValue(forKey: "soundEnabled") || secureStore.bool(forKey: "soundEnabled") != nil,
+            !secureStore.containsValue(forKey: "reminderSoundEnabled") || secureStore.bool(forKey: "reminderSoundEnabled") != nil,
+            !secureStore.containsValue(forKey: "reminderSoundType") || secureStore.string(forKey: "reminderSoundType") != nil,
+            !secureStore.containsValue(forKey: "reminderCustomSoundPath") || secureStore.string(forKey: "reminderCustomSoundPath") != nil,
+            !secureStore.containsValue(forKey: "reminderCustomSoundName") || secureStore.string(forKey: "reminderCustomSoundName") != nil,
+            !secureStore.containsValue(forKey: "reminderCustomSoundBookmarkData") || secureStore.data(forKey: "reminderCustomSoundBookmarkData") != nil,
+            !secureStore.containsValue(forKey: "reminderSoundRepeatCount") || secureStore.integer(forKey: "reminderSoundRepeatCount") != nil,
+            !secureStore.containsValue(forKey: "globalShortcutsEnabled") || secureStore.bool(forKey: "globalShortcutsEnabled") != nil,
+            !secureStore.containsValue(forKey: "shortcutPreset") || secureStore.string(forKey: "shortcutPreset") != nil,
+            !secureStore.containsValue(forKey: "showShortcutFeedback") || secureStore.bool(forKey: "showShortcutFeedback") != nil,
+            !secureStore.containsValue(forKey: AppUpdatePreferences.automaticChecksEnabledKey) || secureStore.bool(forKey: AppUpdatePreferences.automaticChecksEnabledKey) != nil,
+            !secureStore.containsValue(forKey: AppTheme.storageKey) || secureStore.string(forKey: AppTheme.storageKey) != nil
+        ]
+        return readableValues.allSatisfy { $0 }
     }
 }

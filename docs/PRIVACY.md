@@ -10,16 +10,25 @@ server.
 
 Focenda stores tasks, task notes, reminders, scratchpad notes, bookmarks,
 quick links, productivity profiles, saved app layouts, and app preferences
-locally. Before these values are written to
-the app's local preference domain, they are encrypted with authenticated
-AES-GCM encryption. The 256-bit encryption key is stored in the macOS
-Keychain, separately from the encrypted values.
+locally. Before these values are written to the app's local preference store,
+they are encrypted with authenticated AES-GCM encryption. The 256-bit
+encryption key is stored in the macOS Keychain, separately from the encrypted
+values.
+
+The canonical preference store has a stable name that is independent of the
+installed bundle identifier. This lets beta and production Focenda builds
+share the same local data when an update changes the app bundle from
+`com.oomestre.focenda.staging` to `com.oomestre.focenda` (or back again).
+During upgrades, Focenda also checks the previous bundle preference domains
+and the previous Keychain service, then migrates any readable values into the
+stable store. A failed read is never treated as an empty list and is never
+used to overwrite the existing saved payload.
 
 Older Focenda versions stored some values as cleartext `UserDefaults` data.
-After an upgrade, Focenda migrates a legacy value when it is read, replaces it
-with encrypted data, and does not keep the old value under that key. A value
-that has never been read by the updated app can remain in an old local backup
-or copy of the preference domain until that backup is removed.
+After an upgrade, Focenda migrates a legacy value when it is read and writes
+the encrypted replacement to the stable store. The old value in the active
+preference domain is replaced; a copy in a previous bundle domain can remain
+as a recovery source until that domain or backup is removed.
 
 The encryption protects data at rest. It does not protect content while it is
 visible in the running app, displayed by macOS, copied to the clipboard, or

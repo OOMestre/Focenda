@@ -39,6 +39,7 @@ public final class BookmarkViewModel {
     public var selectedBookmarkId: UUID?
 
     private let secureStore: SecureStore
+    private var bookmarksPersistenceReady = false
 
     public init(userDefaults: UserDefaults = .standard, secureStore: SecureStore? = nil) {
         self.secureStore = secureStore ?? SecureStore(defaults: userDefaults)
@@ -246,22 +247,35 @@ public final class BookmarkViewModel {
         self.bookmarks = Self.defaultBookmarks
         self.selectedCategory = "All"
         self.searchQuery = ""
+        bookmarksPersistenceReady = true
         saveToUserDefaults()
     }
 
     /// Loads bookmarks from persistent storage or initializes default seed
     public func loadFromUserDefaults() {
-        if let data = secureStore.data(forKey: Self.userDefaultsKey),
-           let decoded = try? JSONDecoder().decode([BookmarkItem].self, from: data),
-           !decoded.isEmpty {
-            self.bookmarks = decoded
-        } else {
+        guard secureStore.containsValue(forKey: Self.userDefaultsKey) else {
             self.bookmarks = Self.defaultBookmarks
+            bookmarksPersistenceReady = true
+            return
         }
+
+        guard let data = secureStore.data(forKey: Self.userDefaultsKey),
+              let decoded = try? JSONDecoder().decode([BookmarkItem].self, from: data) else {
+            // Keep showing a usable view, but never let a failed migration
+            // overwrite the saved payload with the default list.
+            self.bookmarks = Self.defaultBookmarks
+            bookmarksPersistenceReady = false
+            return
+        }
+
+        // An explicitly saved empty list is a valid user choice.
+        self.bookmarks = decoded
+        bookmarksPersistenceReady = true
     }
 
     /// Saves bookmarks to persistent storage
     public func saveToUserDefaults() {
+        guard bookmarksPersistenceReady else { return }
         if let data = try? JSONEncoder().encode(bookmarks) {
             secureStore.setData(data, forKey: Self.userDefaultsKey)
         }

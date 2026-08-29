@@ -26,6 +26,21 @@ final class AppUpdateTests: XCTestCase {
         XCTAssertFalse(AppUpdateConfiguration.focenda.includePrerelease)
     }
 
+    func testStagingAndProductionBundleIdentifiersShareTheUpdatePath() {
+        XCTAssertTrue(
+            AppRuntime.bundleIdentifiersAreCompatible(
+                "com.oomestre.focenda.staging",
+                "com.oomestre.focenda"
+            )
+        )
+        XCTAssertFalse(
+            AppRuntime.bundleIdentifiersAreCompatible(
+                "com.oomestre.focenda.staging",
+                "com.example.other-app"
+            )
+        )
+    }
+
     func testGitHubClientRejectsInsecureDownloadURL() async throws {
         let client = GitHubReleaseClient(
             configuration: AppUpdateConfiguration(repositoryOwner: "OOMestre", repositoryName: "Focenda")
@@ -337,6 +352,46 @@ final class AppUpdateTests: XCTestCase {
         XCTAssertEqual(installedBundle.object(forInfoDictionaryKey: "FocendaReleaseTag") as? String, "v1.2.0")
     }
 
+    func testInstallerAllowsTheStagingToProductionTransitionWithoutChangingTheDataStore() throws {
+        let fileManager = FileManager.default
+        let root = fileManager.temporaryDirectory.appendingPathComponent("FocendaBundleTransitionTests-\(UUID().uuidString)", isDirectory: true)
+        defer { try? fileManager.removeItem(at: root) }
+
+        let installedApp = root.appendingPathComponent("Focenda Staging.app", isDirectory: true)
+        let updateApp = root.appendingPathComponent("Focenda.app", isDirectory: true)
+        let archive = root.appendingPathComponent("Focenda-macOS.zip")
+        try makeAppBundle(
+            at: installedApp,
+            releaseTag: "v1.0.0",
+            bundleIdentifier: "com.oomestre.focenda.staging"
+        )
+        try makeAppBundle(
+            at: updateApp,
+            releaseTag: "v1.2.0",
+            bundleIdentifier: "com.oomestre.focenda"
+        )
+        try makeArchive(from: updateApp, at: archive)
+
+        let asset = AppUpdateAsset(
+            name: "Focenda-macOS.zip",
+            downloadURL: try XCTUnwrap(URL(string: "https://github.com/OOMestre/Focenda/releases/download/v1.2.0/Focenda-macOS.zip"))
+        )
+        let update = try XCTUnwrap(AppUpdate(
+            release: AppUpdateRelease(tagName: "v1.2.0", assets: [asset]),
+            asset: asset
+        ))
+        let installer = AppUpdateInstaller(
+            applicationURL: installedApp,
+            expectedBundleIdentifier: "com.oomestre.focenda.staging",
+            relaunchAfterInstall: false
+        )
+
+        try installer.install(update: update, downloadedFile: archive)
+
+        let installedBundle = try XCTUnwrap(Bundle(url: installedApp))
+        XCTAssertEqual(installedBundle.bundleIdentifier, "com.oomestre.focenda")
+    }
+
     func testInstallerAcceptsArchiveWithEmptyReleaseTag() throws {
         let fileManager = FileManager.default
         let root = fileManager.temporaryDirectory.appendingPathComponent("FocendaLegacyInstallerTests-\(UUID().uuidString)", isDirectory: true)
@@ -463,7 +518,12 @@ final class AppUpdateTests: XCTestCase {
         XCTAssertEqual(installer.installedOnMainThread, false)
     }
 
-    private func makeAppBundle(at appURL: URL, releaseTag: String, shortVersion: String? = nil) throws {
+    private func makeAppBundle(
+        at appURL: URL,
+        releaseTag: String,
+        shortVersion: String? = nil,
+        bundleIdentifier: String = "com.oomestre.focenda.staging"
+    ) throws {
         let fileManager = FileManager.default
         let contentsURL = appURL.appendingPathComponent("Contents", isDirectory: true)
         let executableURL = contentsURL.appendingPathComponent("MacOS/FocendaApp")
@@ -472,7 +532,7 @@ final class AppUpdateTests: XCTestCase {
         try fileManager.setAttributes([.posixPermissions: 0o755], ofItemAtPath: executableURL.path)
 
         let info: [String: Any] = [
-            "CFBundleIdentifier": "com.oomestre.focenda.staging",
+            "CFBundleIdentifier": bundleIdentifier,
             "CFBundleExecutable": "FocendaApp",
             "CFBundlePackageType": "APPL",
             "CFBundleShortVersionString": shortVersion ?? releaseTag.replacingOccurrences(of: "v", with: ""),

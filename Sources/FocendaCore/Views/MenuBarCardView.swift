@@ -59,6 +59,7 @@ public struct MenuBarCardView: View {
 
     // Quick Links state
     @State private var customLinks: [QuickLink] = []
+    @State private var customLinksPersistenceReady = false
     @State private var newLinkTitle: String = ""
     @State private var newLinkUrl: String = ""
     @State private var isAddingLink: Bool = false
@@ -1372,16 +1373,27 @@ public struct MenuBarCardView: View {
     }
 
     private func saveCustomLinks() {
+        guard customLinksPersistenceReady else { return }
         if let data = try? JSONEncoder().encode(customLinks) {
             secureStore.setData(data, forKey: customLinksStorageKey)
         }
     }
 
     private func loadCustomLinks() {
-        if let data = secureStore.data(forKey: customLinksStorageKey),
-           let decoded = try? JSONDecoder().decode([QuickLink].self, from: data) {
-            self.customLinks = decoded
+        guard secureStore.containsValue(forKey: customLinksStorageKey) else {
+            customLinksPersistenceReady = true
+            return
         }
+
+        guard let data = secureStore.data(forKey: customLinksStorageKey),
+              let decoded = try? JSONDecoder().decode([QuickLink].self, from: data) else {
+            // Keep the saved payload intact until it can be read or migrated.
+            customLinksPersistenceReady = false
+            return
+        }
+
+        self.customLinks = decoded
+        customLinksPersistenceReady = true
     }
 
     // MARK: - Footer Actions

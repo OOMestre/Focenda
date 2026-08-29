@@ -12,6 +12,13 @@ public enum TimerStatus: String, Equatable {
 @Observable
 public final class FocusTimerViewModel {
     public static let userDefaultsKey = "focenda_saved_focus_sessions"
+    public static let timerSettingsKey = "focenda_focus_timer_settings"
+
+    private struct TimerSettings: Codable, Equatable {
+        let workDurationMinutes: Int
+        let shortBreakDurationMinutes: Int
+        let longBreakDurationMinutes: Int
+    }
 
     public var currentMode: FocusMode = .work
     public var status: TimerStatus = .idle
@@ -23,7 +30,9 @@ public final class FocusTimerViewModel {
         didSet {
             completedSessionsCount = completedSessions.count
             completedWorkSessionsCount = completedSessions.filter { $0.mode == .work }.count
-            saveToUserDefaults()
+            if !isLoadingPersistedState && sessionsPersistenceReady {
+                saveToUserDefaults()
+            }
         }
     }
     public var onSessionCompleted: ((FocusMode) -> Void)?
@@ -34,29 +43,44 @@ public final class FocusTimerViewModel {
 
     // Interval durations (in minutes)
     public var workDurationMinutes: Int = 25 {
-        didSet { if status == .idle && currentMode == .work { resetToCurrentMode() } }
+        didSet {
+            if status == .idle && currentMode == .work { resetToCurrentMode() }
+            if !isLoadingPersistedState { saveTimerSettings() }
+        }
     }
     public var shortBreakDurationMinutes: Int = 5 {
-        didSet { if status == .idle && currentMode == .shortBreak { resetToCurrentMode() } }
+        didSet {
+            if status == .idle && currentMode == .shortBreak { resetToCurrentMode() }
+            if !isLoadingPersistedState { saveTimerSettings() }
+        }
     }
     public var longBreakDurationMinutes: Int = 15 {
-        didSet { if status == .idle && currentMode == .longBreak { resetToCurrentMode() } }
+        didSet {
+            if status == .idle && currentMode == .longBreak { resetToCurrentMode() }
+            if !isLoadingPersistedState { saveTimerSettings() }
+        }
     }
 
-    private let userDefaults: UserDefaults
+    private let secureStore: SecureStore
     private var timer: Timer?
     // Timer callbacks refresh the UI; ContinuousClock is the source of truth for elapsed time.
     private var runningSegmentStartedAt: ContinuousClock.Instant?
     private var timeRemainingAtSegmentStart = 0
     private let now: () -> ContinuousClock.Instant
+    private var isLoadingPersistedState = false
+    private var sessionsPersistenceReady = false
+    private var timerSettingsPersistenceReady = false
 
     public init(
         userDefaults: UserDefaults = .standard,
+        secureStore: SecureStore? = nil,
         now: @escaping () -> ContinuousClock.Instant = { ContinuousClock.now }
     ) {
-        self.userDefaults = userDefaults
+        self.secureStore = secureStore ?? SecureStore(defaults: userDefaults)
         self.now = now
+        isLoadingPersistedState = true
         loadFromUserDefaults()
+        isLoadingPersistedState = false
         resetToCurrentMode()
     }
 
@@ -254,18 +278,53 @@ public final class FocusTimerViewModel {
 
     /// Saves completed sessions to the device so history survives app restarts.
     public func saveToUserDefaults() {
+        guard sessionsPersistenceReady else { return }
         guard let encoded = try? JSONEncoder().encode(completedSessions) else { return }
-        userDefaults.set(encoded, forKey: Self.userDefaultsKey)
+        secureStore.setData(encoded, forKey: Self.userDefaultsKey)
     }
 
     /// Restores completed sessions and rebuilds counters used by the dashboard and calendar.
     public func loadFromUserDefaults() {
-        guard let data = userDefaults.data(forKey: Self.userDefaultsKey),
-              let decoded = try? JSONDecoder().decode([FocusSession].self, from: data) else {
-            return
+        if !secureStore.containsValue(forKey: Self.timerSettingsKey) {
+            timerSettingsPersistenceReady = true
+        } else if let settings = secureStore.value(TimerSettings.self, forKey: Self.timerSettingsKey) {
+            workDurationMinutes = Self.clampWorkDuration(settings.workDurationMinutes)
+            shortBreakDurationMinutes = Self.clampShortBreakDuration(settings.shortBreakDurationMinutes)
+            longBreakDurationMinutes = Self.clampLongBreakDuration(settings.longBreakDurationMinutes)
+            timerSettingsPersistenceReady = true
         }
 
-        completedSessions = decoded
+        if !secureStore.containsValue(forKey: Self.userDefaultsKey) {
+            sessionsPersistenceReady = true
+        } else if let data = secureStore.data(forKey: Self.userDefaultsKey),
+                  let decoded = try? JSONDecoder().decode([FocusSession].self, from: data) {
+            completedSessions = decoded
+            sessionsPersistenceReady = true
+        }
+    }
+
+    private func saveTimerSettings() {
+        guard timerSettingsPersistenceReady else { return }
+        secureStore.set(
+            TimerSettings(
+                workDurationMinutes: Self.clampWorkDuration(workDurationMinutes),
+                shortBreakDurationMinutes: Self.clampShortBreakDuration(shortBreakDurationMinutes),
+                longBreakDurationMinutes: Self.clampLongBreakDuration(longBreakDurationMinutes)
+            ),
+            forKey: Self.timerSettingsKey
+        )
+    }
+
+    private static func clampWorkDuration(_ minutes: Int) -> Int {
+        min(90, max(5, minutes))
+    }
+
+    private static func clampShortBreakDuration(_ minutes: Int) -> Int {
+        min(30, max(1, minutes))
+    }
+
+    private static func clampLongBreakDuration(_ minutes: Int) -> Int {
+        min(60, max(5, minutes))
     }
 
     deinit {

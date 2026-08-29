@@ -1,4 +1,5 @@
 import XCTest
+import CryptoKit
 import SwiftUI
 @testable import FocendaCore
 
@@ -73,6 +74,29 @@ final class SettingsViewTests: XCTestCase {
         XCTAssertFalse(SecureStore.shared.bool(forKey: "globalShortcutsEnabled") ?? true)
         XCTAssertEqual(SecureStore.shared.string(forKey: "shortcutPreset"), GlobalShortcutPreset.powerUser.rawValue)
         XCTAssertFalse(SecureStore.shared.bool(forKey: "showShortcutFeedback") ?? true)
+    }
+
+    func testUnreadablePreferenceIsNeverOverwrittenByAUserAction() {
+        let suiteName = "Focenda.SettingsUnreadablePreferenceTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let secureStore = SecureStore(
+            defaults: defaults,
+            encryptionKey: SymmetricKey(data: Data(repeating: 0x17, count: 32))
+        )
+        let corruptedPayload = Data("preference from an incompatible build".utf8)
+        defaults.set(corruptedPayload, forKey: "soundEnabled")
+
+        let appState = AppState(secureStore: secureStore)
+        appState.dailyFocusGoalMinutes = 180
+        appState.savePreferences()
+
+        XCTAssertEqual(defaults.data(forKey: "soundEnabled"), corruptedPayload)
+        XCTAssertEqual(
+            appState.persistenceErrorMessage,
+            "Some saved preferences could not be read. They were left untouched."
+        )
     }
 
     func testAutomaticUpdateChecksDefaultToEnabledAndPersist() {

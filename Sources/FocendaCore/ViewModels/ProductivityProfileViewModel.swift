@@ -12,11 +12,13 @@ public final class ProductivityProfileViewModel {
     public private(set) var isActivatingProfileID: UUID?
     public private(set) var lastActivationResult: ProductivityProfileActivationResult?
     public private(set) var lastErrorMessage: String?
+    public private(set) var persistenceErrorMessage: String?
 
     private let secureStore: SecureStore
     private let windowManager: ProductivityWindowManagerProtocol
     private let activationService: ProductivityProfileActivationServiceProtocol
     private let shortcutManager: GlobalShortcutManagerProtocol
+    private var profilesPersistenceReady = false
 
     public init(
         secureStore: SecureStore = .shared,
@@ -252,17 +254,36 @@ public final class ProductivityProfileViewModel {
     }
 
     public func saveProfiles() {
+        guard profilesPersistenceReady else { return }
         guard let data = try? JSONEncoder().encode(profiles) else { return }
         secureStore.setData(data, forKey: Self.storageKey)
     }
 
     public func loadProfiles() {
-        guard let data = secureStore.data(forKey: Self.storageKey),
-              let decodedProfiles = try? JSONDecoder().decode([ProductivityProfile].self, from: data) else {
+        guard secureStore.containsValue(forKey: Self.storageKey) else {
             profiles = []
+            profilesPersistenceReady = true
+            persistenceErrorMessage = nil
             return
         }
+
+        guard let data = secureStore.data(forKey: Self.storageKey),
+              let decodedProfiles = try? JSONDecoder().decode([ProductivityProfile].self, from: data) else {
+            // Never turn an unreadable saved payload into a new empty payload.
+            // The original value remains in SecureStore so a later migration
+            // or a repaired keychain can still recover it.
+            profiles = []
+            profilesPersistenceReady = false
+            let message = "Saved profiles could not be read. They were left untouched."
+            lastErrorMessage = message
+            persistenceErrorMessage = message
+            return
+        }
+
         profiles = decodedProfiles
+        profilesPersistenceReady = true
+        lastErrorMessage = nil
+        persistenceErrorMessage = nil
     }
 
     private func syncGlobalShortcuts() {

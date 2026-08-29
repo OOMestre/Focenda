@@ -17,6 +17,7 @@ public final class TaskListViewModel {
 
     private let storageKey = "focenda_saved_tasks"
     private let secureStore: SecureStore
+    private var tasksPersistenceReady = false
 
     public init(secureStore: SecureStore = .shared) {
         self.secureStore = secureStore
@@ -24,6 +25,7 @@ public final class TaskListViewModel {
         // when no value has ever been stored; a failed decode must not replace
         // the user's data with samples.
         if !secureStore.containsValue(forKey: storageKey) {
+            tasksPersistenceReady = true
             loadSampleTasks()
         } else {
             loadTasks()
@@ -249,16 +251,29 @@ public final class TaskListViewModel {
     }
 
     public func saveTasks() {
+        guard tasksPersistenceReady else { return }
         if let encoded = try? JSONEncoder().encode(tasks) {
             secureStore.setData(encoded, forKey: storageKey)
         }
     }
 
     public func loadTasks() {
-        if let data = secureStore.data(forKey: storageKey),
-           let decoded = try? JSONDecoder().decode([TaskItem].self, from: data) {
-            self.tasks = decoded
+        guard secureStore.containsValue(forKey: storageKey) else {
+            tasksPersistenceReady = true
+            return
         }
+
+        guard let data = secureStore.data(forKey: storageKey),
+              let decoded = try? JSONDecoder().decode([TaskItem].self, from: data) else {
+            // Keep the unreadable payload intact. A failed load must never
+            // make a later UI action overwrite the user's saved tasks.
+            tasks = []
+            tasksPersistenceReady = false
+            return
+        }
+
+        self.tasks = decoded
+        tasksPersistenceReady = true
     }
 
     private func loadSampleTasks() {

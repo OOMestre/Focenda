@@ -247,6 +247,12 @@ public enum AppUpdatePreferences {
 
 public enum AppRuntime {
     public static let fallbackVersion = "0.1.0"
+    /// Bundle identifiers used by Focenda's beta and production artifacts.
+    /// They intentionally share local data through `SecureStore`.
+    public static let compatibleBundleIdentifiers = [
+        "com.oomestre.focenda",
+        "com.oomestre.focenda.staging"
+    ]
 
     public static var currentReleaseIdentifier: String {
         if let releaseTag = Bundle.main.object(forInfoDictionaryKey: "FocendaReleaseTag") as? String,
@@ -264,6 +270,11 @@ public enum AppRuntime {
 
     public static var currentBundleIdentifier: String? {
         Bundle.main.bundleIdentifier
+    }
+
+    public static func bundleIdentifiersAreCompatible(_ expected: String, _ actual: String) -> Bool {
+        expected == actual ||
+            compatibleBundleIdentifiers.contains(expected) && compatibleBundleIdentifiers.contains(actual)
     }
 }
 
@@ -811,7 +822,7 @@ public final class AppUpdateInstaller: AppUpdateInstalling {
                 throw AppUpdateError.noCompatibleApp
             }
 
-            guard candidateIdentifier == expectedIdentifier else {
+            guard AppRuntime.bundleIdentifiersAreCompatible(expectedIdentifier, candidateIdentifier) else {
                 throw AppUpdateError.bundleIdentifierMismatch(expected: expectedIdentifier, actual: candidateIdentifier)
             }
 

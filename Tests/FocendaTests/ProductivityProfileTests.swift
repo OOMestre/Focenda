@@ -135,6 +135,24 @@ final class ProductivityProfileTests: XCTestCase {
         XCTAssertEqual(result?.arrangedApplicationNames, ["Editor"])
     }
 
+    func testUnreadableSavedProfilesAreNeverOverwrittenByAUserAction() throws {
+        let corruptedPayload = Data("profile payload from an older incompatible build".utf8)
+        defaults.set(corruptedPayload, forKey: ProductivityProfileViewModel.storageKey)
+
+        let viewModel = ProductivityProfileViewModel(
+            secureStore: secureStore,
+            windowManager: FakeProductivityWindowManager(),
+            shortcutManager: FakeGlobalShortcutManager()
+        )
+        let encryptedPayloadBeforeAction = try XCTUnwrap(defaults.data(forKey: ProductivityProfileViewModel.storageKey))
+
+        _ = viewModel.addProfile(name: "A profile that must not erase the old payload")
+
+        XCTAssertEqual(viewModel.lastErrorMessage, "Saved profiles could not be read. They were left untouched.")
+        XCTAssertEqual(defaults.data(forKey: ProductivityProfileViewModel.storageKey), encryptedPayloadBeforeAction)
+        XCTAssertEqual(secureStore.data(forKey: ProductivityProfileViewModel.storageKey), corruptedPayload)
+    }
+
     func testDuplicateShortcutIsDetectedAndRemovingProfileUpdatesSelection() throws {
         let shortcutManager = FakeGlobalShortcutManager()
         let viewModel = ProductivityProfileViewModel(

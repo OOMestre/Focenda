@@ -18,14 +18,28 @@ public struct ProductivityProfilesView: View {
 
     public var body: some View {
         GeometryReader { proxy in
-            HStack(spacing: 0) {
-                profileList
-                    .frame(width: min(300, max(220, proxy.size.width * 0.30)))
+            VStack(spacing: 0) {
+                if let error = viewModel.persistenceErrorMessage {
+                    Label(error, systemImage: "exclamationmark.triangle.fill")
+                        .font(.callout)
+                        .foregroundStyle(.orange)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
+                        .background(.orange.opacity(0.10))
 
-                Divider()
+                    Divider()
+                }
 
-                profileEditor
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                HStack(spacing: 0) {
+                    profileList
+                        .frame(width: min(300, max(220, proxy.size.width * 0.30)))
+
+                    Divider()
+
+                    profileEditor
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
             }
         }
         .background(AppTheme.background)

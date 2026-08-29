@@ -189,6 +189,42 @@ final class FocusTimerViewModelTests: XCTestCase {
         XCTAssertNotNil(testDefaults.data(forKey: FocusTimerViewModel.userDefaultsKey))
     }
 
+    func testTimerDurationsPersistAcrossViewModelInstances() {
+        viewModel.workDurationMinutes = 50
+        viewModel.shortBreakDurationMinutes = 10
+        viewModel.longBreakDurationMinutes = 20
+
+        let reloadedViewModel = FocusTimerViewModel(userDefaults: testDefaults)
+
+        XCTAssertEqual(reloadedViewModel.workDurationMinutes, 50)
+        XCTAssertEqual(reloadedViewModel.shortBreakDurationMinutes, 10)
+        XCTAssertEqual(reloadedViewModel.longBreakDurationMinutes, 20)
+    }
+
+    func testUnreadableTimerSettingsAreNeverOverwrittenByAUserAction() throws {
+        let corruptedPayload = Data("timer settings from an incompatible build".utf8)
+        testDefaults.set(corruptedPayload, forKey: FocusTimerViewModel.timerSettingsKey)
+
+        let reloadedViewModel = FocusTimerViewModel(userDefaults: testDefaults)
+        let payloadAfterLoad = try XCTUnwrap(testDefaults.data(forKey: FocusTimerViewModel.timerSettingsKey))
+        reloadedViewModel.workDurationMinutes = 50
+
+        XCTAssertEqual(payloadAfterLoad, corruptedPayload)
+        XCTAssertEqual(testDefaults.data(forKey: FocusTimerViewModel.timerSettingsKey), payloadAfterLoad)
+    }
+
+    func testUnreadableSessionHistoryIsNeverOverwrittenByAUserAction() throws {
+        let corruptedPayload = Data("focus history from an incompatible build".utf8)
+        testDefaults.set(corruptedPayload, forKey: FocusTimerViewModel.userDefaultsKey)
+
+        let reloadedViewModel = FocusTimerViewModel(userDefaults: testDefaults)
+        let payloadAfterLoad = try XCTUnwrap(testDefaults.data(forKey: FocusTimerViewModel.userDefaultsKey))
+        reloadedViewModel.completedSessions.append(FocusSession(mode: .work, durationSeconds: 1))
+
+        XCTAssertNotEqual(payloadAfterLoad, corruptedPayload)
+        XCTAssertEqual(testDefaults.data(forKey: FocusTimerViewModel.userDefaultsKey), payloadAfterLoad)
+    }
+
     func testLoadingHistoryRebuildsCountersFromStoredSessions() throws {
         let sessions = [
             FocusSession(mode: .work, durationSeconds: 30 * 60),

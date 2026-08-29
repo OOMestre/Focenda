@@ -10,16 +10,44 @@ import Security
 public final class SecureStore {
     public static let shared = SecureStore()
     public static let defaultKeychainService = "com.oomestre.focenda.secure-store"
+    /// Keychain service used by the first encrypted Focenda release.
+    ///
+    /// Keep this identifier in the read path forever. Changing a Keychain
+    /// service creates a new encryption key and makes previously encrypted
+    /// UserDefaults values look like they disappeared.
+    public static let legacyKeychainService = "com.oomestre.focenda.secure-storage"
+
+    /// Stable preference suite shared by staging and production bundles.
+    ///
+    /// The app's bundle identifier changes between beta and production builds,
+    /// so `UserDefaults.standard` alone would split the user's data across two
+    /// preference domains. This suite is intentionally independent of the app
+    /// bundle and is used as the canonical local store in production.
+    public static let sharedDefaultsSuiteName = "com.oomestre.focenda.shared-storage"
+
+    private static let supportedBundleIdentifiers = [
+        "com.oomestre.focenda",
+        "com.oomestre.focenda.staging"
+    ]
 
     private static let keychainAccount = "master-key-v1"
     private static let envelopeMarker = Data("FocendaSecureStoreV1".utf8)
     private static let previewKey = SymmetricKey(data: Data(repeating: 0x42, count: 32))
 
     private let defaults: UserDefaults
+    private let sharedDefaults: UserDefaults?
+    private let legacyDefaults: [UserDefaults]
     private let encryptionKey: SymmetricKey
+    private let decryptionKeys: [SymmetricKey]
 
     private static var isRunningForPreviews: Bool {
         ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1"
+    }
+
+    private static var isRunningInTests: Bool {
+        NSClassFromString("XCTestCase") != nil ||
+            ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil ||
+            ProcessInfo.processInfo.environment["XCTestBundlePath"] != nil
     }
 
     /// Creates a store backed by the supplied defaults domain.
@@ -29,10 +57,29 @@ public final class SecureStore {
     public init(
         defaults: UserDefaults = .standard,
         encryptionKey: SymmetricKey? = nil,
-        keychainService: String = SecureStore.defaultKeychainService
+        keychainService: String = SecureStore.defaultKeychainService,
+        sharedDefaults: UserDefaults? = nil,
+        legacyDefaults: [UserDefaults]? = nil,
+        legacyKeychainServices: [String]? = nil
     ) {
         self.defaults = defaults
-        self.encryptionKey = encryptionKey ?? Self.loadOrCreateKey(service: keychainService)
+        let useStableProductionStorage = sharedDefaults != nil || Self.shouldUseSharedStorage(
+            defaults: defaults,
+            encryptionKey: encryptionKey,
+            keychainService: keychainService
+        )
+        self.sharedDefaults = sharedDefaults ?? (useStableProductionStorage ? UserDefaults(suiteName: Self.sharedDefaultsSuiteName) : nil)
+        self.legacyDefaults = legacyDefaults ?? (useStableProductionStorage ? Self.makeLegacyDefaults(excluding: defaults) : [])
+
+        let legacyServices = legacyKeychainServices ?? (
+            keychainService == Self.defaultKeychainService ? [Self.legacyKeychainService] : []
+        )
+        let keyRing = encryptionKey.map { [$0] } ?? Self.loadKeyRing(
+            service: keychainService,
+            legacyServices: legacyServices
+        )
+        self.encryptionKey = keyRing[0]
+        self.decryptionKeys = keyRing
     }
 
     /// Stores an encodable value as authenticated ciphertext.
@@ -42,42 +89,63 @@ public final class SecureStore {
             return
         }
 
-        defaults.set(encrypted, forKey: key)
+        write(encrypted, forKey: key)
     }
 
     /// Stores raw data as authenticated ciphertext.
     public func setData(_ data: Data, forKey key: String) {
         guard let encrypted = encrypt(data, forKey: key) else { return }
-        defaults.set(encrypted, forKey: key)
+        write(encrypted, forKey: key)
     }
 
     /// Reads and decrypts an encodable value, migrating a legacy cleartext value
     /// in place when one is found.
     public func value<Value: Codable>(_ type: Value.Type, forKey key: String) -> Value? {
-        guard let object = defaults.object(forKey: key) else { return nil }
+        for object in storedObjects(forKey: key) {
+            if let encryptedData = object as? Data,
+               isEnvelope(encryptedData) {
+                guard let plaintext = decrypt(encryptedData, forKey: key),
+                      let decoded = try? JSONDecoder().decode(type, from: plaintext) else {
+                    continue
+                }
 
-        if let encryptedData = object as? Data,
-           isEnvelope(encryptedData) {
-            guard let plaintext = decrypt(encryptedData, forKey: key) else { return nil }
-            return try? JSONDecoder().decode(type, from: plaintext)
+                // Re-encrypt every successfully read value with the current
+                // key and copy it to the stable suite. This repairs values
+                // written by older keychain services and older bundle IDs.
+                setData(plaintext, forKey: key)
+                return decoded
+            }
+
+            if let legacyValue = legacyValue(type, from: object) {
+                set(legacyValue, forKey: key)
+                return legacyValue
+            }
         }
 
-        guard let legacyValue = legacyValue(type, from: object) else { return nil }
-        set(legacyValue, forKey: key)
-        return legacyValue
+        return nil
     }
 
     /// Reads raw data and migrates a legacy cleartext data value in place.
     public func data(forKey key: String) -> Data? {
-        guard let rawData = defaults.data(forKey: key) else { return nil }
+        for object in storedObjects(forKey: key) {
+            guard let rawData = object as? Data else { continue }
 
-        if isEnvelope(rawData) {
-            return decrypt(rawData, forKey: key)
+            if isEnvelope(rawData) {
+                guard let plaintext = decrypt(rawData, forKey: key) else { continue }
+                // Existing encrypted values may use the previous Keychain
+                // service or live in a previous bundle's preference domain.
+                // Rewriting a valid value is safe and makes the migration
+                // durable before the next app update.
+                setData(plaintext, forKey: key)
+                return plaintext
+            }
+
+            // Existing Focenda payloads were stored as JSON data directly.
+            setData(rawData, forKey: key)
+            return rawData
         }
 
-        // Existing Focenda payloads were stored as JSON data directly.
-        setData(rawData, forKey: key)
-        return rawData
+        return nil
     }
 
     public func string(forKey key: String) -> String? {
@@ -101,11 +169,38 @@ public final class SecureStore {
     }
 
     public func removeObject(forKey key: String) {
-        defaults.removeObject(forKey: key)
+        for store in allDefaultsStores {
+            store.removeObject(forKey: key)
+        }
     }
 
     public func containsValue(forKey key: String) -> Bool {
-        defaults.object(forKey: key) != nil
+        allDefaultsStores.contains { $0.object(forKey: key) != nil }
+    }
+
+    private var allDefaultsStores: [UserDefaults] {
+        var stores: [UserDefaults] = []
+        if let sharedDefaults {
+            stores.append(sharedDefaults)
+        }
+        stores.append(defaults)
+        stores.append(contentsOf: legacyDefaults)
+
+        return stores.reduce(into: []) { result, store in
+            guard !result.contains(where: { $0 === store }) else { return }
+            result.append(store)
+        }
+    }
+
+    private func storedObjects(forKey key: String) -> [Any] {
+        allDefaultsStores.compactMap { $0.object(forKey: key) }
+    }
+
+    private func write(_ value: Any, forKey key: String) {
+        if let sharedDefaults, sharedDefaults !== defaults {
+            sharedDefaults.set(value, forKey: key)
+        }
+        defaults.set(value, forKey: key)
     }
 
     private func encrypt(_ plaintext: Data, forKey key: String) -> Data? {
@@ -126,16 +221,21 @@ public final class SecureStore {
         guard isEnvelope(envelope) else { return nil }
 
         let combined = envelope.dropFirst(Self.envelopeMarker.count)
-        guard let sealedBox = try? AES.GCM.SealedBox(combined: Data(combined)),
-              let plaintext = try? AES.GCM.open(
-                sealedBox,
-                using: encryptionKey,
-                authenticating: Data(key.utf8)
-              ) else {
+        guard let sealedBox = try? AES.GCM.SealedBox(combined: Data(combined)) else {
             return nil
         }
 
-        return plaintext
+        for candidateKey in decryptionKeys {
+            if let plaintext = try? AES.GCM.open(
+                sealedBox,
+                using: candidateKey,
+                authenticating: Data(key.utf8)
+            ) {
+                return plaintext
+            }
+        }
+
+        return nil
     }
 
     private func isEnvelope(_ data: Data) -> Bool {
@@ -166,27 +266,75 @@ public final class SecureStore {
         return nil
     }
 
-    private static func loadOrCreateKey(service: String) -> SymmetricKey {
+    private static func loadKeyRing(service: String, legacyServices: [String]) -> [SymmetricKey] {
         if isRunningForPreviews {
-            return previewKey
+            return [previewKey]
         }
+
+        let isDefaultService = service == defaultKeychainService
+        var keyDataCandidates: [Data] = []
 
         if let keyData = readKeychainData(service: service), keyData.count == 32 {
-            return SymmetricKey(data: keyData)
+            keyDataCandidates.append(keyData)
         }
 
-        if let fallbackData = readFallbackKeyData(), fallbackData.count == 32 {
-            _ = saveKeychainData(fallbackData, service: service)
-            return SymmetricKey(data: fallbackData)
+        if isDefaultService,
+           let fallbackData = readFallbackKeyData(),
+           fallbackData.count == 32 {
+            keyDataCandidates.append(fallbackData)
         }
 
-        let generatedKey = SymmetricKey(size: .bits256)
-        let keyData = generatedKey.withUnsafeBytes { Data($0) }
-        let saveStatus = saveKeychainData(keyData, service: service)
-        if saveStatus != errSecSuccess {
-            saveFallbackKeyData(keyData)
+        for legacyService in legacyServices where legacyService != service {
+            if let legacyKeyData = readKeychainData(service: legacyService),
+               legacyKeyData.count == 32 {
+                keyDataCandidates.append(legacyKeyData)
+            }
         }
-        return generatedKey
+
+        if keyDataCandidates.isEmpty {
+            let generatedKey = SymmetricKey(size: .bits256)
+            let keyData = generatedKey.withUnsafeBytes { Data($0) }
+            let saveStatus = saveKeychainData(keyData, service: service)
+            if isDefaultService, saveStatus != errSecSuccess {
+                saveFallbackKeyData(keyData)
+            }
+            return [generatedKey]
+        }
+
+        // If the current service did not exist but an older key did, adopt the
+        // older key under the current service. This prevents a later launch
+        // from generating yet another key and makes the migration one-way.
+        if !legacyServices.isEmpty,
+           readKeychainData(service: service)?.count != 32,
+           let firstKeyData = keyDataCandidates.first {
+            let saveStatus = saveKeychainData(firstKeyData, service: service)
+            if saveStatus != errSecSuccess {
+                saveFallbackKeyData(firstKeyData)
+            }
+        }
+
+        return keyDataCandidates.map { SymmetricKey(data: $0) }
+    }
+
+    private static func shouldUseSharedStorage(
+        defaults: UserDefaults,
+        encryptionKey: SymmetricKey?,
+        keychainService: String
+    ) -> Bool {
+        defaults === UserDefaults.standard &&
+            encryptionKey == nil &&
+            keychainService == defaultKeychainService &&
+            !isRunningInTests
+    }
+
+    private static func makeLegacyDefaults(excluding defaults: UserDefaults) -> [UserDefaults] {
+        supportedBundleIdentifiers.compactMap { bundleIdentifier in
+            guard let legacyDefaults = UserDefaults(suiteName: bundleIdentifier),
+                  legacyDefaults !== defaults else {
+                return nil
+            }
+            return legacyDefaults
+        }
     }
 
     private static func createOpenAccess(service: String) -> SecAccess? {

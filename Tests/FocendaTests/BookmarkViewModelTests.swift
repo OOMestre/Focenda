@@ -247,6 +247,15 @@ final class BookmarkViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.bookmarks.count, 8)
     }
 
+    func testExplicitlySavedEmptyBookmarkListRemainsEmptyAfterReload() throws {
+        let emptyBookmarks = try JSONEncoder().encode([BookmarkItem]())
+        testDefaults.set(emptyBookmarks, forKey: BookmarkViewModel.userDefaultsKey)
+
+        let viewModel = BookmarkViewModel(userDefaults: testDefaults)
+
+        XCTAssertTrue(viewModel.bookmarks.isEmpty)
+    }
+
     func testCategoryCountsAndAllCategories() {
         let viewModel = BookmarkViewModel(userDefaults: testDefaults)
         XCTAssertEqual(viewModel.categoryCount(for: "All"), 8)

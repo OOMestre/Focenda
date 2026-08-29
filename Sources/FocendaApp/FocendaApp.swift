@@ -19,7 +19,7 @@ struct FocendaApp: App {
         let secureStore = SecureStore.shared
         self.secureStore = secureStore
         _appState = State(initialValue: AppState(secureStore: secureStore))
-        _timerVM = State(initialValue: FocusTimerViewModel())
+        _timerVM = State(initialValue: FocusTimerViewModel(secureStore: secureStore))
         _taskVM = State(initialValue: TaskListViewModel(secureStore: secureStore))
         _scratchpadVM = State(initialValue: ScratchpadViewModel(secureStore: secureStore))
         _bookmarkVM = State(initialValue: BookmarkViewModel(secureStore: secureStore))
