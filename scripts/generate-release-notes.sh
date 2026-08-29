@@ -212,11 +212,11 @@ def generate_release_notes(repo_root, from_ref=None, to_ref="HEAD", version=None
     lines.append("")
     lines.append("### Installation & Verification")
     if "beta" in version.lower():
-        lines.append("1. Download `Focenda-macOS.zip` or run `Focenda Staging Launcher.app`.")
+        lines.append("1. Download and open `Focenda-macOS.dmg`, or run `Focenda Staging Launcher.app`.")
         lines.append("2. Build locally using `make staging` or run `swift build -c release`.")
         lines.append("3. Verify all test suites pass using `make test`.")
     else:
-        lines.append("1. Download `Focenda-macOS.zip` from the release assets.")
+        lines.append("1. Download and open `Focenda-macOS.dmg` from the release assets.")
         lines.append("2. Move `Focenda.app` to your `/Applications` directory.")
         lines.append("3. Launch Focenda and enjoy focused productivity.")
     lines.append("")

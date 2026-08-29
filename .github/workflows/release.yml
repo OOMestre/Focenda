@@ -59,11 +59,23 @@ jobs:
           cd dist
           zip -r -X ../Focenda-macOS.zip "${FOCENDA_APP_NAME}.app"
 
+      - name: Package App as DMG
+        env:
+          FOCENDA_APP_NAME: ${{ steps.check-prerelease.outputs.app_name }}
+        run: |
+          DMG_ROOT="$(mktemp -d)"
+          trap 'rm -rf "$DMG_ROOT"' EXIT
+          ditto "dist/${FOCENDA_APP_NAME}.app" "$DMG_ROOT/${FOCENDA_APP_NAME}.app"
+          ln -s /Applications "$DMG_ROOT/Applications"
+          hdiutil create -volname "$FOCENDA_APP_NAME" -srcfolder "$DMG_ROOT" -ov -format UDZO Focenda-macOS.dmg
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.check-prerelease.outputs.tag_name }}
           name: Focenda ${{ steps.check-prerelease.outputs.tag_name }}
           prerelease: ${{ steps.check-prerelease.outputs.is_prerelease == 'true' }}
-          files: Focenda-macOS.zip
+          files: |
+            Focenda-macOS.zip
+            Focenda-macOS.dmg
           generate_release_notes: true

@@ -117,7 +117,7 @@ Push the created tag to GitHub:
 ```bash
 git push origin v0.1.0-beta.1
 ```
-GitHub Actions will automatically pick up the tag, build the staging bundle, zip the artifact, and publish a GitHub Pre-release.
+GitHub Actions will automatically pick up the tag, build the staging bundle, package ZIP and DMG artifacts, and publish a GitHub Pre-release.
 
 ---
 
@@ -226,7 +226,7 @@ Focenda's release workflows are automated via GitHub Actions:
 ### 2. Release & Publish (`.github/workflows/release.yml`)
 - Triggers on git tag push matching `v*` (e.g. `v0.1.0`, `v0.1.0-beta.1`).
 - Validates tests and builds macOS application bundle.
-- Packages application into `Focenda-macOS.zip`.
+- Packages the application into `Focenda-macOS.zip` and `Focenda-macOS.dmg`.
 - Detects whether the tag is a beta (`is_prerelease=true`) or production release (`is_prerelease=false`).
 - Publishes the GitHub Release with attached binaries and release notes.
 
