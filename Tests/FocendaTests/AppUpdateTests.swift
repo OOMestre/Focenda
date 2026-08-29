@@ -490,6 +490,55 @@ final class AppUpdateTests: XCTestCase {
         process.waitUntilExit()
         XCTAssertEqual(process.terminationStatus, 0)
     }
+
+    func testServiceSelectsDMGAssetWhenAvailable() async throws {
+        let dmgAsset = AppUpdateAsset(
+            name: "Focenda-macOS.dmg",
+            downloadURL: try XCTUnwrap(URL(string: "https://github.com/OOMestre/Focenda/releases/download/v1.2.0/Focenda-macOS.dmg"))
+        )
+        let release = AppUpdateRelease(
+            tagName: "v1.2.0",
+            assets: [dmgAsset]
+        )
+        let client = StubUpdateClient(releases: [release])
+        let service = AppUpdateService(
+            configuration: AppUpdateConfiguration(repositoryOwner: "OOMestre", repositoryName: "Focenda"),
+            client: client,
+            installer: RecordingUpdateInstaller()
+        )
+
+        let result = try await service.checkForUpdates(currentReleaseIdentifier: "1.0.0")
+        let update = try XCTUnwrap(result)
+
+        XCTAssertEqual(update.version.description, "1.2.0")
+        XCTAssertEqual(update.asset.name, "Focenda-macOS.dmg")
+    }
+
+    func testServicePrefersDMGOverZIPWhenBothAvailable() async throws {
+        let zipAsset = AppUpdateAsset(
+            name: "Focenda-macOS.zip",
+            downloadURL: try XCTUnwrap(URL(string: "https://github.com/OOMestre/Focenda/releases/download/v1.2.0/Focenda-macOS.zip"))
+        )
+        let dmgAsset = AppUpdateAsset(
+            name: "Focenda-macOS.dmg",
+            downloadURL: try XCTUnwrap(URL(string: "https://github.com/OOMestre/Focenda/releases/download/v1.2.0/Focenda-macOS.dmg"))
+        )
+        let release = AppUpdateRelease(
+            tagName: "v1.2.0",
+            assets: [zipAsset, dmgAsset]
+        )
+        let client = StubUpdateClient(releases: [release])
+        let service = AppUpdateService(
+            configuration: AppUpdateConfiguration(repositoryOwner: "OOMestre", repositoryName: "Focenda"),
+            client: client,
+            installer: RecordingUpdateInstaller()
+        )
+
+        let result = try await service.checkForUpdates(currentReleaseIdentifier: "1.0.0")
+        let update = try XCTUnwrap(result)
+
+        XCTAssertEqual(update.asset.name, "Focenda-macOS.dmg")
+    }
 }
 
 private final class StubUpdateClient: AppUpdateClient {

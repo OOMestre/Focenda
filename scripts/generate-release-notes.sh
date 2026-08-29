@@ -212,7 +212,7 @@ def generate_release_notes(repo_root, from_ref=None, to_ref="HEAD", version=None
     lines.append("")
     lines.append("### Installation & Verification")
     if "beta" in version.lower():
-        lines.append("1. Download `Focenda-macOS.dmg` (or `Focenda-macOS.zip`) from the release assets.")
+        lines.append("1. Download `Focenda-macOS.dmg` from the release assets.")
         lines.append("2. Open the `.dmg` and drag `Focenda Staging.app` to your `/Applications` folder.")
         lines.append("3. Verify all test suites pass locally using `make test`.")
     else:

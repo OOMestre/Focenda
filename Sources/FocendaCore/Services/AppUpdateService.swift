@@ -18,7 +18,7 @@ public struct AppUpdateConfiguration: Equatable, Sendable {
         repositoryOwner: String,
         repositoryName: String,
         includePrerelease: Bool = false,
-        supportedAssetNames: [String] = ["Focenda-macOS.zip", "Focenda.zip"]
+        supportedAssetNames: [String] = ["Focenda-macOS.dmg", "Focenda.dmg", "Focenda-macOS.zip", "Focenda.zip"]
     ) {
         self.repositoryOwner = repositoryOwner
         self.repositoryName = repositoryName
@@ -742,6 +742,10 @@ public final class AppUpdateService: AppUpdateProviding {
             }
         }
 
+        if let dmgAsset = release.assets.first(where: { $0.name.lowercased().hasSuffix(".dmg") }) {
+            return dmgAsset
+        }
+
         return release.assets.first { $0.name.lowercased().hasSuffix(".zip") }
     }
 }
@@ -852,6 +856,17 @@ public final class AppUpdateInstaller: AppUpdateInstalling {
 
     private func inspectArchive(at archiveURL: URL) throws {
         #if os(macOS)
+        if archiveURL.pathExtension.lowercased() == "dmg" {
+            guard let attributes = try? fileManager.attributesOfItem(atPath: archiveURL.path),
+                  let fileSize = attributes[.size] as? UInt64 else {
+                throw AppUpdateError.invalidArchive
+            }
+            guard fileSize <= archiveLimits.maxUncompressedBytes else {
+                throw AppUpdateError.archiveTooLarge(limit: archiveLimits.maxUncompressedBytes)
+            }
+            return
+        }
+
         let handle: FileHandle
         do {
             handle = try FileHandle(forReadingFrom: archiveURL)
@@ -1198,6 +1213,11 @@ public final class AppUpdateInstaller: AppUpdateInstalling {
 
     private func extract(_ archiveURL: URL, to destinationURL: URL) throws {
         #if os(macOS)
+        if archiveURL.pathExtension.lowercased() == "dmg" {
+            try extractDMG(archiveURL, to: destinationURL)
+            return
+        }
+
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/ditto")
         process.arguments = ["-x", "-k", archiveURL.path, destinationURL.path]
@@ -1213,6 +1233,58 @@ public final class AppUpdateInstaller: AppUpdateInstalling {
 
         guard process.terminationStatus == 0 else {
             _ = errorPipe.fileHandleForReading.readDataToEndOfFile()
+            throw AppUpdateError.invalidArchive
+        }
+        #else
+        throw AppUpdateError.invalidArchive
+        #endif
+    }
+
+    private func extractDMG(_ dmgURL: URL, to destinationURL: URL) throws {
+        #if os(macOS)
+        let mountPoint = destinationURL.deletingLastPathComponent().appendingPathComponent("MountPoint-\(UUID().uuidString)", isDirectory: true)
+        try fileManager.createDirectory(at: mountPoint, withIntermediateDirectories: true)
+        defer {
+            let detachProcess = Process()
+            detachProcess.executableURL = URL(fileURLWithPath: "/usr/bin/hdiutil")
+            detachProcess.arguments = ["detach", mountPoint.path, "-force"]
+            try? detachProcess.run()
+            detachProcess.waitUntilExit()
+            try? fileManager.removeItem(at: mountPoint)
+        }
+
+        let attachProcess = Process()
+        attachProcess.executableURL = URL(fileURLWithPath: "/usr/bin/hdiutil")
+        attachProcess.arguments = ["attach", dmgURL.path, "-nobrowse", "-readonly", "-mountpoint", mountPoint.path]
+        let errorPipe = Pipe()
+        attachProcess.standardError = errorPipe
+        do {
+            try attachProcess.run()
+        } catch {
+            throw AppUpdateError.processFailed(error.localizedDescription)
+        }
+        attachProcess.waitUntilExit()
+        guard attachProcess.terminationStatus == 0 else {
+            throw AppUpdateError.invalidArchive
+        }
+
+        guard let appURL = findApplication(in: mountPoint) else {
+            throw AppUpdateError.noCompatibleApp
+        }
+
+        let targetAppURL = destinationURL.appendingPathComponent(appURL.lastPathComponent, isDirectory: true)
+        let copyProcess = Process()
+        copyProcess.executableURL = URL(fileURLWithPath: "/usr/bin/ditto")
+        copyProcess.arguments = [appURL.path, targetAppURL.path]
+        let copyErrorPipe = Pipe()
+        copyProcess.standardError = copyErrorPipe
+        do {
+            try copyProcess.run()
+        } catch {
+            throw AppUpdateError.processFailed(error.localizedDescription)
+        }
+        copyProcess.waitUntilExit()
+        guard copyProcess.terminationStatus == 0 else {
             throw AppUpdateError.invalidArchive
         }
         #else
