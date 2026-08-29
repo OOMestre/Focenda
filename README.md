@@ -58,7 +58,7 @@ Combining structured focus cycles (Pomodoro and deep work timers), visual Kanban
 2. **Manage Tasks in Kanban:** Navigate to Tasks & Kanban to organize items across columns, set priority levels (High, Medium, Low), or switch to the linear list view.
 3. **Inspect Schedule in Calendar:** Open Calendar and hover over any date to preview scheduled items; click a date to keep the preview open and use its quick actions.
 4. **Capture Notes:** Use Scratchpad or the Menu Bar popover to take quick notes into dedicated notebooks.
-5. **Restore a Workspace:** Open Profiles, add your applications, capture or edit each window layout, record a shortcut, and activate the profile whenever you want to return to that setup.
+5. **Restore a Workspace:** Open Profiles, add your applications, choose each monitor and a simple position on it, adjust window sizes, record a shortcut, and activate the profile whenever you want to return to that setup.
 
 ---
 

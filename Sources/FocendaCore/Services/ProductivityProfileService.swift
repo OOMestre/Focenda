@@ -143,7 +143,7 @@ public final class AccessibilityWindowManager: ProductivityWindowManagerProtocol
 
     public func defaultWindowLayout() -> ProductivityWindowLayout {
         guard let screen = NSScreen.main ?? NSScreen.screens.first else {
-            return ProductivityWindowLayout()
+            return ProductivityWindowLayout(position: .center)
         }
 
         let visibleFrame = screen.visibleFrame
@@ -155,7 +155,8 @@ public final class AccessibilityWindowManager: ProductivityWindowManagerProtocol
             width: width,
             height: height,
             screenID: Self.displayIdentifier(for: screen),
-            screenName: screen.localizedName
+            screenName: screen.localizedName,
+            position: .center
         )
     }
 
@@ -272,7 +273,8 @@ public final class AccessibilityWindowManager: ProductivityWindowManagerProtocol
             width: windowFrame.width,
             height: windowFrame.height,
             screenID: Self.displayIdentifier(for: screen),
-            screenName: screen.localizedName
+            screenName: screen.localizedName,
+            position: ProductivityWindowPosition.nearest(to: windowFrame, in: visibleFrame)
         )
     }
 
@@ -411,10 +413,20 @@ private extension ProductivityWindowLayout {
         let height = min(safeLayout.height, visibleFrame.height)
         let maxX = max(visibleFrame.minX, visibleFrame.maxX - width)
         let maxY = max(visibleFrame.minY, visibleFrame.maxY - height)
-        let origin = CGPoint(
-            x: min(max(visibleFrame.minX + safeLayout.x, visibleFrame.minX), maxX),
-            y: min(max(visibleFrame.minY + safeLayout.y, visibleFrame.minY), maxY)
-        )
+        let origin: CGPoint
+        if let position = safeLayout.position {
+            origin = position.origin(
+                in: visibleFrame,
+                windowSize: CGSize(width: width, height: height)
+            )
+        } else {
+            // Keep applying coordinates for layouts written before semantic
+            // positions were introduced.
+            origin = CGPoint(
+                x: min(max(visibleFrame.minX + safeLayout.x, visibleFrame.minX), maxX),
+                y: min(max(visibleFrame.minY + safeLayout.y, visibleFrame.minY), maxY)
+            )
+        }
         return CGRect(origin: origin, size: CGSize(width: width, height: height))
     }
 }

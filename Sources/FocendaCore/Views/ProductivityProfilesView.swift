@@ -346,7 +346,7 @@ private struct ProductivityProfileEditor: View {
                         Text("Applications & window layouts")
                             .font(.headline)
                             .foregroundStyle(AppTheme.textPrimary)
-                        Text("Add an app, then set its monitor, position, and size. Capture uses the app's current window.")
+                        Text("Add an app, then choose its monitor, position, and size. Capture converts the current window to the nearest simple position.")
                             .font(.caption)
                             .foregroundStyle(AppTheme.textSecondary)
                             .fixedSize(horizontal: false, vertical: true)
@@ -503,7 +503,7 @@ private struct ProductivityApplicationLayoutEditor: View {
                 }
                 .buttonStyle(.bordered)
                 .controlSize(.small)
-                .help("Save the current position and size of this app's first window")
+                .help("Save this app's monitor, size, and nearest simple position")
 
                 Button(role: .destructive) {
                     viewModel.removeApplication(applicationID: application.id, from: profileID)
@@ -535,15 +535,39 @@ private struct ProductivityApplicationLayoutEditor: View {
                 Spacer(minLength: 0)
             }
 
+            HStack(alignment: .top, spacing: 16) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Label("Position", systemImage: "square.grid.3x3")
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(AppTheme.textSecondary)
+
+                    Text(application.windowLayout.position?.label ?? "Custom saved position")
+                        .font(.caption2)
+                        .foregroundStyle(AppTheme.textTertiary)
+                        .lineLimit(1)
+
+                    Text("Choose where the window sits on this monitor.")
+                        .font(.caption2)
+                        .foregroundStyle(AppTheme.textTertiary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                ProductivityWindowPositionPicker(selection: positionSelection)
+
+                Spacer(minLength: 0)
+            }
+
             HStack(spacing: 10) {
-                layoutNumberField("X", value: $application.windowLayout.x)
-                layoutNumberField("Y", value: $application.windowLayout.y)
+                Label("Window size", systemImage: "arrow.up.left.and.arrow.down.right")
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(AppTheme.textSecondary)
+
                 layoutNumberField("Width", value: $application.windowLayout.width)
                 layoutNumberField("Height", value: $application.windowLayout.height)
                 Spacer(minLength: 0)
             }
 
-            Text("Position is relative to the monitor's usable area. Saved target: \(application.windowLayout.monitorDescription)")
+            Text("Saved target: \(application.windowLayout.monitorDescription)")
                 .font(.caption2)
                 .foregroundStyle(AppTheme.textTertiary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -571,6 +595,13 @@ private struct ProductivityApplicationLayoutEditor: View {
         )
     }
 
+    private var positionSelection: Binding<ProductivityWindowPosition?> {
+        Binding(
+            get: { application.windowLayout.position },
+            set: { application.windowLayout.position = $0 }
+        )
+    }
+
     private func layoutNumberField(_ title: String, value: Binding<Double>) -> some View {
         VStack(alignment: .leading, spacing: 3) {
             Text(title)
@@ -593,6 +624,43 @@ private struct ProductivityApplicationLayoutEditor: View {
         Image(systemName: "app.fill")
             .frame(width: 30, height: 30)
         #endif
+    }
+}
+
+private struct ProductivityWindowPositionPicker: View {
+    @Binding var selection: ProductivityWindowPosition?
+
+    private let columns = Array(
+        repeating: GridItem(.fixed(30), spacing: 4),
+        count: 3
+    )
+
+    var body: some View {
+        LazyVGrid(columns: columns, spacing: 4) {
+            ForEach(ProductivityWindowPosition.allCases) { position in
+                let isSelected = selection == position
+
+                Button {
+                    selection = position
+                } label: {
+                    Image(systemName: position.systemImage)
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(isSelected ? AppTheme.textOnAccent : AppTheme.textSecondary)
+                        .frame(width: 30, height: 26)
+                        .background(isSelected ? AppTheme.accent : AppTheme.cardBackgroundSubtle)
+                        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                .stroke(isSelected ? AppTheme.accent : AppTheme.subtleBorder, lineWidth: 1)
+                        )
+                }
+                .buttonStyle(.plain)
+                .help(position.label)
+                .accessibilityLabel(Text(position.label))
+                .accessibilityAddTraits(isSelected ? .isSelected : [])
+            }
+        }
+        .fixedSize()
     }
 }
 

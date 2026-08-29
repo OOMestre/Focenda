@@ -43,7 +43,8 @@ final class ProductivityProfileTests: XCTestCase {
                 width: 1200,
                 height: 800,
                 screenID: 42,
-                screenName: "Studio Display"
+                screenName: "Studio Display",
+                position: .topRight
             )
         )
         let profile = ProductivityProfile(
@@ -56,9 +57,48 @@ final class ProductivityProfileTests: XCTestCase {
         let decoded = try JSONDecoder().decode(ProductivityProfile.self, from: encoded)
 
         XCTAssertEqual(decoded, profile)
+        XCTAssertEqual(decoded.applications.first?.windowLayout.position, .topRight)
         XCTAssertEqual(shortcut.displayString, "⌥ ⌘ P")
         XCTAssertEqual(ProductivityWindowLayout(width: 1, height: 2).sanitized.width, ProductivityWindowLayout.minimumWidth)
         XCTAssertEqual(ProductivityWindowLayout(width: 1, height: 2).sanitized.height, ProductivityWindowLayout.minimumHeight)
+    }
+
+    func testSemanticWindowPositionsMapToSimpleScreenAnchors() {
+        let visibleFrame = CGRect(x: 100, y: 50, width: 1000, height: 800)
+        let windowSize = CGSize(width: 400, height: 300)
+
+        XCTAssertEqual(
+            ProductivityWindowPosition.topLeft.origin(in: visibleFrame, windowSize: windowSize),
+            CGPoint(x: 124, y: 526)
+        )
+        XCTAssertEqual(
+            ProductivityWindowPosition.center.origin(in: visibleFrame, windowSize: windowSize),
+            CGPoint(x: 400, y: 300)
+        )
+        XCTAssertEqual(
+            ProductivityWindowPosition.bottomRight.origin(in: visibleFrame, windowSize: windowSize),
+            CGPoint(x: 676, y: 74)
+        )
+        XCTAssertEqual(
+            ProductivityWindowPosition.nearest(
+                to: CGRect(x: 675, y: 525, width: windowSize.width, height: windowSize.height),
+                in: visibleFrame
+            ),
+            .topRight
+        )
+    }
+
+    func testLegacyWindowLayoutsDecodeWithoutSemanticPosition() throws {
+        let legacyData = Data(
+            #"{"x":24,"y":36,"width":1200,"height":800,"screenID":42,"screenName":"Studio Display"}"#.utf8
+        )
+
+        let decoded = try JSONDecoder().decode(ProductivityWindowLayout.self, from: legacyData)
+
+        XCTAssertNil(decoded.position)
+        XCTAssertEqual(decoded.x, 24)
+        XCTAssertEqual(decoded.y, 36)
+        XCTAssertEqual(decoded.screenName, "Studio Display")
     }
 
     func testActivationOpensOnlyClosedAppsAndArrangesEveryConfiguredWindow() async {
@@ -228,7 +268,7 @@ private final class FakeProductivityWindowManager: ProductivityWindowManagerProt
     }
 
     func defaultWindowLayout() -> ProductivityWindowLayout {
-        ProductivityWindowLayout(screenID: 42, screenName: "Studio Display")
+        ProductivityWindowLayout(screenID: 42, screenName: "Studio Display", position: .center)
     }
 
     func isApplicationRunning(_ application: ProductivityProfileApplication) -> Bool {
@@ -258,7 +298,8 @@ private final class FakeProductivityWindowManager: ProductivityWindowManagerProt
             width: 1100,
             height: 720,
             screenID: 42,
-            screenName: "Studio Display"
+            screenName: "Studio Display",
+            position: .bottomLeft
         )
     }
 }
