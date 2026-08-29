@@ -52,10 +52,11 @@ jobs:
           FOCENDA_NO_OPEN: "1"
         run: ./scripts/build-staging.sh
 
-      - name: Package App as ZIP
+      - name: Package App as DMG and ZIP
         env:
           FOCENDA_APP_NAME: ${{ steps.check-prerelease.outputs.app_name }}
         run: |
+          ./scripts/create-dmg.sh "dist/${FOCENDA_APP_NAME}.app" "Focenda-macOS.dmg" "${FOCENDA_APP_NAME}"
           cd dist
           zip -r -X ../Focenda-macOS.zip "${FOCENDA_APP_NAME}.app"
 
@@ -65,5 +66,7 @@ jobs:
           tag_name: ${{ steps.check-prerelease.outputs.tag_name }}
           name: Focenda ${{ steps.check-prerelease.outputs.tag_name }}
           prerelease: ${{ steps.check-prerelease.outputs.is_prerelease == 'true' }}
-          files: Focenda-macOS.zip
+          files: |
+            Focenda-macOS.dmg
+            Focenda-macOS.zip
           generate_release_notes: true

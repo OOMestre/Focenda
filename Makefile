@@ -1,4 +1,4 @@
-.PHONY: all test build staging release-beta release-notes clean
+.PHONY: all test build staging dmg release-beta release-notes clean
 
 all: staging
 
@@ -10,6 +10,9 @@ build:
 
 staging:
 	./scripts/build-staging.sh
+
+dmg: staging
+	./scripts/create-dmg.sh "dist/Focenda Staging.app" "dist/Focenda-macOS.dmg" "Focenda Staging"
 
 release-beta:
 	./scripts/release-staging-beta.sh

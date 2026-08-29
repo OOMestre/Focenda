@@ -64,8 +64,8 @@ Combining structured focus cycles (Pomodoro and deep work timers), visual Kanban
 
 ## Installation
 
-### Option 1: Direct Download (Releases)
-Download the latest staging or production bundle from [GitHub Releases](https://github.com/OOMestre/Focenda/releases), extract the archive, and place `Focenda.app` into `/Applications`.
+### Option 1: Direct DMG Download (Releases)
+Download the latest `Focenda-macOS.dmg` from [GitHub Releases](https://github.com/OOMestre/Focenda/releases), open the disk image, and drag `Focenda.app` into `/Applications`.
 
 ### Option 2: Build from Source
 ```bash

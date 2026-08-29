@@ -151,24 +151,27 @@ else
   fi
 fi
 
-# Step 3: Build Focenda Staging.app
+# Step 3: Build Focenda Staging.app & DMG
 echo ""
-echo "[3/3] Building Focenda Staging.app..."
+echo "[3/3] Building Focenda Staging.app and packaging DMG..."
 if [ "$DRY_RUN" -eq 1 ]; then
   echo "[Dry Run] Would execute: ./scripts/build-staging.sh"
+  echo "[Dry Run] Would execute: ./scripts/create-dmg.sh"
 else
   if [ "$NO_OPEN" -eq 1 ]; then
     FOCENDA_RELEASE_TAG="$BETA_TAG" FOCENDA_NO_OPEN=1 "$SCRIPT_DIR/build-staging.sh"
   else
     FOCENDA_RELEASE_TAG="$BETA_TAG" "$SCRIPT_DIR/build-staging.sh"
   fi
+  "$SCRIPT_DIR/create-dmg.sh" "$REPOSITORY_ROOT/dist/Focenda Staging.app" "$REPOSITORY_ROOT/dist/Focenda-macOS.dmg" "Focenda Staging"
 fi
 
 echo ""
 echo "=================================================="
 echo "Staging Beta Release Process Complete"
-echo "- Tag:      $BETA_TAG"
-echo "- Artifact: dist/Focenda Staging.app"
+echo "- Tag:       $BETA_TAG"
+echo "- Artifacts: dist/Focenda Staging.app"
+echo "             dist/Focenda-macOS.dmg"
 echo ""
 echo "To publish this staging beta tag to GitHub, run:"
 echo "  git push origin $BETA_TAG"

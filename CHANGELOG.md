@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 - **Global Shortcuts Settings & Custom Presets:** Added a dedicated Keyboard Shortcuts preferences section in Settings with Apple-style keycap badges, scheme presets (Standard `⌥ ⌘`, Power User `⌃ ⌥ ⌘`, Compact `⌃ ⌥`), and audio feedback options.
 - **macOS Menu Bar Focus Commands:** Integrated a native `CommandMenu("Focus")` with standard keyboard shortcuts in the macOS menu bar.
 - **Private GitHub Updates:** Added manual and daily automatic release checks in Settings, native macOS update notifications, release-archive validation, and local app replacement/relaunch without uploading user data.
+- **Native DMG Releases:** Automated GitHub Actions release packaging to generate and upload direct drag-and-drop installer `.dmg` disk images (`Focenda-macOS.dmg`) alongside update archives.
 - **Post-Update Guide:** After an in-app update, Focenda now opens a short, paginated guide using the release notes so users can review what changed one section at a time.
 
 - **Duplicate Reminder Delivery:** Task and recurring reminders now use the in-app HUD while Focenda is active and the native macOS notification when it is inactive, avoiding duplicate alerts.

@@ -226,9 +226,9 @@ Focenda's release workflows are automated via GitHub Actions:
 ### 2. Release & Publish (`.github/workflows/release.yml`)
 - Triggers on git tag push matching `v*` (e.g. `v0.1.0`, `v0.1.0-beta.1`).
 - Validates tests and builds macOS application bundle.
-- Packages application into `Focenda-macOS.zip`.
+- Packages application into native drag-and-drop installer `Focenda-macOS.dmg` and background update archive `Focenda-macOS.zip`.
 - Detects whether the tag is a beta (`is_prerelease=true`) or production release (`is_prerelease=false`).
-- Publishes the GitHub Release with attached binaries and release notes.
+- Publishes the GitHub Release with attached `.dmg` and `.zip` binaries and generated release notes.
 
 ### 3. In-App Update Client
 Focenda checks the public GitHub Releases API from the Mac. The client sends no tasks, notes, preferences, identifiers, or telemetry; the only downloaded content is the public release metadata and the selected `Focenda-macOS.zip` archive.
