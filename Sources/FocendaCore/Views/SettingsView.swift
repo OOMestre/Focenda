@@ -11,6 +11,7 @@ public struct SettingsView: View {
 
     @State private var isTestingSound: Bool = false
     @State private var testingTask: Task<Void, Never>?
+    @State private var isShowingOnboarding: Bool = false
 
     public init(
         appState: AppState,
@@ -34,6 +35,9 @@ public struct SettingsView: View {
 
                 // Appearance & Theme Picker
                 themePickerSection
+
+                // Guided onboarding tour
+                onboardingSection
 
                 // App Updates
                 appUpdateSection
@@ -149,6 +153,41 @@ public struct SettingsView: View {
         .navigationTitle("Settings")
         .onDisappear {
             stopAudioPreview()
+        }
+        .sheet(isPresented: $isShowingOnboarding) {
+            OnboardingView(appState: appState)
+        }
+    }
+
+    // MARK: - Getting Started Section
+    private var onboardingSection: some View {
+        GroupBox(label: Label("Getting Started", systemImage: "sparkles").foregroundStyle(AppTheme.textPrimary)) {
+            HStack(alignment: .center, spacing: 14) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Review the Focenda workspace")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(AppTheme.textPrimary)
+
+                    Text("Take the guided tour again to see how every section and the menu bar control center fit together.")
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: 12)
+
+                Button {
+                    isShowingOnboarding = true
+                } label: {
+                    Label("Replay Onboarding", systemImage: "arrow.counterclockwise")
+                        .font(.caption.weight(.semibold))
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(AppTheme.accent)
+                .controlSize(.small)
+                .accessibilityIdentifier("settingsReplayOnboardingButton")
+            }
+            .padding(12)
         }
     }
 

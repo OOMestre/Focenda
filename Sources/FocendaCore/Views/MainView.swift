@@ -22,6 +22,8 @@ public struct MainView: View {
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
     @State private var activeInAppReminder: (title: String, subtitle: String, time: String)?
     @State private var isShowingUpdateGuide = false
+    @State private var isShowingOnboarding = false
+    @State private var isPresentingInitialOnboarding = false
 
     public init(
         appState: AppState = AppState(),
@@ -242,9 +244,25 @@ public struct MainView: View {
         .background(AppTheme.background)
         .preferredColorScheme(appState.selectedTheme.colorScheme)
         .onAppear {
-            if updateManager.completedUpdateGuide != nil {
+            if !appState.hasCompletedOnboarding {
+                isPresentingInitialOnboarding = true
+                isShowingOnboarding = true
+            } else if updateManager.completedUpdateGuide != nil {
                 isShowingUpdateGuide = true
             }
+        }
+        .sheet(isPresented: $isShowingOnboarding, onDismiss: {
+            guard isPresentingInitialOnboarding else { return }
+            isPresentingInitialOnboarding = false
+
+            // If an update guide is waiting, show it after the first-launch
+            // tour has been dismissed instead of competing for the same sheet.
+            guard appState.hasCompletedOnboarding, updateManager.completedUpdateGuide != nil else { return }
+            DispatchQueue.main.async {
+                isShowingUpdateGuide = true
+            }
+        }) {
+            OnboardingView(appState: appState)
         }
         .sheet(isPresented: $isShowingUpdateGuide, onDismiss: {
             updateManager.dismissCompletedUpdateGuide()

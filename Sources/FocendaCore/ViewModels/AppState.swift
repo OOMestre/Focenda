@@ -39,7 +39,11 @@ public enum AppTab: String, CaseIterable, Identifiable {
 /// Global application state and user preferences
 @Observable
 public final class AppState {
+    /// Stable key used to remember that the first-launch guided tour was seen.
+    public static let onboardingCompletionKey = "focenda_onboarding_completed_v1"
+
     public var selectedTab: AppTab = .dashboard
+    public private(set) var hasCompletedOnboarding: Bool
     public var dailyFocusGoalMinutes: Int = 120
     public var soundEnabled: Bool = true
     public var reminderSoundEnabled: Bool = true {
@@ -124,6 +128,7 @@ public final class AppState {
 
     public init(secureStore: SecureStore = .shared) {
         self.secureStore = secureStore
+        self.hasCompletedOnboarding = secureStore.bool(forKey: Self.onboardingCompletionKey) ?? false
         let savedGoal = secureStore.integer(forKey: "dailyFocusGoalMinutes") ?? 0
         self.dailyFocusGoalMinutes = savedGoal == 0 ? 120 : savedGoal
         self.soundEnabled = secureStore.bool(forKey: "soundEnabled") ?? true
@@ -169,6 +174,19 @@ public final class AppState {
         }
     }
 
+    /// Marks the guided tour as complete so it no longer appears on launch.
+    public func completeOnboarding() {
+        guard !hasCompletedOnboarding else { return }
+        hasCompletedOnboarding = true
+        secureStore.set(true, forKey: Self.onboardingCompletionKey)
+    }
+
+    /// Resets the tour state for an explicit replay or a future reset action.
+    public func resetOnboarding() {
+        hasCompletedOnboarding = false
+        secureStore.set(false, forKey: Self.onboardingCompletionKey)
+    }
+
     public func savePreferences() {
         guard preferencesPersistenceReady else { return }
         secureStore.set(dailyFocusGoalMinutes, forKey: "dailyFocusGoalMinutes")
@@ -205,7 +223,8 @@ public final class AppState {
             !secureStore.containsValue(forKey: "shortcutPreset") || secureStore.string(forKey: "shortcutPreset") != nil,
             !secureStore.containsValue(forKey: "showShortcutFeedback") || secureStore.bool(forKey: "showShortcutFeedback") != nil,
             !secureStore.containsValue(forKey: AppUpdatePreferences.automaticChecksEnabledKey) || secureStore.bool(forKey: AppUpdatePreferences.automaticChecksEnabledKey) != nil,
-            !secureStore.containsValue(forKey: AppTheme.storageKey) || secureStore.string(forKey: AppTheme.storageKey) != nil
+            !secureStore.containsValue(forKey: AppTheme.storageKey) || secureStore.string(forKey: AppTheme.storageKey) != nil,
+            !secureStore.containsValue(forKey: Self.onboardingCompletionKey) || secureStore.bool(forKey: Self.onboardingCompletionKey) != nil
         ]
         return readableValues.allSatisfy { $0 }
     }

@@ -46,6 +46,7 @@ Combining structured focus cycles (Pomodoro and deep work timers), visual Kanban
 - **Focus Hub & Bookmarks:** Responsive quick-launch directory for essential development references, tools, and documentation with 1-click browser integration.
 - **Productivity Profiles:** Save a complete workspace with selected applications, per-window monitor/position/size layouts, and a global shortcut that opens and organizes it on demand.
 - **Menu Bar Control Center:** Floating, top-down animated macOS menu bar utility providing timer controls, quick note capture into user folders, instant task addition, and bookmarks access.
+- **Guided First-Launch Onboarding:** A complete tour of every workspace section and the menu bar control center, replayable from Settings whenever needed.
 - **Customizable Visual Themes:** Five refined aesthetic themes selectable in Settings (Zen Calm Light, Obsidian Minimal Dark, Warm Sandstone, Nordic Frost, Forest Matcha) without disruptive automatic color shifts.
 - **Private In-App Updates:** Settings can check GitHub Releases manually or once a day, show native macOS update notifications, and install validated Focenda archives locally without sending personal data or app content anywhere.
 - **100% Local & Private:** Tasks, notes, reminders, bookmarks, and preferences stay on device in authenticated encrypted local storage. Zero telemetry, no third-party accounts, and zero cloud tracking.
@@ -53,6 +54,8 @@ Combining structured focus cycles (Pomodoro and deep work timers), visual Kanban
 ---
 
 ## Quick Start
+
+On the first launch, Focenda opens a guided tour covering the Dashboard, Focus Timer, Tasks, Calendar, Reminders, Scratchpad, Bookmarks, Profiles, Settings, Support and the menu bar control center. You can replay it at any time from Settings → Getting Started.
 
 1. **Start a Focus Session:** Open the Focus Timer and start your target interval with one click or spacebar.
 2. **Manage Tasks in Kanban:** Navigate to Tasks & Kanban to organize items across columns, set priority levels (High, Medium, Low), or switch to the linear list view.
