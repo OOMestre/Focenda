@@ -5,6 +5,8 @@ import AppKit
 public final class FloatingMiniTimerPanel: NSPanel {
     public static let shared = FloatingMiniTimerPanel()
 
+    private var hostingView: NSHostingView<FloatingControlCenterView>?
+
     public init() {
         super.init(
             contentRect: NSRect(x: 100, y: 100, width: 340, height: 380),
@@ -40,7 +42,13 @@ public final class FloatingMiniTimerPanel: NSPanel {
                 self?.orderOut(nil)
             }
         )
-        self.contentView = NSHostingView(rootView: view)
+        if let hostingView {
+            hostingView.rootView = view
+        } else {
+            let newHostingView = NSHostingView(rootView: view)
+            self.hostingView = newHostingView
+            self.contentView = newHostingView
+        }
 
         if let pt = point {
             let width: CGFloat = 340
@@ -86,6 +94,7 @@ public struct FloatingControlCenterView: View {
     @State private var quickNoteText: String = ""
     @State private var newTaskTitle: String = ""
     @State private var newTaskPriority: TaskPriority = .medium
+    private let presentationID = UUID()
 
     public init(
         timerVM: FocusTimerViewModel,
@@ -173,6 +182,7 @@ public struct FloatingControlCenterView: View {
         .onAppear {
             quickNoteText = scratchpadVM.currentContent
         }
+        .id(presentationID)
     }
 
     // MARK: - Compact Content

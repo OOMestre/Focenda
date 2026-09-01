@@ -8,6 +8,7 @@ public final class ReminderAlertHUDPanel: NSPanel {
     public static let shared = ReminderAlertHUDPanel()
 
     private var autoDismissTimer: Timer?
+    private var hostingView: NSHostingView<ReminderAlertHUDView>?
     public private(set) var isShowingAlert: Bool = false
     public private(set) var currentTitle: String = ""
     public private(set) var currentSubtitle: String = ""
@@ -78,7 +79,13 @@ public final class ReminderAlertHUDPanel: NSPanel {
             }
         )
 
-        self.contentView = NSHostingView(rootView: view)
+        if let hostingView {
+            hostingView.rootView = view
+        } else {
+            let newHostingView = NSHostingView(rootView: view)
+            self.hostingView = newHostingView
+            self.contentView = newHostingView
+        }
 
         // Calculate top-right position on the primary screen below the menu bar
         let screen = NSScreen.main ?? NSScreen.screens.first
@@ -137,6 +144,7 @@ public struct ReminderAlertHUDView: View {
     @State private var timeRemainingRatio: CGFloat = 1.0
     @State private var isCardPresented: Bool = false
     @State private var isCardPulseActive: Bool = false
+    private let presentationID = UUID()
 
     public init(
         title: String,
@@ -358,6 +366,7 @@ public struct ReminderAlertHUDView: View {
                 presentCard()
             }
         }
+        .id(presentationID)
     }
 
     private func presentCard() {
