@@ -159,7 +159,7 @@ public struct SettingsView: View {
             OnboardingView(appState: appState)
         }
         .sheet(isPresented: $isShowingUpdateGuide) {
-            if let guide = updateManager.lastUpdateGuide {
+            if AppUpdateGuide.isEnabled, let guide = updateManager.lastUpdateGuide {
                 AppUpdateGuideView(guide: guide) {
                     isShowingUpdateGuide = false
                 }
@@ -322,7 +322,7 @@ public struct SettingsView: View {
 
     private var lastUpdateGuideSection: some View {
         Group {
-            if let guide = updateManager.lastUpdateGuide {
+            if AppUpdateGuide.isEnabled, let guide = updateManager.lastUpdateGuide {
                 Divider()
 
                 HStack(alignment: .center, spacing: 10) {

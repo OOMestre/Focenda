@@ -2,6 +2,10 @@ import XCTest
 @testable import FocendaCore
 
 final class AppUpdateTests: XCTestCase {
+    func testUpdateGuideIsTemporarilyHiddenWithoutRemovingItsImplementation() {
+        XCTAssertFalse(AppUpdateGuide.isEnabled)
+    }
+
     func testAppVersionComparisonFollowsReleasePrecedence() throws {
         let beta1 = try XCTUnwrap(AppVersion("v1.2.3-beta.1"))
         let beta2 = try XCTUnwrap(AppVersion("1.2.3-beta.2"))

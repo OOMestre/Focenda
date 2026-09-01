@@ -15,6 +15,10 @@ public struct AppUpdateGuideSection: Codable, Equatable, Identifiable, Sendable 
 
 /// Release notes prepared for the first launch after an in-app update.
 public struct AppUpdateGuide: Codable, Equatable, Identifiable, Sendable {
+    /// Temporarily hides the update guide UI while the experience is refined.
+    /// Keep the implementation and persisted guides available for reactivation.
+    public static let isEnabled = false
+
     public let releaseTag: String
     public let version: String
     public let title: String

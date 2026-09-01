@@ -256,7 +256,7 @@ public struct MainView: View {
             if !appState.hasCompletedOnboarding {
                 isPresentingInitialOnboarding = true
                 isShowingOnboarding = true
-            } else if updateManager.completedUpdateGuide != nil {
+            } else if AppUpdateGuide.isEnabled, updateManager.completedUpdateGuide != nil {
                 isShowingUpdateGuide = true
             }
         }
@@ -266,7 +266,9 @@ public struct MainView: View {
 
             // If an update guide is waiting, show it after the first-launch
             // tour has been dismissed instead of competing for the same sheet.
-            guard appState.hasCompletedOnboarding, updateManager.completedUpdateGuide != nil else { return }
+            guard AppUpdateGuide.isEnabled,
+                  appState.hasCompletedOnboarding,
+                  updateManager.completedUpdateGuide != nil else { return }
             DispatchQueue.main.async {
                 isShowingUpdateGuide = true
             }
@@ -276,7 +278,7 @@ public struct MainView: View {
         .sheet(isPresented: $isShowingUpdateGuide, onDismiss: {
             updateManager.dismissCompletedUpdateGuide()
         }) {
-            if let guide = updateManager.completedUpdateGuide {
+            if AppUpdateGuide.isEnabled, let guide = updateManager.completedUpdateGuide {
                 AppUpdateGuideView(guide: guide) {
                     isShowingUpdateGuide = false
                 }

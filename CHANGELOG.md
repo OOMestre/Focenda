@@ -17,8 +17,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 - **macOS Menu Bar Focus Commands:** Integrated a native `CommandMenu("Focus")` with standard keyboard shortcuts in the macOS menu bar.
 - **Private GitHub Updates:** Added manual and daily automatic release checks in Settings, native macOS update notifications, release-archive validation, and local app replacement/relaunch without uploading user data.
 - **Native DMG Releases:** Automated GitHub Actions release packaging to generate and upload direct drag-and-drop installer `.dmg` disk images (`Focenda-macOS.dmg`) alongside update archives.
-- **Post-Update Guide:** After an in-app update, Focenda now opens a short, paginated guide using the release notes so users can review what changed one section at a time.
-- **Post-Update Guide Replay:** The latest completed update guide is now retained so it can be reopened from Settings whenever needed.
+- **Post-Update Guide (temporarily hidden):** The implementation remains available while the post-update experience is refined.
+- **Post-Update Guide Replay (temporarily hidden):** The latest completed update guide remains retained for future reactivation from Settings.
 
 - **Duplicate Reminder Delivery:** Task and recurring reminders now use the in-app HUD while Focenda is active and the native macOS notification when it is inactive, avoiding duplicate alerts.
 - **Focus History Persistence:** Completed timer sessions and their counters now persist locally and are restored for dashboard metrics and calendar history after relaunching Focenda.

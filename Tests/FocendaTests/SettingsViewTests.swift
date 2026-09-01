@@ -58,7 +58,7 @@ final class SettingsViewTests: XCTestCase {
         XCTAssertNotNil(settingsView.body)
     }
 
-    func testSettingsViewRendersReplayForTheLatestUpdateGuide() throws {
+    func testSettingsViewKeepsStoredUpdateGuideWhileFeatureIsHidden() throws {
         let suiteName = "Focenda.SettingsUpdateGuideTests.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
         defer { defaults.removePersistentDomain(forName: suiteName) }
@@ -89,6 +89,7 @@ final class SettingsViewTests: XCTestCase {
         )
 
         XCTAssertEqual(updateManager.lastUpdateGuide, guide)
+        XCTAssertFalse(AppUpdateGuide.isEnabled)
         XCTAssertNotNil(settingsView.body)
     }
 
@@ -233,4 +234,3 @@ final class SettingsViewTests: XCTestCase {
         XCTAssertFalse(manager.lastUpdateGuide?.sections.isEmpty ?? true)
     }
 }
-
