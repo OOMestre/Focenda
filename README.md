@@ -126,17 +126,7 @@ On the first launch, Focenda opens a guided tour covering the Dashboard, Focus T
 
 ## Installation
 
-### Option 1: Direct DMG Download (Releases)
-Download the latest `Focenda-macOS.dmg` from [GitHub Releases](https://github.com/OOMestre/Focenda/releases), open the disk image, and drag `Focenda.app` into `/Applications`.
-
-### Option 2: Build from Source
-```bash
-git clone https://github.com/OOMestre/Focenda.git
-cd Focenda
-make staging
-```
-
-### Option 3: Homebrew Tap
+### Option 1: Homebrew Tap
 Install the current Focenda release from the [Focenda Homebrew Tap](https://github.com/OOMestre/homebrew-focenda):
 
 ```bash
@@ -167,6 +157,16 @@ Update or remove the installation with:
 ```bash
 brew upgrade --cask focenda
 brew uninstall --cask focenda
+```
+
+### Option 2: Direct DMG Download (Releases)
+Download the latest `Focenda-macOS.dmg` from [GitHub Releases](https://github.com/OOMestre/Focenda/releases), open the disk image, and drag `Focenda.app` into `/Applications`.
+
+### Option 3: Build from Source
+```bash
+git clone https://github.com/OOMestre/Focenda.git
+cd Focenda
+make staging
 ```
 
 ---
