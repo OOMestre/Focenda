@@ -34,9 +34,13 @@ Focenda is a high-performance, distraction-free macOS application engineered to 
 
 Combining structured focus cycles (Pomodoro and deep work timers), visual Kanban workflows, notebook scratchpads, quick web resource hubs, and recurring reminders with native macOS system alerts, Focenda delivers a unified, clutter-free productivity system.
 
----
-
+<a id="key-features"></a>
 ## Key Features & Visual Showcase
+
+### Daily Productivity Dashboard
+Central command hub featuring dynamic time-of-day greetings, daily focus goal progress rings, real-time productivity statistics (today focus time, completed cycles, pending and high-priority tasks), an active focus session card, and quick-action cards for upcoming due tasks.
+
+---
 
 ### Intelligent Focus Timer
 Configurable intervals for deep focus, short breaks, and long breaks with smooth circular progress animations, audio chimes, and quick time adjustments (+5m / -5m).
@@ -44,6 +48,11 @@ Configurable intervals for deep focus, short breaks, and long breaks with smooth
 <p align="center">
   <img src="assets/gifs/focus-timer.gif" alt="Focus Timer" width="650" />
 </p>
+
+---
+
+### Floating Mini Timer HUD
+Draggable, always-on-top picture-in-picture floating timer panel that stays visible across all macOS Spaces and applications. Seamlessly toggle between a compact mini readout and an expanded control center with quick note capture, fast task entry, and bookmark shortcuts.
 
 ---
 
@@ -98,6 +107,9 @@ Responsive quick-launch directory for essential development references, tools, a
 ### Productivity Profiles
 Save a complete window layout with selected applications, per-window monitor/position/size layouts, and a global shortcut that opens and organizes it on demand. Profiles restore windows on the current macOS desktop; macOS does not offer a supported API for an app to create or control Spaces.
 
+### Global System Shortcuts
+Configurable keyboard hotkeys (such as `⌥ + Space` for instant timer toggle) to manage focus cycles and control centers from anywhere in the system without switching windows.
+
 ### Guided First-Launch Onboarding
 A complete tour of every workspace section and the menu bar control center, replayable from Settings whenever needed.
 
@@ -106,6 +118,9 @@ Five refined aesthetic themes selectable in Settings (Zen Calm Light, Obsidian M
 
 ### Private In-App Updates
 Settings can check GitHub Releases manually or once a day, show native macOS update notifications, and install validated Focenda archives locally without sending personal data or app content anywhere.
+
+### Native Support & Diagnostic Hub
+Dedicated in-app support space featuring system diagnostics information, one-click diagnostic report copying, and direct links to community feedback and project support.
 
 ### 100% Local, Private & Secure
 Tasks, notes, reminders, bookmarks, and preferences stay on device in authenticated encrypted local storage. Zero telemetry, no third-party accounts, and zero cloud tracking.
@@ -126,41 +141,32 @@ On the first launch, Focenda opens a guided tour covering the Dashboard, Focus T
 
 ## Installation
 
-### Option 1: Homebrew Tap
-Install the current Focenda release from the [Focenda Homebrew Tap](https://github.com/OOMestre/homebrew-focenda):
+### Option 1: Homebrew Cask (Recommended)
+Install Focenda via [Homebrew](https://brew.sh):
 
 ```bash
-brew tap oomestre/focenda
-brew trust --cask oomestre/focenda/focenda
-brew install --cask focenda
-```
-
-The tap currently installs the latest public Focenda beta release. The command
-above trusts only the Focenda Cask. If you prefer to trust every formula, Cask,
-and command from this tap, use whole-tap trust instead:
-
-```bash
-brew tap oomestre/focenda
-brew trust --tap oomestre/focenda
-brew install --cask focenda
-```
-
-For a one-line install, Homebrew can tap the repository and trust only this
-Cask automatically:
-
-```bash
+# One-line install via Homebrew Cask
 brew install --cask oomestre/focenda/focenda
 ```
 
-Update or remove the installation with:
+Alternatively, tap the repository explicitly:
+
+```bash
+brew tap oomestre/focenda
+brew install --cask focenda
+```
+
+To update or uninstall:
 
 ```bash
 brew upgrade --cask focenda
 brew uninstall --cask focenda
 ```
 
-### Option 2: Direct DMG Download (Releases)
-Download the latest `Focenda-macOS.dmg` from [GitHub Releases](https://github.com/OOMestre/Focenda/releases), open the disk image, and drag `Focenda.app` into `/Applications`.
+### Option 2: Direct DMG Download (GitHub Releases)
+1. Download the latest `Focenda-macOS.dmg` from [GitHub Releases](https://github.com/OOMestre/Focenda/releases).
+2. Open the disk image and drag `Focenda.app` into `/Applications`.
+3. Launch `Focenda` from `/Applications` or Spotlight.
 
 ### Option 3: Build from Source
 ```bash
@@ -179,13 +185,19 @@ make staging
 
 ### Development Commands
 ```bash
-# Run unit test suite (294 automated tests)
+# Run full unit test suite (360 automated tests)
 make test
+
+# Build release binary executable
+make build
 
 # Build staging application bundle and launch
 make staging
 
-# Clean build artifacts
+# Package staging application into distributable disk image (DMG)
+make dmg
+
+# Clean build artifacts and caches
 make clean
 ```
 
