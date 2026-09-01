@@ -136,6 +136,39 @@ cd Focenda
 make staging
 ```
 
+### Option 3: Homebrew Tap
+Install the current Focenda release from the [Focenda Homebrew Tap](https://github.com/OOMestre/homebrew-focenda):
+
+```bash
+brew tap oomestre/focenda
+brew trust --cask oomestre/focenda/focenda
+brew install --cask focenda
+```
+
+The tap currently installs the latest public Focenda beta release. The command
+above trusts only the Focenda Cask. If you prefer to trust every formula, Cask,
+and command from this tap, use whole-tap trust instead:
+
+```bash
+brew tap oomestre/focenda
+brew trust --tap oomestre/focenda
+brew install --cask focenda
+```
+
+For a one-line install, Homebrew can tap the repository and trust only this
+Cask automatically:
+
+```bash
+brew install --cask oomestre/focenda/focenda
+```
+
+Update or remove the installation with:
+
+```bash
+brew upgrade --cask focenda
+brew uninstall --cask focenda
+```
+
 ---
 
 ## Local Development
