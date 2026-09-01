@@ -140,7 +140,7 @@ public struct SettingsView: View {
 
                             Spacer()
 
-                            Text("MIT License")
+                            Text("GPL-3.0 License")
                                 .font(.caption)
                                 .foregroundStyle(AppTheme.textTertiary)
                         }
