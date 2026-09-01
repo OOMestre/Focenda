@@ -58,6 +58,40 @@ final class SettingsViewTests: XCTestCase {
         XCTAssertNotNil(settingsView.body)
     }
 
+    func testSettingsViewRendersReplayForTheLatestUpdateGuide() throws {
+        let suiteName = "Focenda.SettingsUpdateGuideTests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let store = SecureStore(
+            defaults: defaults,
+            encryptionKey: SymmetricKey(data: Data(repeating: 0x29, count: 32))
+        )
+        let guide = AppUpdateGuide(
+            releaseTag: "v1.2.0",
+            version: "1.2.0",
+            title: "A calmer way to focus",
+            sections: [
+                AppUpdateGuideSection(title: "Enhancements", items: ["A better focus flow."])
+            ]
+        )
+        store.set(guide, forKey: AppUpdatePreferences.lastUpdateGuideKey)
+
+        let appState = AppState(secureStore: store)
+        let updateManager = AppUpdateManager(
+            currentReleaseIdentifier: "v1.2.0",
+            secureStore: store
+        )
+        let settingsView = SettingsView(
+            appState: appState,
+            timerVM: FocusTimerViewModel(),
+            updateManager: updateManager
+        )
+
+        XCTAssertEqual(updateManager.lastUpdateGuide, guide)
+        XCTAssertNotNil(settingsView.body)
+    }
+
     func testAppStateSavePreferences() {
         let appState = AppState()
         appState.dailyFocusGoalMinutes = 180
