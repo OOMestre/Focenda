@@ -21,8 +21,8 @@
 [Quick Start](#quick-start) |
 [Installation](#installation) |
 [Local Development](#local-development) |
-[Contributing](#contributing) |
-[Support](#support--buy-me-a-coffee) |
+[Contributing](CONTRIBUTING.md) |
+[Support](SUPPORT.md) |
 [Privacy & Security](docs/PRIVACY.md) |
 [License](#license)
 
@@ -213,7 +213,7 @@ Contributions are welcome. Please consult [CONTRIBUTING.md](CONTRIBUTING.md) for
 
 ---
 
-<a id="support--buy-me-a-coffee"></a>
+<a id="support-the-project"></a>
 ## Support the Project
 
 Focenda is 100% free, open-source, and independently developed. If Focenda helps you stay focused and productive, consider supporting its continued development!
@@ -226,7 +226,7 @@ Focenda is 100% free, open-source, and independently developed. If Focenda helps
 
 - **[Buy Me a Coffee](https://buymeacoffee.com/omestre)** — Support independent macOS development.
 - **Star on GitHub** — Help Focenda reach more people by starring it on [GitHub](https://github.com/OOMestre/Focenda).
-- **Feedback & Ideas** — Share ideas or report issues on [GitHub Issues](https://github.com/OOMestre/Focenda/issues).
+- **Get Help & Feature Requests** — Consult [SUPPORT.md](SUPPORT.md) for reporting issues and submitting feature proposals.
 
 ---
 
