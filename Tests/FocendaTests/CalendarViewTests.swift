@@ -670,4 +670,142 @@ final class CalendarViewTests: XCTestCase {
         XCTAssertFalse(calendarView.keepsDayPopoverOpen(for: otherDate, pinnedDate: selectedDate))
         XCTAssertFalse(calendarView.keepsDayPopoverOpen(for: selectedDate, pinnedDate: nil))
     }
+
+    func testPreGroupedCalendarGridAccuracy() {
+        let timerVM = FocusTimerViewModel()
+        let taskVM = TaskListViewModel()
+        let reminderVM = RecurringReminderViewModel()
+        reminderVM.reminders = []
+        taskVM.tasks = []
+        timerVM.completedSessions = []
+
+        var components = DateComponents()
+        components.year = 2026
+        components.month = 8
+        components.day = 15
+        let baseDate = Calendar.current.date(from: components)!
+
+        let day10 = Calendar.current.date(byAdding: .day, value: -5, to: baseDate)!
+        let day12 = Calendar.current.date(byAdding: .day, value: -3, to: baseDate)!
+        let day15 = baseDate
+        let day20 = Calendar.current.date(byAdding: .day, value: 5, to: baseDate)!
+
+        // Focus sessions (work and break)
+        timerVM.completedSessions = [
+            FocusSession(mode: .work, durationSeconds: 25 * 60, completedAt: day10),
+            FocusSession(mode: .shortBreak, durationSeconds: 5 * 60, completedAt: day10),
+            FocusSession(mode: .work, durationSeconds: 30 * 60, completedAt: day10), // total 55m on day10, 2 sessions
+            FocusSession(mode: .work, durationSeconds: 45 * 60, completedAt: day15),
+            FocusSession(mode: .work, durationSeconds: 20 * 60, completedAt: day20)
+        ]
+
+        // Tasks
+        let taskA = TaskItem(title: "Task A", isCompleted: false, createdAt: day10, reminderDate: day15, dueDate: day12)
+        let taskB = TaskItem(title: "Task B", isCompleted: true, createdAt: day12, completedAt: day15)
+        let taskC = TaskItem(title: "Task C", isCompleted: false, createdAt: day15, dueDate: day20)
+        taskVM.tasks = [taskA, taskB, taskC]
+
+        // Recurring Reminders
+        reminderVM.addReminder(title: "Daily Standup", time: day15, repeatFrequency: .daily)
+
+        let calendarView = CalendarView(
+            timerVM: timerVM,
+            taskVM: taskVM,
+            recurringReminderVM: reminderVM,
+            initialDate: baseDate
+        )
+
+        let days = calendarView.calculateDaysInMonth(for: baseDate)
+        XCTAssertEqual(days.count % 7, 0)
+
+        // Verify day 10
+        let calDay10 = days.first(where: { Calendar.current.isDate($0.date, inSameDayAs: day10) })
+        XCTAssertNotNil(calDay10)
+        XCTAssertEqual(calDay10?.focusMinutes, 55)
+        XCTAssertEqual(calDay10?.focusSessionsCount, 3) // 2 work + 1 shortBreak
+        XCTAssertEqual(calDay10?.focusHeatmapLevel, 2)
+        XCTAssertEqual(calDay10?.tasksCount, 1) // taskA (createdAt)
+        XCTAssertEqual(calDay10?.dueTasksCount, 0)
+        XCTAssertFalse(calDay10?.hasDueTasks ?? true)
+
+        // Verify day 12
+        let calDay12 = days.first(where: { Calendar.current.isDate($0.date, inSameDayAs: day12) })
+        XCTAssertNotNil(calDay12)
+        XCTAssertEqual(calDay12?.dueTasksCount, 1) // taskA due
+        XCTAssertTrue(calDay12?.hasDueTasks ?? false)
+        XCTAssertEqual(calDay12?.tasksCount, 2) // taskA (due) + taskB (created)
+
+        // Verify day 15
+        let calDay15 = days.first(where: { Calendar.current.isDate($0.date, inSameDayAs: day15) })
+        XCTAssertNotNil(calDay15)
+        XCTAssertEqual(calDay15?.focusMinutes, 45)
+        XCTAssertEqual(calDay15?.focusSessionsCount, 1)
+        XCTAssertEqual(calDay15?.hasReminders, true)
+        XCTAssertEqual(calDay15?.hasRecurringReminders, true)
+        XCTAssertEqual(calDay15?.recurringRemindersCount, 1)
+        XCTAssertEqual(calDay15?.tasksCount, 3) // taskA (reminder) + taskB (completed) + taskC (created)
+
+        // Verify day 20
+        let calDay20 = days.first(where: { Calendar.current.isDate($0.date, inSameDayAs: day20) })
+        XCTAssertNotNil(calDay20)
+        XCTAssertEqual(calDay20?.dueTasksCount, 1) // taskC due
+        XCTAssertTrue(calDay20?.hasDueTasks ?? false)
+    }
+
+    func testPreGroupedCalendarGridPerformanceWithHundredsOfItems() {
+        let timerVM = FocusTimerViewModel()
+        let taskVM = TaskListViewModel()
+        let reminderVM = RecurringReminderViewModel()
+        reminderVM.reminders = []
+
+        var components = DateComponents()
+        components.year = 2026
+        components.month = 8
+        components.day = 1
+        let monthStart = Calendar.current.date(from: components)!
+
+        // Create 500 focus sessions and 500 tasks spread across the month
+        var sessions: [FocusSession] = []
+        var tasks: [TaskItem] = []
+
+        for i in 0..<500 {
+            let offset = i % 31
+            let sessionDate = Calendar.current.date(byAdding: .day, value: offset, to: monthStart)!
+            sessions.append(FocusSession(
+                mode: i % 4 == 0 ? .shortBreak : .work,
+                durationSeconds: 25 * 60,
+                completedAt: sessionDate
+            ))
+
+            let taskDue = i % 3 == 0 ? Calendar.current.date(byAdding: .day, value: offset, to: monthStart) : nil
+            let taskReminder = i % 5 == 0 ? Calendar.current.date(byAdding: .day, value: offset, to: monthStart) : nil
+            tasks.append(TaskItem(
+                title: "Stress Task \(i)",
+                isCompleted: i % 2 == 0,
+                createdAt: sessionDate,
+                completedAt: i % 2 == 0 ? sessionDate : nil,
+                reminderDate: taskReminder,
+                dueDate: taskDue
+            ))
+        }
+
+        timerVM.completedSessions = sessions
+        taskVM.tasks = tasks
+
+        let calendarView = CalendarView(
+            timerVM: timerVM,
+            taskVM: taskVM,
+            recurringReminderVM: reminderVM,
+            initialDate: monthStart
+        )
+
+        let startTime = CFAbsoluteTimeGetCurrent()
+        let days = calendarView.calculateDaysInMonth(for: monthStart)
+        let elapsed = (CFAbsoluteTimeGetCurrent() - startTime) * 1000 // ms
+
+        XCTAssertEqual(days.count % 7, 0)
+        XCTAssertTrue(days.count >= 28 && days.count <= 42)
+        // Execution must be fast (< 50ms in testing environment, typically < 3ms)
+        XCTAssertLessThan(elapsed, 50.0, "calculateDaysInMonth took \(elapsed)ms for 1000 items, expected < 50ms")
+    }
 }
