@@ -1,8 +1,5 @@
 <div align="center">
 
-<img src="assets/focenda-mascot.png" alt="Focenda Owl Mascot" width="160" />
-<br/>
-
 <h1>Focenda</h1>
 
 <hr />
@@ -38,7 +35,7 @@ Focenda is a high-performance, distraction-free macOS application engineered to 
 Combining structured focus cycles (Pomodoro and deep work timers), visual Kanban workflows, notebook scratchpads, quick web resource hubs, and recurring reminders with native macOS system alerts, Focenda delivers a unified, clutter-free productivity system.
 
 <a id="key-features"></a>
-## Key Features & Visual Showcase
+## Key Features
 
 ### Daily Productivity Dashboard
 Central command hub featuring dynamic time-of-day greetings, daily focus goal progress rings, real-time productivity statistics (today focus time, completed cycles, pending and high-priority tasks), an active focus session card, and quick-action cards for upcoming due tasks.
@@ -47,10 +44,6 @@ Central command hub featuring dynamic time-of-day greetings, daily focus goal pr
 
 ### Intelligent Focus Timer
 Configurable intervals for deep focus, short breaks, and long breaks with smooth circular progress animations, audio chimes, and quick time adjustments (+5m / -5m).
-
-<p align="center">
-  <img src="assets/gifs/focus-timer.gif" alt="Focus Timer" width="650" />
-</p>
 
 ---
 
@@ -62,54 +55,30 @@ Draggable, always-on-top picture-in-picture floating timer panel that stays visi
 ### Unified Tasks & Kanban Board
 Interactive 3-column Kanban workflow with drag-and-drop support, direct status progression pills (To Do, In Progress, Done), Pomodoro counters, due dates, and seamless toggling to a linear list view.
 
-<p align="center">
-  <img src="assets/gifs/tasks-kanban.gif" alt="Tasks & Kanban Board" width="650" />
-</p>
-
 ---
 
 ### Interactive Calendar & Day Previews
 Full monthly calendar grid with daily focus heatmaps, scheduled tasks, due date milestone indicators, and compact hover previews that stay pinned after clicking a date for quick actions.
-
-<p align="center">
-  <img src="assets/gifs/calendar.gif" alt="Interactive Calendar" width="650" />
-</p>
 
 ---
 
 ### Recurring Reminders
 Dedicated scheduler for daily, weekday, weekly, and monthly recurring tasks with native macOS banner alerts, rich chime notifications, and overdue tracking.
 
-<p align="center">
-  <img src="assets/gifs/reminders.gif" alt="Recurring Reminders" width="650" />
-</p>
-
 ---
 
 ### Multi-Notebook Scratchpad
 Master-detail quick notes system organized into custom folders (General, Projects, Work, Personal, Ideas) with live character/word counters, search, and keystroke persistence.
-
-<p align="center">
-  <img src="assets/gifs/scratchpad.gif" alt="Multi-Notebook Scratchpad" width="650" />
-</p>
 
 ---
 
 ### Menu Bar Control Center
 Floating, top-down animated macOS menu bar utility providing quick timer controls, instant note capture into user folders, rapid task creation, and bookmark access without interrupting your workflow.
 
-<p align="center">
-  <img src="assets/gifs/menu-bar.gif" alt="Menu Bar Control Center" width="650" />
-</p>
-
 ---
 
 ### Focus Hub & Bookmarks
 Responsive quick-launch directory for essential development references, tools, and documentation with 1-click browser integration.
-
-<p align="center">
-  <img src="assets/gifs/bookmarks.gif" alt="Focus Hub & Bookmarks" width="650" />
-</p>
 
 ---
 
