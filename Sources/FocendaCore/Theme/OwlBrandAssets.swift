@@ -29,7 +29,8 @@ public enum OwlBrandAssets {
             Bundle.main.path(forResource: "focenda-mascot", ofType: "png"),
             Bundle.main.path(forResource: "AppIcon", ofType: "icns"),
             Bundle.main.resourcePath.map { "\($0)/focenda-mascot.png" },
-            "Resources/focenda-mascot.png"
+            "Resources/focenda-mascot.png",
+            "assets/focenda-mascot.png"
         ].compactMap { $0 }
 
         for path in searchPaths {
@@ -52,7 +53,8 @@ public enum OwlBrandAssets {
         let searchPaths = [
             Bundle.main.path(forResource: "focenda-icon", ofType: "png"),
             Bundle.main.resourcePath.map { "\($0)/focenda-icon.png" },
-            "Resources/focenda-icon.png"
+            "Resources/focenda-icon.png",
+            "assets/focenda-icon.png"
         ].compactMap { $0 }
 
         for path in searchPaths {
