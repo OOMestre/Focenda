@@ -4,29 +4,22 @@ All notable changes, new features, and bug fixes for **Focenda** are documented 
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.1.0] - 2026-09-01
 
-### Added
-- **Keychain Prompt Removal:** Moved the local encryption key to a protected
-  Application Support file so normal launches and app updates no longer trigger
-  recurring macOS Keychain authorization prompts. Existing installations are
-  migrated from the previous Keychain entry once.
-- **Productivity Profiles (temporarily hidden):** The implementation and saved profile data remain available while the experience is refined.
-- **Global Keyboard Shortcuts for Focus:** Implemented native system-wide keyboard shortcuts using macOS Carbon HIToolbox (`RegisterEventHotKey`) and `AppKit` to start/pause focus (`⌥ ⌘ F`), launch deep focus mode (`⌥ ⌘ 1`), trigger short breaks (`⌥ ⌘ 2`), start long breaks (`⌥ ⌘ 3`), reset the timer (`⌥ ⌘ R`), and skip sessions (`⌥ ⌘ S`) from any application across macOS.
-- **Global Shortcuts Settings & Custom Presets:** Added a dedicated Keyboard Shortcuts preferences section in Settings with Apple-style keycap badges, scheme presets (Standard `⌥ ⌘`, Power User `⌃ ⌥ ⌘`, Compact `⌃ ⌥`), and audio feedback options.
-- **macOS Menu Bar Focus Commands:** Integrated a native `CommandMenu("Focus")` with standard keyboard shortcuts in the macOS menu bar.
-- **Private GitHub Updates:** Added manual and daily automatic release checks in Settings, native macOS update notifications, release-archive validation, and local app replacement/relaunch without uploading user data.
-- **Native DMG Releases:** Automated GitHub Actions release packaging to generate and upload direct drag-and-drop installer `.dmg` disk images (`Focenda-macOS.dmg`) alongside update archives.
-- **Post-Update Guide (temporarily hidden):** The implementation remains available while the post-update experience is refined.
-- **Post-Update Guide Replay (temporarily hidden):** The latest completed update guide remains retained for future reactivation from Settings.
+### Summary
+Focenda v0.1.0 is the first official release of the native macOS focus, task, and calendar productivity suite. It provides a complete, distraction-free productivity environment combining intelligent focus timers, unified Kanban task workflows, an interactive monthly calendar, recurring reminders, a multi-notebook scratchpad, an instant-access menu bar control center, 5 refined visual themes, global keyboard shortcuts, guided onboarding, and encrypted local storage.
 
-- **Duplicate Reminder Delivery:** Task and recurring reminders now use the in-app HUD while Focenda is active and the native macOS notification when it is inactive, avoiding duplicate alerts.
-- **Focus History Persistence:** Completed timer sessions and their counters now persist locally and are restored for dashboard metrics and calendar history after relaunching Focenda.
-- **Pomodoro Completion Alert:** Timer completion now uses the floating alert HUD without activating the app, and plays the configured alert chime (Hero by default) only once.
-- **Pomodoro Alert Motion:** Completion alerts animate the timer badge with a subtle pulse that respects Reduce Motion.
-
-- **Calendar Day Preview:** Clicking a calendar date now pins its preview while the cursor moves to the quick actions, and the preview has been simplified to reduce visual density.
-- **Simplified Scratchpad Notes:** Removed the generic color categories and their filter controls. The Scratchpad now starts empty, allows the final note to be deleted, uses neutral untitled notes, and migrates old category placeholders without losing user-written content.
+### Key Highlights & Features
+- **Intelligent Focus Timer:** Deep focus, short break, and long break intervals with circular progress animations, mini floating HUD, and session counters.
+- **Unified Tasks & Kanban:** 3-column drag-and-drop Kanban board with seamless toggle to linear list view, priority flags, due dates, and Pomodoro session counts.
+- **Interactive Calendar:** Monthly schedule grid with focus heatmaps, scheduled task indicators, and pinned date previews.
+- **Recurring Reminders:** Scheduled alerts for daily, weekday, weekly, and monthly intervals with native macOS notifications and rich chime alerts.
+- **Multi-Notebook Scratchpad:** Debounced AES-GCM encrypted notes with instant search, folder organization, and keystroke persistence.
+- **Menu Bar Control Center:** Quick timer controls, note capture, and task addition directly from the macOS menu bar.
+- **Global Keyboard Shortcuts:** System-wide hotkeys (`⌥ ⌘ F`, `⌥ ⌘ 1-3`, etc.) to control timers and focus cycles from any app.
+- **5 Refined Aesthetic Themes:** Zen Calm Light, Obsidian Minimal Dark, Warm Sandstone, Nordic Frost, and Forest Matcha with instant color switching.
+- **Direct DMG Installer:** Automated `.dmg` drag-and-drop disk image releases (`Focenda-macOS.dmg`) and private in-app updates.
+- **100% Local, Private & Secure:** Authenticated AES-GCM encryption on device with zero telemetry and no cloud tracking.
 
 ---
 
