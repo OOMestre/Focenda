@@ -8,6 +8,7 @@ import Combine
 /// Workspace for creating, editing, and activating productivity profiles.
 public struct ProductivityProfilesView: View {
     @Bindable var viewModel: ProductivityProfileViewModel
+    @Environment(\.scenePhase) private var scenePhase
 
     @State private var profileToDelete: ProductivityProfile?
     @State private var isDeleteAlertPresented = false
@@ -44,6 +45,13 @@ public struct ProductivityProfilesView: View {
         }
         .background(AppTheme.background)
         .navigationTitle("Productivity Profiles")
+        .onAppear {
+            viewModel.refreshAccessibilityStatus()
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            guard newPhase == .active else { return }
+            viewModel.refreshAccessibilityStatus()
+        }
         .alert("Delete profile?", isPresented: $isDeleteAlertPresented) {
             Button("Delete", role: .destructive) {
                 if let profileToDelete {

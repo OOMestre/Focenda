@@ -130,6 +130,23 @@ final class ProductivityProfileTests: XCTestCase {
         XCTAssertFalse(result.succeeded)
     }
 
+    func testAccessibilityStatusRefreshesAfterPermissionChanges() {
+        let windowManager = FakeProductivityWindowManager()
+        windowManager.isAccessibilityTrusted = false
+        let viewModel = ProductivityProfileViewModel(
+            secureStore: secureStore,
+            windowManager: windowManager,
+            shortcutManager: FakeGlobalShortcutManager()
+        )
+
+        XCTAssertFalse(viewModel.isAccessibilityTrusted)
+
+        windowManager.isAccessibilityTrusted = true
+
+        XCTAssertTrue(viewModel.refreshAccessibilityStatus())
+        XCTAssertTrue(viewModel.isAccessibilityTrusted)
+    }
+
     func testViewModelPersistsProfilesAndRegistersProfileShortcuts() async throws {
         let windowManager = FakeProductivityWindowManager()
         let shortcutManager = FakeGlobalShortcutManager()

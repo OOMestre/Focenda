@@ -13,6 +13,7 @@ public final class ProductivityProfileViewModel {
     public private(set) var lastActivationResult: ProductivityProfileActivationResult?
     public private(set) var lastErrorMessage: String?
     public private(set) var persistenceErrorMessage: String?
+    public private(set) var isAccessibilityTrusted: Bool
 
     private let secureStore: SecureStore
     private let windowManager: ProductivityWindowManagerProtocol
@@ -30,6 +31,7 @@ public final class ProductivityProfileViewModel {
         self.windowManager = windowManager
         self.activationService = activationService ?? ProductivityProfileActivationService(windowManager: windowManager)
         self.shortcutManager = shortcutManager
+        self.isAccessibilityTrusted = windowManager.isAccessibilityTrusted
         loadProfiles()
         selectedProfileID = profiles.first?.id
         syncGlobalShortcuts()
@@ -45,12 +47,18 @@ public final class ProductivityProfileViewModel {
         return profiles.first(where: { $0.id == activeProfileID })
     }
 
-    public var isAccessibilityTrusted: Bool {
-        windowManager.isAccessibilityTrusted
-    }
-
     public var availableScreens: [ProductivityScreenDescriptor] {
         windowManager.availableScreens()
+    }
+
+    /// Refreshes the cached Accessibility state after the user changes it in System Settings.
+    @discardableResult
+    public func refreshAccessibilityStatus() -> Bool {
+        let trusted = windowManager.isAccessibilityTrusted
+        if isAccessibilityTrusted != trusted {
+            isAccessibilityTrusted = trusted
+        }
+        return trusted
     }
 
     @discardableResult
@@ -222,6 +230,7 @@ public final class ProductivityProfileViewModel {
 
     public func requestAccessibilityAccess() {
         windowManager.requestAccessibilityAccess()
+        refreshAccessibilityStatus()
     }
 
     public func hasShortcutConflict(for profileID: UUID) -> Bool {
