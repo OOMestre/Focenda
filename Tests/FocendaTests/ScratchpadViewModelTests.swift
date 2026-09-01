@@ -300,9 +300,7 @@ final class ScratchpadViewModelTests: XCTestCase {
         XCTAssertEqual(note.relativeFormattedDate, "2h ago")
 
         note.updatedAt = Date().addingTimeInterval(-172800) // 2 days ago
-        let formatter = DateFormatter()
-        formatter.dateFormat = "MMM d"
-        XCTAssertEqual(note.relativeFormattedDate, formatter.string(from: note.updatedAt))
+        XCTAssertEqual(note.relativeFormattedDate, AppDateFormatter.monthDay.string(from: note.updatedAt))
     }
 
     func testDisplayTitleAndSnippet() {

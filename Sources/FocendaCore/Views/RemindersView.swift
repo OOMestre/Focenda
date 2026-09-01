@@ -960,46 +960,36 @@ public struct RemindersView: View {
             return (time: "None", title: "No upcoming alarms")
         }
 
-        let timeFormatter = DateFormatter()
-        timeFormatter.dateFormat = "h:mm a"
-        let timeStr = timeFormatter.string(from: earliest.date)
+        let timeStr = AppDateFormatter.time12.string(from: earliest.date)
 
         if calendar.isDateInToday(earliest.date) {
             return (time: timeStr, title: "Today • \(earliest.title)")
         } else if calendar.isDateInTomorrow(earliest.date) {
             return (time: timeStr, title: "Tomorrow • \(earliest.title)")
         } else {
-            let dayFormatter = DateFormatter()
-            dayFormatter.dateFormat = "MMM d"
-            return (time: timeStr, title: "\(dayFormatter.string(from: earliest.date)) • \(earliest.title)")
+            return (time: timeStr, title: "\(AppDateFormatter.monthDay.string(from: earliest.date)) • \(earliest.title)")
         }
     }
 
     private func formattedRelativeTime(_ date: Date) -> String {
-        let timeFormatter = DateFormatter()
-        timeFormatter.dateFormat = "h:mm a"
-        let timeStr = timeFormatter.string(from: date)
+        let timeStr = AppDateFormatter.time12.string(from: date)
 
         if calendar.isDateInToday(date) {
             return "Today \(timeStr)"
         } else if calendar.isDateInTomorrow(date) {
             return "Tomorrow \(timeStr)"
         } else {
-            let dayFormatter = DateFormatter()
-            dayFormatter.dateFormat = "EEE, MMM d"
-            return "\(dayFormatter.string(from: date)) \(timeStr)"
+            return "\(AppDateFormatter.weekdayMonthDay.string(from: date)) \(timeStr)"
         }
     }
 
     private func formattedTaskReminderDate(_ date: Date) -> String {
-        let formatter = DateFormatter()
         if calendar.isDateInToday(date) {
-            formatter.dateFormat = "'Today,' h:mm a"
+            return AppDateFormatter.todayTime12.string(from: date)
         } else if calendar.isDateInTomorrow(date) {
-            formatter.dateFormat = "'Tmrw,' h:mm a"
+            return AppDateFormatter.tomorrowTime12.string(from: date)
         } else {
-            formatter.dateFormat = "MMM d, h:mm a"
+            return AppDateFormatter.monthDayTime12.string(from: date)
         }
-        return formatter.string(from: date)
     }
 }

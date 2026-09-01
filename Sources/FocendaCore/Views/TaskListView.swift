@@ -716,28 +716,23 @@ public struct TaskRowView: View {
 
     private func formatReminderDate(_ date: Date) -> String {
         let calendar = Calendar.current
-        let formatter = DateFormatter()
-        formatter.timeStyle = .short
 
         if calendar.isDateInToday(date) {
-            return "Today \(formatter.string(from: date))"
+            return "Today \(AppDateFormatter.shortTime.string(from: date))"
         } else {
-            formatter.dateStyle = .short
-            return formatter.string(from: date)
+            return AppDateFormatter.shortDateTime.string(from: date)
         }
     }
 
     private func formatDueDate(_ date: Date) -> String {
         let calendar = Calendar.current
-        let formatter = DateFormatter()
 
         if calendar.isDateInToday(date) {
             return "Due today"
         } else if calendar.isDateInTomorrow(date) {
             return "Due tomorrow"
         } else {
-            formatter.dateFormat = "MMM d"
-            return "Due \(formatter.string(from: date))"
+            return "Due \(AppDateFormatter.monthDay.string(from: date))"
         }
     }
 }

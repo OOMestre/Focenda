@@ -99,17 +99,13 @@ public struct ScratchpadNote: Identifiable, Codable, Equatable, Sendable {
     }
 
     public var formattedDate: String {
-        let formatter = DateFormatter()
         let calendar = Calendar.current
         if calendar.isDateInToday(updatedAt) {
-            formatter.dateFormat = "HH:mm"
-            return "Today, " + formatter.string(from: updatedAt)
+            return "Today, " + AppDateFormatter.time24.string(from: updatedAt)
         } else if calendar.isDateInYesterday(updatedAt) {
-            formatter.dateFormat = "HH:mm"
-            return "Yesterday, " + formatter.string(from: updatedAt)
+            return "Yesterday, " + AppDateFormatter.time24.string(from: updatedAt)
         } else {
-            formatter.dateFormat = "MMM d, HH:mm"
-            return formatter.string(from: updatedAt)
+            return AppDateFormatter.monthDayTime24.string(from: updatedAt)
         }
     }
 
@@ -127,9 +123,7 @@ public struct ScratchpadNote: Identifiable, Codable, Equatable, Sendable {
         } else if Calendar.current.isDateInYesterday(updatedAt) {
             return "Yesterday"
         } else {
-            let formatter = DateFormatter()
-            formatter.dateFormat = "MMM d"
-            return formatter.string(from: updatedAt)
+            return AppDateFormatter.monthDay.string(from: updatedAt)
         }
     }
 }
