@@ -58,11 +58,32 @@ jobs:
         run: |
           ./scripts/create-dmg.sh "dist/${FOCENDA_APP_NAME}.app" "Focenda-macOS.dmg" "${FOCENDA_APP_NAME}"
 
+      - name: Extract Release Notes from CHANGELOG
+        env:
+          TAG_NAME: ${{ steps.check-prerelease.outputs.tag_name }}
+        run: |
+          mkdir -p dist
+          python3 -c "
+          import os, sys, re
+          tag = os.environ.get('TAG_NAME', '')
+          version = tag.lstrip('v')
+          with open('CHANGELOG.md', 'r', encoding='utf-8') as f:
+              content = f.read()
+          pattern = rf'## \[{re.escape(version)}\][^\n]*\n(.*?)(?=\n## \[|\Z)'
+          match = re.search(pattern, content, re.DOTALL)
+          if match:
+              notes = match.group(1).strip()
+          else:
+              notes = f'Release {tag}'
+          with open('dist/release-notes.md', 'w', encoding='utf-8') as f:
+              f.write(notes + '\n')
+          "
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.check-prerelease.outputs.tag_name }}
-          name: Focenda ${{ steps.check-prerelease.outputs.tag_name }}
+          name: ${{ steps.check-prerelease.outputs.tag_name }}
+          body_path: dist/release-notes.md
           prerelease: ${{ steps.check-prerelease.outputs.is_prerelease == 'true' }}
           files: Focenda-macOS.dmg
-          generate_release_notes: true
