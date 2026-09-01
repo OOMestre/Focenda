@@ -36,20 +36,79 @@ Combining structured focus cycles (Pomodoro and deep work timers), visual Kanban
 
 ---
 
-## Key Features
+## Key Features & Visual Showcase
 
-- **Intelligent Focus Timer:** Configurable intervals for deep focus, short breaks, and long breaks with smooth circular progress animations and custom time adjustments (+5m / -5m).
-- **Unified Tasks & Kanban Board:** Interactive 3-column Kanban workflow with drag-and-drop support, direct status progression pills (To Do, In Progress, Done), Pomodoro counters, due dates, and a seamless toggle to list view.
-- **Interactive Calendar & Day Previews:** Full monthly calendar grid with daily focus heatmaps, scheduled tasks, due date milestone indicators, and compact hover previews that stay pinned after clicking a date for quick actions.
-- **Recurring Reminders:** Dedicated scheduler for daily, weekday, weekly, and monthly recurring tasks with native macOS banner alerts and rich chime notifications.
-- **Multi-Notebook Scratchpad:** Master-detail quick notes system organized into custom folders (General, Projects, Work, Personal, Ideas) with live character/word counters and keystroke persistence.
-- **Focus Hub & Bookmarks:** Responsive quick-launch directory for essential development references, tools, and documentation with 1-click browser integration.
-- **Productivity Profiles:** Save a complete workspace with selected applications, per-window monitor/position/size layouts, and a global shortcut that opens and organizes it on demand.
-- **Menu Bar Control Center:** Floating, top-down animated macOS menu bar utility providing timer controls, quick note capture into user folders, instant task addition, and bookmarks access.
-- **Guided First-Launch Onboarding:** A complete tour of every workspace section and the menu bar control center, replayable from Settings whenever needed.
-- **Customizable Visual Themes:** Five refined aesthetic themes selectable in Settings (Zen Calm Light, Obsidian Minimal Dark, Warm Sandstone, Nordic Frost, Forest Matcha) without disruptive automatic color shifts.
-- **Private In-App Updates:** Settings can check GitHub Releases manually or once a day, show native macOS update notifications, and install validated Focenda archives locally without sending personal data or app content anywhere.
-- **100% Local & Private:** Tasks, notes, reminders, bookmarks, and preferences stay on device in authenticated encrypted local storage. Zero telemetry, no third-party accounts, and zero cloud tracking.
+### ⏱️ Intelligent Focus Timer
+Configurable intervals for deep focus, short breaks, and long breaks with smooth circular progress animations, audio chimes, and quick time adjustments (+5m / -5m).
+
+<p align="center">
+  <img src="assets/gifs/focus-timer.gif" alt="Focus Timer" width="650" />
+</p>
+
+---
+
+### 📋 Unified Tasks & Kanban Board
+Interactive 3-column Kanban workflow with drag-and-drop support, direct status progression pills (To Do, In Progress, Done), Pomodoro counters, due dates, and seamless toggling to a linear list view.
+
+<p align="center">
+  <img src="assets/gifs/tasks-kanban.gif" alt="Tasks & Kanban Board" width="650" />
+</p>
+
+---
+
+### 📅 Interactive Calendar & Day Previews
+Full monthly calendar grid with daily focus heatmaps, scheduled tasks, due date milestone indicators, and compact hover previews that stay pinned after clicking a date for quick actions.
+
+<p align="center">
+  <img src="assets/gifs/calendar.gif" alt="Interactive Calendar" width="650" />
+</p>
+
+---
+
+### 🔔 Recurring Reminders
+Dedicated scheduler for daily, weekday, weekly, and monthly recurring tasks with native macOS banner alerts, rich chime notifications, and overdue tracking.
+
+<p align="center">
+  <img src="assets/gifs/reminders.gif" alt="Recurring Reminders" width="650" />
+</p>
+
+---
+
+### 📝 Multi-Notebook Scratchpad
+Master-detail quick notes system organized into custom folders (General, Projects, Work, Personal, Ideas) with live character/word counters, search, and keystroke persistence.
+
+<p align="center">
+  <img src="assets/gifs/scratchpad.gif" alt="Multi-Notebook Scratchpad" width="650" />
+</p>
+
+---
+
+### ⚡ Menu Bar Control Center
+Floating, top-down animated macOS menu bar utility providing quick timer controls, instant note capture into user folders, rapid task creation, and bookmark access without interrupting your workflow.
+
+<p align="center">
+  <img src="assets/gifs/menu-bar.gif" alt="Menu Bar Control Center" width="650" />
+</p>
+
+---
+
+### 🔗 Focus Hub & Bookmarks
+Responsive quick-launch directory for essential development references, tools, and documentation with 1-click browser integration.
+
+### 🖥️ Productivity Profiles
+Save a complete workspace with selected applications, per-window monitor/position/size layouts, and a global shortcut that opens and organizes it on demand.
+
+### 🧭 Guided First-Launch Onboarding
+A complete tour of every workspace section and the menu bar control center, replayable from Settings whenever needed.
+
+### 🎨 Customizable Visual Themes
+Five refined aesthetic themes selectable in Settings (Zen Calm Light, Obsidian Minimal Dark, Warm Sandstone, Nordic Frost, Forest Matcha) without disruptive automatic color shifts.
+
+### 🔄 Private In-App Updates
+Settings can check GitHub Releases manually or once a day, show native macOS update notifications, and install validated Focenda archives locally without sending personal data or app content anywhere.
+
+### 🔒 100% Local, Private & Secure
+Tasks, notes, reminders, bookmarks, and preferences stay on device in authenticated encrypted local storage. Zero telemetry, no third-party accounts, and zero cloud tracking.
 
 ---
 
