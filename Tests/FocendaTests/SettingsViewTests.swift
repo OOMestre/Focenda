@@ -7,18 +7,34 @@ final class SettingsViewTests: XCTestCase {
 
     override func setUp() {
         super.setUp()
-        UserDefaults.standard.removeObject(forKey: AppTheme.storageKey)
-        UserDefaults.standard.removeObject(forKey: "dailyFocusGoalMinutes")
-        UserDefaults.standard.removeObject(forKey: "soundEnabled")
-        UserDefaults.standard.removeObject(forKey: AppUpdatePreferences.automaticChecksEnabledKey)
+        cleanupDefaults()
     }
 
     override func tearDown() {
-        UserDefaults.standard.removeObject(forKey: AppTheme.storageKey)
-        UserDefaults.standard.removeObject(forKey: "dailyFocusGoalMinutes")
-        UserDefaults.standard.removeObject(forKey: "soundEnabled")
-        UserDefaults.standard.removeObject(forKey: AppUpdatePreferences.automaticChecksEnabledKey)
+        cleanupDefaults()
         super.tearDown()
+    }
+
+    private func cleanupDefaults() {
+        let keys = [
+            AppTheme.storageKey,
+            "dailyFocusGoalMinutes",
+            "soundEnabled",
+            "reminderSoundEnabled",
+            "reminderSoundType",
+            "reminderSoundRepeatCount",
+            "reminderCustomSoundPath",
+            "reminderCustomSoundName",
+            "reminderCustomSoundBookmarkData",
+            "globalShortcutsEnabled",
+            "shortcutPreset",
+            "showShortcutFeedback",
+            AppUpdatePreferences.automaticChecksEnabledKey,
+            AppState.onboardingCompletionKey
+        ]
+        for key in keys {
+            UserDefaults.standard.removeObject(forKey: key)
+        }
     }
 
     func testAppStateThemeSelection() {
@@ -43,7 +59,7 @@ final class SettingsViewTests: XCTestCase {
     }
 
     func testAppStateLoadsStoredTheme() {
-        UserDefaults.standard.set(AppThemeOption.forestMatcha.rawValue, forKey: AppTheme.storageKey)
+        SecureStore.shared.set(AppThemeOption.forestMatcha.rawValue, forKey: AppTheme.storageKey)
         let appState = AppState()
         XCTAssertEqual(appState.selectedTheme, .forestMatcha)
         XCTAssertEqual(AppTheme.current, .forestMatcha)
