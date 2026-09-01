@@ -21,12 +21,12 @@ public final class TaskListViewModel {
 
     public init(secureStore: SecureStore = .shared) {
         self.secureStore = secureStore
-        // An empty array is a valid persisted state. Only seed sample tasks
-        // when no value has ever been stored; a failed decode must not replace
-        // the user's data with samples.
+        // An empty array is a valid persisted state. A fresh installation must
+        // not receive sample tasks, and a failed decode must not discard the
+        // user's saved data.
         if !secureStore.containsValue(forKey: storageKey) {
             tasksPersistenceReady = true
-            loadSampleTasks()
+            tasks = []
         } else {
             loadTasks()
         }
@@ -276,41 +276,4 @@ public final class TaskListViewModel {
         tasksPersistenceReady = true
     }
 
-    private func loadSampleTasks() {
-        self.tasks = [
-            TaskItem(
-                title: "Plan weekly productivity goals",
-                notes: "Block dedicated deep work focus sessions",
-                priority: .high,
-                status: .inProgress,
-                reminderDate: Calendar.current.date(byAdding: .hour, value: 2, to: Date()),
-                dueDate: Calendar.current.date(byAdding: .day, value: 1, to: Date()),
-                tags: ["Planning", "Focus"],
-                estimatedPomodoros: 2,
-                completedPomodoros: 1
-            ),
-            TaskItem(
-                title: "Explore Focenda features",
-                notes: "Try out the focus timer, kanban board, and scratchpad",
-                priority: .medium,
-                status: .todo,
-                reminderDate: Calendar.current.date(byAdding: .day, value: 1, to: Date()),
-                dueDate: Calendar.current.date(byAdding: .day, value: 3, to: Date()),
-                tags: ["Welcome"],
-                estimatedPomodoros: 1,
-                completedPomodoros: 0
-            ),
-            TaskItem(
-                title: "Organize project tasks & priorities",
-                notes: "Categorize by urgency and impact",
-                priority: .low,
-                status: .done,
-                completedAt: Date(),
-                tags: ["Organization"],
-                estimatedPomodoros: 1,
-                completedPomodoros: 1
-            )
-        ]
-        saveTasks()
-    }
 }

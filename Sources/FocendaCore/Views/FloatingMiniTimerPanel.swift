@@ -519,29 +519,37 @@ public struct FloatingControlCenterView: View {
     }
 
     // MARK: - Quick Links Tab
+    @ViewBuilder
     private var quickLinksTab: some View {
-        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 6) {
-            ForEach(QuickLink.defaultLinks) { link in
-                Button {
-                    if let url = link.url {
-                        NSWorkspace.shared.open(url)
+        if QuickLink.defaultLinks.isEmpty {
+            Text("No quick links yet.")
+                .font(.caption)
+                .foregroundStyle(AppTheme.textTertiary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        } else {
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 6) {
+                ForEach(QuickLink.defaultLinks) { link in
+                    Button {
+                        if let url = link.url {
+                            NSWorkspace.shared.open(url)
+                        }
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: link.iconName)
+                                .font(.caption.bold())
+                                .foregroundStyle(AppTheme.accent)
+                            Text(link.title)
+                                .font(.caption.weight(.medium))
+                                .foregroundStyle(AppTheme.textPrimary)
+                                .lineLimit(1)
+                            Spacer()
+                        }
+                        .padding(6)
+                        .background(AppTheme.cardBackgroundSubtle)
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
                     }
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: link.iconName)
-                            .font(.caption.bold())
-                            .foregroundStyle(AppTheme.accent)
-                        Text(link.title)
-                            .font(.caption.weight(.medium))
-                            .foregroundStyle(AppTheme.textPrimary)
-                            .lineLimit(1)
-                        Spacer()
-                    }
-                    .padding(6)
-                    .background(AppTheme.cardBackgroundSubtle)
-                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
             }
         }
     }

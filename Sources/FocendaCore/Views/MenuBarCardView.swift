@@ -1274,68 +1274,76 @@ public struct MenuBarCardView: View {
             }
 
             let allLinks = QuickLink.defaultLinks + customLinks
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
-                ForEach(allLinks) { link in
-                    let isCustom = customLinks.contains(where: { $0.id == link.id })
-                    Button {
-                        if let url = link.url {
-                            NSWorkspace.shared.open(url)
-                        }
-                    } label: {
-                        HStack(spacing: 8) {
-                            Image(systemName: link.iconName)
-                                .font(.system(size: 11, weight: .bold))
-                                .foregroundStyle(AppTheme.accent)
-                                .frame(width: 20)
-
-                            Text(link.title)
-                                .font(.caption.weight(.medium))
-                                .foregroundStyle(AppTheme.textPrimary)
-                                .lineLimit(1)
-
-                            Spacer()
-
-                            Image(systemName: "arrow.up.right")
-                                .font(.system(size: 9))
-                                .foregroundStyle(AppTheme.textTertiary)
-                        }
-                        .padding(8)
-                        .background(
-                            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                .fill(AppTheme.cardBackgroundSubtle)
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                .stroke(AppTheme.subtleBorder, lineWidth: 1)
-                        )
-                    }
-                    .buttonStyle(SpringScaleButtonStyle())
-                    .contextMenu {
+            if allLinks.isEmpty {
+                Text("No quick links yet. Add one above to keep it close at hand.")
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.textTertiary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.vertical, 4)
+            } else {
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
+                    ForEach(allLinks) { link in
+                        let isCustom = customLinks.contains(where: { $0.id == link.id })
                         Button {
                             if let url = link.url {
                                 NSWorkspace.shared.open(url)
                             }
                         } label: {
-                            Label("Open in Browser", systemImage: "arrow.up.right")
+                            HStack(spacing: 8) {
+                                Image(systemName: link.iconName)
+                                    .font(.system(size: 11, weight: .bold))
+                                    .foregroundStyle(AppTheme.accent)
+                                    .frame(width: 20)
+
+                                Text(link.title)
+                                    .font(.caption.weight(.medium))
+                                    .foregroundStyle(AppTheme.textPrimary)
+                                    .lineLimit(1)
+
+                                Spacer()
+
+                                Image(systemName: "arrow.up.right")
+                                    .font(.system(size: 9))
+                                    .foregroundStyle(AppTheme.textTertiary)
+                            }
+                            .padding(8)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                    .fill(AppTheme.cardBackgroundSubtle)
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                    .stroke(AppTheme.subtleBorder, lineWidth: 1)
+                            )
                         }
-
-                        Button {
-                            let pasteboard = NSPasteboard.general
-                            pasteboard.clearContents()
-                            pasteboard.setString(link.urlString, forType: .string)
-                        } label: {
-                            Label("Copy URL", systemImage: "doc.on.doc")
-                        }
-
-                        if isCustom {
-                            Divider()
-
-                            Button(role: .destructive) {
-                                withAnimation(.spring(response: 0.25)) {
-                                    deleteCustomLink(link)
+                        .buttonStyle(SpringScaleButtonStyle())
+                        .contextMenu {
+                            Button {
+                                if let url = link.url {
+                                    NSWorkspace.shared.open(url)
                                 }
                             } label: {
-                                Label("Delete Bookmark", systemImage: "trash")
+                                Label("Open in Browser", systemImage: "arrow.up.right")
+                            }
+
+                            Button {
+                                let pasteboard = NSPasteboard.general
+                                pasteboard.clearContents()
+                                pasteboard.setString(link.urlString, forType: .string)
+                            } label: {
+                                Label("Copy URL", systemImage: "doc.on.doc")
+                            }
+
+                            if isCustom {
+                                Divider()
+
+                                Button(role: .destructive) {
+                                    withAnimation(.spring(response: 0.25)) {
+                                        deleteCustomLink(link)
+                                    }
+                                } label: {
+                                    Label("Delete Bookmark", systemImage: "trash")
+                                }
                             }
                         }
                     }

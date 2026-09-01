@@ -46,73 +46,8 @@ public final class BookmarkViewModel {
         loadFromUserDefaults()
     }
 
-    /// Pre-populated default bookmarks for developer focus and productivity
-    public static let defaultBookmarks: [BookmarkItem] = [
-        BookmarkItem(
-            title: "Apple Developer Documentation",
-            url: "https://developer.apple.com/documentation",
-            iconName: "apple.logo",
-            category: "Documentation",
-            isPinned: true,
-            clickCount: 12
-        ),
-        BookmarkItem(
-            title: "Swift.org Reference",
-            url: "https://www.swift.org/documentation/",
-            iconName: "swift",
-            category: "Documentation",
-            isPinned: true,
-            clickCount: 9
-        ),
-        BookmarkItem(
-            title: "GitHub Repositories",
-            url: "https://github.com",
-            iconName: "chevron.left.forwardslash.chevron.right",
-            category: "Development",
-            isPinned: true,
-            clickCount: 15
-        ),
-        BookmarkItem(
-            title: "Human Interface Guidelines",
-            url: "https://developer.apple.com/design/human-interface-guidelines",
-            iconName: "macwindow.on.rectangle",
-            category: "Design & UI",
-            isPinned: false,
-            clickCount: 5
-        ),
-        BookmarkItem(
-            title: "Brain.fm Focus Audio",
-            url: "https://brain.fm",
-            iconName: "headphones",
-            category: "Focus & Flow",
-            isPinned: false,
-            clickCount: 7
-        ),
-        BookmarkItem(
-            title: "Lofi Cafe Stream",
-            url: "https://lofi.cafe",
-            iconName: "music.note",
-            category: "Focus & Flow",
-            isPinned: false,
-            clickCount: 4
-        ),
-        BookmarkItem(
-            title: "Excalidraw Whiteboard",
-            url: "https://excalidraw.com",
-            iconName: "pencil.and.ruler.fill",
-            category: "Design & UI",
-            isPinned: false,
-            clickCount: 3
-        ),
-        BookmarkItem(
-            title: "Raycast Store & Script Commands",
-            url: "https://www.raycast.com/store",
-            iconName: "command",
-            category: "Utilities",
-            isPinned: false,
-            clickCount: 2
-        )
-    ]
+    /// A fresh installation starts without any user bookmarks.
+    public static let defaultBookmarks: [BookmarkItem] = []
 
     /// Dynamic list of all available categories including presets and custom ones
     public var allCategories: [String] {
@@ -251,7 +186,7 @@ public final class BookmarkViewModel {
         saveToUserDefaults()
     }
 
-    /// Loads bookmarks from persistent storage or initializes default seed
+    /// Loads bookmarks from persistent storage or initializes an empty list
     public func loadFromUserDefaults() {
         guard secureStore.containsValue(forKey: Self.userDefaultsKey) else {
             self.bookmarks = Self.defaultBookmarks
