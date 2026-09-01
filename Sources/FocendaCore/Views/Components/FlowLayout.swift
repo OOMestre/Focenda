@@ -21,11 +21,22 @@ public struct FlowLayout: Layout {
         self.verticalAlignment = verticalAlignment
     }
 
-    public func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        let sizes = subviews.map { $0.sizeThatFits(.unspecified) }
+    public struct Cache {
+        fileprivate var itemSizes: [CGSize]
+    }
+
+    public func makeCache(subviews: Subviews) -> Cache {
+        Cache(itemSizes: subviews.map { $0.sizeThatFits(.unspecified) })
+    }
+
+    public func updateCache(_ cache: inout Cache, subviews: Subviews) {
+        cache.itemSizes = subviews.map { $0.sizeThatFits(.unspecified) }
+    }
+
+    public func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout Cache) -> CGSize {
         let maxWidth = proposal.width ?? .infinity
         let result = Self.calculateLayout(
-            itemSizes: sizes,
+            itemSizes: cache.itemSizes,
             maxWidth: maxWidth,
             spacing: spacing,
             lineSpacing: lineSpacing
@@ -33,10 +44,9 @@ public struct FlowLayout: Layout {
         return result.size
     }
 
-    public func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        let sizes = subviews.map { $0.sizeThatFits(.unspecified) }
+    public func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout Cache) {
         let result = Self.calculateLayout(
-            itemSizes: sizes,
+            itemSizes: cache.itemSizes,
             maxWidth: bounds.width,
             spacing: spacing,
             lineSpacing: lineSpacing
