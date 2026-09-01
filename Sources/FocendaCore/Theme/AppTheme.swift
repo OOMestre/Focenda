@@ -115,6 +115,96 @@ public enum AppTheme {
 
     private static var _cachedTheme: AppThemeOption? = nil
 
+    private struct ColorComponents: Hashable {
+        let red: Double
+        let green: Double
+        let blue: Double
+        let alpha: Double
+
+        init(_ components: (r: Double, g: Double, b: Double, a: Double)) {
+            self.red = components.r
+            self.green = components.g
+            self.blue = components.b
+            self.alpha = components.a
+        }
+    }
+
+    private struct ThemeColorDefinition: Hashable {
+        let zenLight: ColorComponents
+        let obsidianDark: ColorComponents
+        let sandstoneLight: ColorComponents
+        let sandstoneDark: ColorComponents
+        let nordicLight: ColorComponents
+        let nordicDark: ColorComponents
+        let matchaLight: ColorComponents
+        let matchaDark: ColorComponents
+
+        init(
+            zenLight: (r: Double, g: Double, b: Double, a: Double),
+            obsidianDark: (r: Double, g: Double, b: Double, a: Double),
+            sandstoneLight: (r: Double, g: Double, b: Double, a: Double),
+            sandstoneDark: (r: Double, g: Double, b: Double, a: Double),
+            nordicLight: (r: Double, g: Double, b: Double, a: Double),
+            nordicDark: (r: Double, g: Double, b: Double, a: Double),
+            matchaLight: (r: Double, g: Double, b: Double, a: Double),
+            matchaDark: (r: Double, g: Double, b: Double, a: Double)
+        ) {
+            self.zenLight = ColorComponents(zenLight)
+            self.obsidianDark = ColorComponents(obsidianDark)
+            self.sandstoneLight = ColorComponents(sandstoneLight)
+            self.sandstoneDark = ColorComponents(sandstoneDark)
+            self.nordicLight = ColorComponents(nordicLight)
+            self.nordicDark = ColorComponents(nordicDark)
+            self.matchaLight = ColorComponents(matchaLight)
+            self.matchaDark = ColorComponents(matchaDark)
+        }
+
+        func components(for theme: AppThemeOption, isDark: Bool) -> ColorComponents {
+            switch theme {
+            case .zenCalm:
+                return zenLight
+            case .obsidianMinimal:
+                return obsidianDark
+            case .warmSandstone:
+                return isDark ? sandstoneDark : sandstoneLight
+            case .nordicFrost:
+                return isDark ? nordicDark : nordicLight
+            case .forestMatcha:
+                return isDark ? matchaDark : matchaLight
+            }
+        }
+    }
+
+    private struct LightDarkColorDefinition: Hashable {
+        let light: ColorComponents
+        let dark: ColorComponents
+
+        init(
+            light: (r: Double, g: Double, b: Double, a: Double),
+            dark: (r: Double, g: Double, b: Double, a: Double)
+        ) {
+            self.light = ColorComponents(light)
+            self.dark = ColorComponents(dark)
+        }
+    }
+
+    private enum ColorCacheKey: Hashable {
+        case theme(ThemeColorDefinition)
+        case lightDark(LightDarkColorDefinition)
+    }
+
+    private struct ResolvedNSColorCacheKey: Hashable {
+        let color: ColorCacheKey
+        let theme: AppThemeOption?
+        let isDark: Bool
+    }
+
+    /// Dynamic colors are shared for the active theme instead of being rebuilt on every computed-property access.
+    private static let colorCacheLock = NSLock()
+    private static var cachedColors: [ColorCacheKey: Color] = [:]
+    private static var cachedDynamicNSColors: [ColorCacheKey: NSColor] = [:]
+    private static var cachedResolvedNSColors: [ResolvedNSColorCacheKey: NSColor] = [:]
+
     /// Currently active theme option
     public static var current: AppThemeOption {
         get {
@@ -127,7 +217,11 @@ public enum AppTheme {
             return resolved
         }
         set {
+            let themeDidChange = _cachedTheme != newValue
             _cachedTheme = newValue
+            if themeDidChange {
+                invalidateColorCache()
+            }
             SecureStore.shared.set(newValue.rawValue, forKey: storageKey)
         }
     }
@@ -145,26 +239,31 @@ public enum AppTheme {
         matchaLight: (r: Double, g: Double, b: Double, a: Double),
         matchaDark: (r: Double, g: Double, b: Double, a: Double)
     ) -> Color {
-        Color(nsColor: NSColor(name: nil, dynamicProvider: { appearance in
-            let match = appearance.bestMatch(from: [.aqua, .darkAqua])
-            let isDark = match == .darkAqua
+        let definition = ThemeColorDefinition(
+            zenLight: zenLight,
+            obsidianDark: obsidianDark,
+            sandstoneLight: sandstoneLight,
+            sandstoneDark: sandstoneDark,
+            nordicLight: nordicLight,
+            nordicDark: nordicDark,
+            matchaLight: matchaLight,
+            matchaDark: matchaDark
+        )
+        let cacheKey = ColorCacheKey.theme(definition)
 
-            switch AppTheme.current {
-            case .zenCalm:
-                return NSColor(srgbRed: zenLight.r, green: zenLight.g, blue: zenLight.b, alpha: zenLight.a)
-            case .obsidianMinimal:
-                return NSColor(srgbRed: obsidianDark.r, green: obsidianDark.g, blue: obsidianDark.b, alpha: obsidianDark.a)
-            case .warmSandstone:
-                let c = isDark ? sandstoneDark : sandstoneLight
-                return NSColor(srgbRed: c.r, green: c.g, blue: c.b, alpha: c.a)
-            case .nordicFrost:
-                let c = isDark ? nordicDark : nordicLight
-                return NSColor(srgbRed: c.r, green: c.g, blue: c.b, alpha: c.a)
-            case .forestMatcha:
-                let c = isDark ? matchaDark : matchaLight
-                return NSColor(srgbRed: c.r, green: c.g, blue: c.b, alpha: c.a)
-            }
-        }))
+        return cachedColor(for: cacheKey) {
+            NSColor(name: nil, dynamicProvider: { appearance in
+                let theme = AppTheme.current
+                let isDark = AppTheme.isDarkAppearance(appearance)
+                let components = definition.components(for: theme, isDark: isDark)
+                return AppTheme.cachedResolvedNSColor(
+                    for: cacheKey,
+                    theme: theme,
+                    isDark: isDark,
+                    components: components
+                )
+            })
+        }
     }
 
     /// Backwards compatible helper for simple Light/Dark dynamic color pairs
@@ -172,14 +271,86 @@ public enum AppTheme {
         lightRed: Double, lightGreen: Double, lightBlue: Double, lightAlpha: Double = 1.0,
         darkRed: Double, darkGreen: Double, darkBlue: Double, darkAlpha: Double = 1.0
     ) -> Color {
-        Color(nsColor: NSColor(name: nil, dynamicProvider: { appearance in
-            let match = appearance.bestMatch(from: [.aqua, .darkAqua])
-            if match == .darkAqua {
-                return NSColor(srgbRed: darkRed, green: darkGreen, blue: darkBlue, alpha: darkAlpha)
-            } else {
-                return NSColor(srgbRed: lightRed, green: lightGreen, blue: lightBlue, alpha: lightAlpha)
-            }
-        }))
+        let definition = LightDarkColorDefinition(
+            light: (lightRed, lightGreen, lightBlue, lightAlpha),
+            dark: (darkRed, darkGreen, darkBlue, darkAlpha)
+        )
+        let cacheKey = ColorCacheKey.lightDark(definition)
+
+        return cachedColor(for: cacheKey) {
+            NSColor(name: nil, dynamicProvider: { appearance in
+                let isDark = AppTheme.isDarkAppearance(appearance)
+                let components = isDark ? definition.dark : definition.light
+                return AppTheme.cachedResolvedNSColor(
+                    for: cacheKey,
+                    theme: nil,
+                    isDark: isDark,
+                    components: components
+                )
+            })
+        }
+    }
+
+    private static func isDarkAppearance(_ appearance: NSAppearance) -> Bool {
+        appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
+    }
+
+    private static func cachedColor(
+        for key: ColorCacheKey,
+        makeNSColor: () -> NSColor
+    ) -> Color {
+        colorCacheLock.lock()
+        defer { colorCacheLock.unlock() }
+
+        if let cached = cachedColors[key] {
+            return cached
+        }
+
+        let nsColor: NSColor
+        if let cached = cachedDynamicNSColors[key] {
+            nsColor = cached
+        } else {
+            nsColor = makeNSColor()
+            cachedDynamicNSColors[key] = nsColor
+        }
+
+        let color = Color(nsColor: nsColor)
+        cachedColors[key] = color
+        return color
+    }
+
+    private static func cachedResolvedNSColor(
+        for key: ColorCacheKey,
+        theme: AppThemeOption?,
+        isDark: Bool,
+        components: ColorComponents
+    ) -> NSColor {
+        let cacheKey = ResolvedNSColorCacheKey(color: key, theme: theme, isDark: isDark)
+
+        colorCacheLock.lock()
+        defer { colorCacheLock.unlock() }
+
+        if let cached = cachedResolvedNSColors[cacheKey] {
+            return cached
+        }
+
+        let color = NSColor(
+            srgbRed: components.red,
+            green: components.green,
+            blue: components.blue,
+            alpha: components.alpha
+        )
+        cachedResolvedNSColors[cacheKey] = color
+        return color
+    }
+
+    private static func invalidateColorCache() {
+        colorCacheLock.lock()
+        defer { colorCacheLock.unlock() }
+
+        cachedColors.removeAll(keepingCapacity: true)
+        cachedDynamicNSColors.removeAll(keepingCapacity: true)
+        cachedResolvedNSColors.removeAll(keepingCapacity: true)
     }
 
     // MARK: - Focus Mode Colors (Calm, Sophisticated & Organic)
