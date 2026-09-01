@@ -73,6 +73,9 @@ Focenda v1.0.0 is the first official release of the native macOS focus, task, an
 - **Apple CryptoKit Encryption:** Authenticated encryption using hardware-backed cryptographic keys.
 - **Hermetic In-App Updates:** Check for official releases securely on GitHub with signed DMGs (`Focenda-macOS.dmg`).
 
+### Fixed & Changed
+- **Silent Legacy Keychain Migration:** Legacy Keychain entries are checked without authentication UI, so a first launch after installation or update never asks for the login Keychain password.
+
 ---
 
 ## [0.1.0-beta.9] - 2026-08-26

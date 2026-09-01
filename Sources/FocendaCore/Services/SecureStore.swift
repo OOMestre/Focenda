@@ -331,18 +331,25 @@ public final class SecureStore {
     }
 
     private static func readKeychainData(service: String) -> Data? {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: keychainAccount,
-            kSecReturnData as String: true,
-            kSecMatchLimit as String: kSecMatchLimitOne
-        ]
+        let query = keychainReadQuery(service: service)
 
         var result: CFTypeRef?
         let status = SecItemCopyMatching(query as CFDictionary, &result)
         guard status == errSecSuccess else { return nil }
         return result as? Data
+    }
+
+    /// Builds the one-time migration query without allowing macOS to show an
+    /// authentication prompt for a legacy Keychain item.
+    static func keychainReadQuery(service: String) -> [String: Any] {
+        [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: keychainAccount,
+            kSecReturnData as String: true,
+            kSecMatchLimit as String: kSecMatchLimitOne,
+            kSecUseAuthenticationUI as String: kSecUseAuthenticationUISkip
+        ]
     }
 
     private static var fallbackKeyURL: URL? {
