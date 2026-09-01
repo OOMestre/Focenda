@@ -110,7 +110,12 @@ final class SettingsViewTests: XCTestCase {
     }
 
     func testAppStateSavePreferences() {
-        let appState = AppState()
+        let suiteName = "Focenda.SettingsSavePreferencesTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let secureStore = SecureStore(defaults: defaults)
+
+        let appState = AppState(secureStore: secureStore)
         appState.dailyFocusGoalMinutes = 180
         appState.soundEnabled = false
         appState.selectedTheme = .obsidianMinimal
@@ -119,12 +124,12 @@ final class SettingsViewTests: XCTestCase {
         appState.showShortcutFeedback = false
         appState.savePreferences()
 
-        XCTAssertEqual(SecureStore.shared.integer(forKey: "dailyFocusGoalMinutes") ?? 0, 180)
-        XCTAssertFalse(SecureStore.shared.bool(forKey: "soundEnabled") ?? true)
-        XCTAssertEqual(SecureStore.shared.string(forKey: AppTheme.storageKey), AppThemeOption.obsidianMinimal.rawValue)
-        XCTAssertFalse(SecureStore.shared.bool(forKey: "globalShortcutsEnabled") ?? true)
-        XCTAssertEqual(SecureStore.shared.string(forKey: "shortcutPreset"), GlobalShortcutPreset.powerUser.rawValue)
-        XCTAssertFalse(SecureStore.shared.bool(forKey: "showShortcutFeedback") ?? true)
+        XCTAssertEqual(secureStore.integer(forKey: "dailyFocusGoalMinutes") ?? 0, 180)
+        XCTAssertFalse(secureStore.bool(forKey: "soundEnabled") ?? true)
+        XCTAssertEqual(secureStore.string(forKey: AppTheme.storageKey), AppThemeOption.obsidianMinimal.rawValue)
+        XCTAssertFalse(secureStore.bool(forKey: "globalShortcutsEnabled") ?? true)
+        XCTAssertEqual(secureStore.string(forKey: "shortcutPreset"), GlobalShortcutPreset.powerUser.rawValue)
+        XCTAssertFalse(secureStore.bool(forKey: "showShortcutFeedback") ?? true)
     }
 
     func testUnreadablePreferenceIsNeverOverwrittenByAUserAction() {
@@ -151,14 +156,18 @@ final class SettingsViewTests: XCTestCase {
     }
 
     func testAutomaticUpdateChecksDefaultToEnabledAndPersist() {
-        let appState = AppState()
+        let suiteName = "Focenda.SettingsUpdateCheckTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let secureStore = SecureStore(defaults: defaults)
 
+        let appState = AppState(secureStore: secureStore)
         XCTAssertTrue(appState.automaticUpdateChecksEnabled)
 
         appState.automaticUpdateChecksEnabled = false
-        XCTAssertFalse(SecureStore.shared.bool(forKey: AppUpdatePreferences.automaticChecksEnabledKey) ?? true)
+        XCTAssertFalse(secureStore.bool(forKey: AppUpdatePreferences.automaticChecksEnabledKey) ?? true)
 
-        let reloadedAppState = AppState()
+        let reloadedAppState = AppState(secureStore: secureStore)
         XCTAssertFalse(reloadedAppState.automaticUpdateChecksEnabled)
     }
 
@@ -173,7 +182,12 @@ final class SettingsViewTests: XCTestCase {
     }
 
     func testAppStateReminderSoundPreferencesSaveAndLoad() {
-        let appState = AppState()
+        let suiteName = "Focenda.SettingsReminderSoundTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let secureStore = SecureStore(defaults: defaults)
+
+        let appState = AppState(secureStore: secureStore)
         appState.reminderSoundEnabled = true
         appState.reminderSoundType = .glass
         appState.reminderSoundRepeatCount = 4
@@ -181,25 +195,18 @@ final class SettingsViewTests: XCTestCase {
         appState.reminderCustomSoundName = "custom.mp3"
         appState.savePreferences()
 
-        XCTAssertTrue(SecureStore.shared.bool(forKey: "reminderSoundEnabled") ?? false)
-        XCTAssertEqual(SecureStore.shared.string(forKey: "reminderSoundType"), ReminderSoundType.glass.rawValue)
-        XCTAssertEqual(SecureStore.shared.integer(forKey: "reminderSoundRepeatCount") ?? 0, 4)
-        XCTAssertEqual(SecureStore.shared.string(forKey: "reminderCustomSoundPath"), "/path/to/custom.mp3")
-        XCTAssertEqual(SecureStore.shared.string(forKey: "reminderCustomSoundName"), "custom.mp3")
+        XCTAssertTrue(secureStore.bool(forKey: "reminderSoundEnabled") ?? false)
+        XCTAssertEqual(secureStore.string(forKey: "reminderSoundType"), ReminderSoundType.glass.rawValue)
+        XCTAssertEqual(secureStore.integer(forKey: "reminderSoundRepeatCount") ?? 0, 4)
+        XCTAssertEqual(secureStore.string(forKey: "reminderCustomSoundPath"), "/path/to/custom.mp3")
+        XCTAssertEqual(secureStore.string(forKey: "reminderCustomSoundName"), "custom.mp3")
 
-        let reloadedAppState = AppState()
+        let reloadedAppState = AppState(secureStore: secureStore)
         XCTAssertTrue(reloadedAppState.reminderSoundEnabled)
         XCTAssertEqual(reloadedAppState.reminderSoundType, .glass)
         XCTAssertEqual(reloadedAppState.reminderSoundRepeatCount, 4)
         XCTAssertEqual(reloadedAppState.reminderCustomSoundPath, "/path/to/custom.mp3")
         XCTAssertEqual(reloadedAppState.reminderCustomSoundName, "custom.mp3")
-
-        // Cleanup
-        UserDefaults.standard.removeObject(forKey: "reminderSoundEnabled")
-        UserDefaults.standard.removeObject(forKey: "reminderSoundType")
-        UserDefaults.standard.removeObject(forKey: "reminderSoundRepeatCount")
-        UserDefaults.standard.removeObject(forKey: "reminderCustomSoundPath")
-        UserDefaults.standard.removeObject(forKey: "reminderCustomSoundName")
     }
 
     func testAppStateReminderSoundRepeatClamping() {
