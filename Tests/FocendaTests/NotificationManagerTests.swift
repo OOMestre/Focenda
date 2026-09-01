@@ -188,13 +188,13 @@ final class NotificationManagerTests: XCTestCase {
 
     func testPlayUserReminderSoundRespectsPreferences() {
         let manager = NotificationManager()
-        UserDefaults.standard.set(true, forKey: "reminderSoundEnabled")
-        UserDefaults.standard.set(ReminderSoundType.glass.rawValue, forKey: "reminderSoundType")
-        UserDefaults.standard.set(4, forKey: "reminderSoundRepeatCount")
+        SecureStore.shared.set(true, forKey: "reminderSoundEnabled")
+        SecureStore.shared.set(ReminderSoundType.glass.rawValue, forKey: "reminderSoundType")
+        SecureStore.shared.set(4, forKey: "reminderSoundRepeatCount")
         manager.playUserReminderSound()
         manager.stopActiveSound()
 
-        UserDefaults.standard.set(false, forKey: "reminderSoundEnabled")
+        SecureStore.shared.set(false, forKey: "reminderSoundEnabled")
         manager.playUserReminderSound()
         XCTAssertFalse(manager.isPlayingSound)
 
