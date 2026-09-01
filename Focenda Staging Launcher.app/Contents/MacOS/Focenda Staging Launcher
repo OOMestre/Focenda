@@ -1,0 +1,42 @@
+#!/bin/sh
+
+set -eu
+
+SCRIPT_DIRECTORY=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+REPOSITORY_ROOT=$(CDPATH= cd -- "$SCRIPT_DIRECTORY/../../.." && pwd)
+STAGING_APP="$REPOSITORY_ROOT/dist/Focenda Staging.app"
+STAGING_INFO="$STAGING_APP/Contents/Info.plist"
+STAGING_EXECUTABLE="$STAGING_APP/Contents/MacOS/FocendaApp"
+
+show_error() {
+	/usr/bin/osascript - "$1" <<'APPLESCRIPT'
+on run argv
+	display alert "Focenda Staging Launcher" message (item 1 of argv) as critical buttons {"OK"} default button "OK"
+end run
+APPLESCRIPT
+}
+
+if [ ! -d "$STAGING_APP" ] || [ -L "$STAGING_APP" ] || \
+	[ ! -f "$STAGING_INFO" ] || [ ! -x "$STAGING_EXECUTABLE" ]; then
+	show_error "Focenda Staging has not been built in this workspace.
+
+Run this command, then double-click the launcher again:
+
+cd \"$REPOSITORY_ROOT\" && make staging"
+	exit 1
+fi
+
+BUNDLE_IDENTIFIER=$(/usr/bin/plutil -extract CFBundleIdentifier raw -o - "$STAGING_INFO" 2>/dev/null || true)
+BUNDLE_EXECUTABLE=$(/usr/bin/plutil -extract CFBundleExecutable raw -o - "$STAGING_INFO" 2>/dev/null || true)
+
+if [ "$BUNDLE_IDENTIFIER" != "com.oomestre.focenda.staging" ] || \
+	[ "$BUNDLE_EXECUTABLE" != "FocendaApp" ]; then
+	show_error "The staging application at this workspace path is invalid or incomplete.
+
+Run this command to rebuild it safely, then double-click the launcher again:
+
+cd \"$REPOSITORY_ROOT\" && make staging"
+	exit 1
+fi
+
+exec /usr/bin/open "$STAGING_APP"

@@ -1,0 +1,26 @@
+name: CI Build & Test
+
+on:
+  push:
+    branches:
+      - main
+      - staging
+  pull_request:
+    branches:
+      - main
+      - staging
+
+jobs:
+  build-and-test:
+    name: Build & Run Test Suite
+    runs-on: macos-14
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Build Application
+        run: swift build -c release
+
+      - name: Run Unit Tests
+        run: swift test

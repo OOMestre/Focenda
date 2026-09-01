@@ -3,12 +3,30 @@ AGENTS.md
 .agents/
 .agent/
 
+# Git Worktrees
+.worktrees/
+worktrees/
+
 # Swift Package Manager & Builds
 .build/
 dist/
 build/
 DerivedData/
 
+# Xcode Project Files
+*.xcodeproj/
+*.xcworkspace/
+.swiftpm/
+
 # macOS System Files
 .DS_Store
 .Trashes
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+*.xcuserstate
+
+# Temporary files
+*.swp
+*.bak
+*~
