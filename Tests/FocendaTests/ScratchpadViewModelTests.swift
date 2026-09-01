@@ -40,6 +40,7 @@ final class ScratchpadViewModelTests: XCTestCase {
         let ideasNote = viewModel1.createNote(title: "Ideas")
         viewModel1.selectNote(ideasNote)
         viewModel1.updateContent("Sky test ideas")
+        viewModel1.flushPendingSaves()
 
         // Create new viewmodel instance backed by same UserDefaults to verify persistence
         let viewModel2 = ScratchpadViewModel(userDefaults: testDefaults)
@@ -47,19 +48,119 @@ final class ScratchpadViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel2.notes.first(where: { $0.title == "Ideas" })?.content, "Sky test ideas")
     }
 
-    func testKeystrokePersistence() {
+    func testKeystrokePersistenceAndDebounce() {
         let viewModel1 = ScratchpadViewModel(userDefaults: testDefaults)
         viewModel1.currentTitle = "Instant Title"
         viewModel1.currentContent = "Keystroke character 1"
+
+        // In-memory updates are instantaneous (0 delay for 120 FPS UI)
+        XCTAssertEqual(viewModel1.currentTitle, "Instant Title")
+        XCTAssertEqual(viewModel1.currentContent, "Keystroke character 1")
+        XCTAssertTrue(viewModel1.hasPendingSaves)
+
+        // Before debounce fires or flush, disk is not yet written to avoid per-keystroke crypto lag
+        let unpersistedViewModel = ScratchpadViewModel(userDefaults: testDefaults)
+        XCTAssertTrue(unpersistedViewModel.notes.isEmpty)
+
+        // Flushing immediately persists to disk
+        viewModel1.flushPendingSaves()
+        XCTAssertFalse(viewModel1.hasPendingSaves)
 
         let viewModel2 = ScratchpadViewModel(userDefaults: testDefaults)
         XCTAssertEqual(viewModel2.currentTitle, "Instant Title")
         XCTAssertEqual(viewModel2.currentContent, "Keystroke character 1")
 
-        // Simulate typing keystroke by keystroke
+        // Typing keystroke by keystroke
         viewModel1.currentContent = "Keystroke character 12"
+        XCTAssertEqual(viewModel1.currentContent, "Keystroke character 12")
+        viewModel1.flushPendingSaves()
+
         let viewModel3 = ScratchpadViewModel(userDefaults: testDefaults)
         XCTAssertEqual(viewModel3.currentContent, "Keystroke character 12")
+    }
+
+    func testDebounceTimerPersistsAfterInterval() {
+        let viewModel = ScratchpadViewModel(userDefaults: testDefaults, debounceInterval: 0.05)
+        _ = viewModel.createNote(title: "Debounce Note")
+        viewModel.updateContent("Debounced content written")
+        XCTAssertTrue(viewModel.hasPendingSaves)
+
+        let exp = expectation(description: "Wait for debounce timer")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            exp.fulfill()
+        }
+        waitForExpectations(timeout: 1.0)
+
+        XCTAssertFalse(viewModel.hasPendingSaves)
+
+        let reloaded = ScratchpadViewModel(userDefaults: testDefaults)
+        XCTAssertEqual(reloaded.notes.first?.content, "Debounced content written")
+    }
+
+    func testSwitchingNotesOrFoldersFlushesPendingChanges() {
+        let viewModel = ScratchpadViewModel(userDefaults: testDefaults)
+        let note1 = viewModel.createNote(title: "First Note", folder: "General")
+        viewModel.updateContent("Unsaved draft in note 1")
+        XCTAssertTrue(viewModel.hasPendingSaves)
+
+        // Switching note immediately flushes note 1 to disk
+        let note2 = viewModel.createNote(title: "Second Note", folder: "General")
+        XCTAssertFalse(viewModel.hasPendingSaves)
+
+        let reloaded = ScratchpadViewModel(userDefaults: testDefaults)
+        XCTAssertEqual(reloaded.notes.first(where: { $0.id == note1.id })?.content, "Unsaved draft in note 1")
+        XCTAssertEqual(reloaded.notes.first(where: { $0.id == note2.id })?.title, "Second Note")
+    }
+
+    func testAppLifecycleNotificationsFlushPendingChanges() {
+        let viewModel = ScratchpadViewModel(userDefaults: testDefaults)
+        _ = viewModel.createNote(title: "Background Note")
+        viewModel.updateContent("Crucial text typed before app switch")
+        XCTAssertTrue(viewModel.hasPendingSaves)
+
+        // Simulate app resigning active (user switches apps)
+        NotificationCenter.default.post(name: NSApplication.willResignActiveNotification, object: nil)
+        XCTAssertFalse(viewModel.hasPendingSaves)
+
+        let reloadedAfterResign = ScratchpadViewModel(userDefaults: testDefaults)
+        XCTAssertEqual(reloadedAfterResign.notes.first?.content, "Crucial text typed before app switch")
+
+        // Simulate app termination (Cmd+Q)
+        viewModel.updateContent("Text typed right before Quit")
+        XCTAssertTrue(viewModel.hasPendingSaves)
+
+        NotificationCenter.default.post(name: NSApplication.willTerminateNotification, object: nil)
+        XCTAssertFalse(viewModel.hasPendingSaves)
+
+        let reloadedAfterQuit = ScratchpadViewModel(userDefaults: testDefaults)
+        XCTAssertEqual(reloadedAfterQuit.notes.first?.content, "Text typed right before Quit")
+    }
+
+    func testRapidKeystrokesDebounceOptimization() {
+        let viewModel = ScratchpadViewModel(userDefaults: testDefaults, debounceInterval: 0.05)
+        _ = viewModel.createNote(title: "Typing Speed Test")
+
+        // Simulate 50 rapid keystrokes
+        for i in 1...50 {
+            viewModel.updateContent("Typed sequence \(i)")
+            XCTAssertEqual(viewModel.currentContent, "Typed sequence \(i)")
+            XCTAssertTrue(viewModel.hasPendingSaves)
+        }
+
+        // Memory updated instantaneously 50 times
+        XCTAssertEqual(viewModel.currentContent, "Typed sequence 50")
+
+        // Wait for debounce interval to finish
+        let exp = expectation(description: "Wait for rapid typing debounce")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            exp.fulfill()
+        }
+        waitForExpectations(timeout: 1.0)
+
+        XCTAssertFalse(viewModel.hasPendingSaves)
+
+        let reloaded = ScratchpadViewModel(userDefaults: testDefaults)
+        XCTAssertEqual(reloaded.notes.first?.content, "Typed sequence 50")
     }
 
     func testWordAndCharacterAndLineCount() {
@@ -138,6 +239,10 @@ final class ScratchpadViewModelTests: XCTestCase {
         viewModel.updateTitle("Meeting Notes")
 
         XCTAssertEqual(viewModel.currentNote.title, "Meeting Notes")
+        XCTAssertTrue(viewModel.hasPendingSaves)
+
+        viewModel.flushPendingSaves()
+        XCTAssertFalse(viewModel.hasPendingSaves)
 
         let viewModel2 = ScratchpadViewModel(userDefaults: testDefaults)
         XCTAssertEqual(viewModel2.notes.first?.title, "Meeting Notes")
