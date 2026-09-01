@@ -208,13 +208,18 @@ final class GlobalShortcutTests: XCTestCase {
     // MARK: - AppState Persistence Tests
 
     func testAppStateShortcutPreferencesPersistence() {
-        let state1 = AppState()
+        let suiteName = "Focenda.GlobalShortcutTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let secureStore = SecureStore(defaults: defaults)
+
+        let state1 = AppState(secureStore: secureStore)
         state1.globalShortcutsEnabled = false
         state1.shortcutPreset = .powerUser
         state1.showShortcutFeedback = false
         state1.savePreferences()
 
-        let state2 = AppState()
+        let state2 = AppState(secureStore: secureStore)
         XCTAssertEqual(state2.globalShortcutsEnabled, false)
         XCTAssertEqual(state2.shortcutPreset, .powerUser)
         XCTAssertEqual(state2.showShortcutFeedback, false)
