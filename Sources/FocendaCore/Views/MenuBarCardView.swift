@@ -370,7 +370,7 @@ public struct MenuBarCardView: View {
         )
     }
 
-    // MARK: - ⏱️ Focus Section
+    // MARK: - Focus Section
     private var focusSection: some View {
         VStack(spacing: 12) {
             modeSelectorSection
@@ -593,7 +593,7 @@ public struct MenuBarCardView: View {
         }
     }
 
-    // MARK: - 🔔 Recurring Reminders Section
+    // MARK: - Recurring Reminders Section
     private var recurringRemindersSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
@@ -744,7 +744,7 @@ public struct MenuBarCardView: View {
         isAddingReminder = false
     }
 
-    // MARK: - 📝 Quick Note Section
+    // MARK: - Quick Note Section
     private var quickNoteSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             // Folder Selector Header & Actions Bar
@@ -1065,7 +1065,7 @@ public struct MenuBarCardView: View {
         }
     }
 
-    // MARK: - ✅ Quick Task Section
+    // MARK: - Quick Task Section
     private var quickTaskSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 8) {
@@ -1207,7 +1207,7 @@ public struct MenuBarCardView: View {
         newTaskTitle = ""
     }
 
-    // MARK: - 🔗 Quick Links Section
+    // MARK: - Quick Links Section
     private var quickLinksSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {

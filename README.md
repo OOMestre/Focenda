@@ -224,9 +224,9 @@ Focenda is 100% free, open-source, and independently developed. If Focenda helps
   </a>
 </p>
 
-- ☕ **[Buy Me a Coffee](https://buymeacoffee.com/omestre)** — Support independent macOS development.
-- ⭐ **Star on GitHub** — Help Focenda reach more people by starring it on [GitHub](https://github.com/OOMestre/Focenda).
-- 💬 **Feedback & Ideas** — Share ideas or report issues on [GitHub Issues](https://github.com/OOMestre/Focenda/issues).
+- **[Buy Me a Coffee](https://buymeacoffee.com/omestre)** — Support independent macOS development.
+- **Star on GitHub** — Help Focenda reach more people by starring it on [GitHub](https://github.com/OOMestre/Focenda).
+- **Feedback & Ideas** — Share ideas or report issues on [GitHub Issues](https://github.com/OOMestre/Focenda/issues).
 
 ---
 

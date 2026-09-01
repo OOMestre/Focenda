@@ -141,9 +141,9 @@ codesign --verify --deep --strict "$TEMP_APP"
 mv "$TEMP_APP" "$APP_BUNDLE"
 
 echo "========================================"
-echo "✅ Created $APP_BUNDLE"
+echo "Created $APP_BUNDLE"
 if [ "${FOCENDA_NO_OPEN:-0}" != "1" ]; then
-  echo "🚀 Launching $APP_NAME..."
+  echo "Launching $APP_NAME..."
   echo "========================================"
   open "$APP_BUNDLE"
 else
