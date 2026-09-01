@@ -6,7 +6,6 @@ public struct CalendarDay: Identifiable, Equatable {
     public var id: String {
         AppDateFormatter.isoDate.string(from: date)
     }
-
     public let date: Date
     public let dayNumber: Int
     public let isCurrentMonth: Bool
@@ -1731,32 +1730,78 @@ public struct CalendarView: View {
             return []
         }
 
+        // O(M) Pre-grouping focus sessions by start of day
+        var workSecondsByDate: [Date: Int] = [:]
+        var sessionCountsByDate: [Date: Int] = [:]
+        for session in timerVM.completedSessions {
+            let day = calendar.startOfDay(for: session.completedAt)
+            sessionCountsByDate[day, default: 0] += 1
+            if session.mode == .work {
+                workSecondsByDate[day, default: 0] += session.durationSeconds
+            }
+        }
+
+        // O(N) Pre-grouping tasks by start of day
+        let todayStart = calendar.startOfDay(for: Date())
+        var tasksCountByDate: [Date: Int] = [:]
+        var dueTasksCountByDate: [Date: Int] = [:]
+        var hasTaskReminderByDate: [Date: Bool] = [:]
+
+        for task in taskVM.tasks {
+            var matchedDays = Set<Date>()
+
+            if let dueDate = task.dueDate {
+                let dueDay = calendar.startOfDay(for: dueDate)
+                matchedDays.insert(dueDay)
+                dueTasksCountByDate[dueDay, default: 0] += 1
+            }
+
+            if let reminderDate = task.reminderDate {
+                let remDay = calendar.startOfDay(for: reminderDate)
+                matchedDays.insert(remDay)
+                hasTaskReminderByDate[remDay] = true
+            }
+
+            if let completedAt = task.completedAt {
+                let compDay = calendar.startOfDay(for: completedAt)
+                matchedDays.insert(compDay)
+            }
+
+            let createdDay = calendar.startOfDay(for: task.createdAt)
+            matchedDays.insert(createdDay)
+
+            if !task.isCompleted {
+                matchedDays.insert(todayStart)
+            }
+
+            for day in matchedDays {
+                tasksCountByDate[day, default: 0] += 1
+            }
+        }
+
+        // Pre-fetch active recurring reminders for fast matching
+        let activeReminders = recurringReminderVM.activeReminders
+        let selectedStart = calendar.startOfDay(for: selectedDate)
+
         var days: [CalendarDay] = []
         var currentDate = monthFirstWeek.start
 
         while currentDate < monthLastWeek.end {
+            let currentDay = calendar.startOfDay(for: currentDate)
             let isCurrentMonth = calendar.isDate(currentDate, equalTo: date, toGranularity: .month)
-            let isToday = calendar.isDateInToday(currentDate)
-            let isSelected = calendar.isDate(currentDate, inSameDayAs: selectedDate)
+            let isToday = (currentDay == todayStart)
+            let isSelected = (currentDay == selectedStart)
             let dayNumber = calendar.component(.day, from: currentDate)
 
-            let focusMin = focusMinutes(for: currentDate)
-            let sessionsList = sessions(for: currentDate)
-            let tasksList = tasks(for: currentDate)
-            let recurringRemindersList = recurringReminderVM.reminders(for: currentDate, calendar: calendar)
+            let focusMin = (workSecondsByDate[currentDay] ?? 0) / 60
+            let sessionsCount = sessionCountsByDate[currentDay] ?? 0
+            let tasksCount = tasksCountByDate[currentDay] ?? 0
+            let dueTasksCount = dueTasksCountByDate[currentDay] ?? 0
+            let hasDueTasks = dueTasksCount > 0
 
-            let dueTasks = tasksList.filter { task in
-                if let due = task.dueDate {
-                    return calendar.isDate(due, inSameDayAs: currentDate)
-                }
-                return false
-            }
-            let hasReminders = tasksList.contains { task in
-                if let rem = task.reminderDate {
-                    return calendar.isDate(rem, inSameDayAs: currentDate)
-                }
-                return false
-            }
+            let recurringRemindersCount = activeReminders.isEmpty ? 0 : activeReminders.filter { $0.matches(date: currentDate, calendar: calendar) }.count
+            let hasRecurringReminders = recurringRemindersCount > 0
+            let hasReminders = (hasTaskReminderByDate[currentDay] == true) || hasRecurringReminders
 
             let day = CalendarDay(
                 date: currentDate,
@@ -1765,13 +1810,13 @@ public struct CalendarView: View {
                 isToday: isToday,
                 isSelected: isSelected,
                 focusMinutes: focusMin,
-                focusSessionsCount: sessionsList.count,
-                tasksCount: tasksList.count,
-                dueTasksCount: dueTasks.count,
-                hasDueTasks: !dueTasks.isEmpty,
-                hasReminders: hasReminders || !recurringRemindersList.isEmpty,
-                recurringRemindersCount: recurringRemindersList.count,
-                hasRecurringReminders: !recurringRemindersList.isEmpty
+                focusSessionsCount: sessionsCount,
+                tasksCount: tasksCount,
+                dueTasksCount: dueTasksCount,
+                hasDueTasks: hasDueTasks,
+                hasReminders: hasReminders,
+                recurringRemindersCount: recurringRemindersCount,
+                hasRecurringReminders: hasRecurringReminders
             )
             days.append(day)
 
@@ -1867,10 +1912,9 @@ public struct CalendarView: View {
         let totalFocusMinutes = sessionsInMonth.filter { $0.mode == .work }.reduce(0) { $0 + $1.durationSeconds } / 60
         let sessionsCount = sessionsInMonth.count
 
-        var activeDateSet = Set<String>()
-
+        var activeDateSet = Set<Date>()
         for session in sessionsInMonth {
-            activeDateSet.insert(AppDateFormatter.isoDate.string(from: session.completedAt))
+            activeDateSet.insert(calendar.startOfDay(for: session.completedAt))
         }
 
         let tasksCompleted = taskVM.tasks.filter { task in
