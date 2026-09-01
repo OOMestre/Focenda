@@ -44,6 +44,7 @@ If you discover a potential security vulnerability, please report it responsibly
 
 - [README](README.md) - Overview, key features, quick start, and installation options.
 - [Contributing Guide](CONTRIBUTING.md) - Local development setup, coding standards, test suite execution, and Pull Request workflow.
+- [Trademarks Policy](TRADEMARKS.md) - Guidelines for the Focenda name, app icon, and official branding.
 - [Privacy and Security Policy](docs/PRIVACY.md) - Local encrypted storage, network behavior, permissions, and hardened runtime details.
 - [Release and Deployment Guide](docs/RELEASE_GUIDE.md) - Release cadence, staging beta versus production builds, and CI/CD pipelines.
 

@@ -24,6 +24,7 @@
 [Contributing](CONTRIBUTING.md) |
 [Support](SUPPORT.md) |
 [Privacy & Security](docs/PRIVACY.md) |
+[Trademarks](TRADEMARKS.md) |
 [License](#license)
 
 ---
@@ -238,6 +239,8 @@ details.
 
 ---
 
-## License
+## License & Trademarks
 
 Distributed under the **MIT License**. See [LICENSE](LICENSE) for details.
+
+For trademark, logo, and project branding guidelines, see [TRADEMARKS.md](TRADEMARKS.md).
