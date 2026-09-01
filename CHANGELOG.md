@@ -9,17 +9,68 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 ### Summary
 Focenda v1.0.0 is the first official release of the native macOS focus, task, and calendar productivity suite. It provides a complete, distraction-free productivity environment combining intelligent focus timers, unified Kanban task workflows, an interactive monthly calendar, recurring reminders, a multi-notebook scratchpad, an instant-access menu bar control center, 5 refined visual themes, global keyboard shortcuts, guided onboarding, and encrypted local storage.
 
-### Key Highlights & Features
-- **Intelligent Focus Timer:** Deep focus, short break, and long break intervals with circular progress animations, mini floating HUD, and session counters.
-- **Unified Tasks & Kanban:** 3-column drag-and-drop Kanban board with seamless toggle to linear list view, priority flags, due dates, and Pomodoro session counts.
-- **Interactive Calendar:** Monthly schedule grid with focus heatmaps, scheduled task indicators, and pinned date previews.
-- **Recurring Reminders:** Scheduled alerts for daily, weekday, weekly, and monthly intervals with native macOS notifications and rich chime alerts.
-- **Multi-Notebook Scratchpad:** Debounced AES-GCM encrypted notes with instant search, folder organization, and keystroke persistence.
-- **Menu Bar Control Center:** Quick timer controls, note capture, and task addition directly from the macOS menu bar.
-- **Global Keyboard Shortcuts:** System-wide hotkeys (`⌥ ⌘ F`, `⌥ ⌘ 1-3`, etc.) to control timers and focus cycles from any app.
-- **5 Refined Aesthetic Themes:** Zen Calm Light, Obsidian Minimal Dark, Warm Sandstone, Nordic Frost, and Forest Matcha with instant color switching.
-- **Direct DMG Installer:** Automated `.dmg` drag-and-drop disk image releases (`Focenda-macOS.dmg`) and private in-app updates.
-- **100% Local, Private & Secure:** Authenticated AES-GCM encryption on device with zero telemetry and no cloud tracking.
+### Features & Workspaces
+
+#### Focus Timer & Flow Engine
+- **Multiple Interval Modes:** Deep Focus (25 min default), Short Break (5 min), and Long Break (15 min) with custom duration sliders in Settings.
+- **Circular Animated Visualizer:** Hardware-accelerated progress ring with elapsed/remaining countdowns and pulse animations.
+- **Floating Mini Timer HUD:** Lightweight, draggable floating panel (`NSPanel`) designed for multi-space desktop setups.
+- **Energy-Efficient Execution:** Background throttling, window minimization pause handling, and low CPU usage.
+- **Audio Completion Chimes:** Configurable alert sounds (Hero, Glass, Ping, Submarine) and support for custom audio files with multi-pulse chimes.
+- **Session History & Analytics:** Daily focus minutes, completed sessions, and productivity streaks persisted locally and reflected in dashboard stats.
+
+#### Tasks & Kanban Board
+- **Unified Switcher:** One-click toggle between interactive 3-column Kanban board (`To Do`, `In Progress`, `Done`) and compact linear list view.
+- **Drag & Drop Workflow:** Native macOS drag-and-drop support across Kanban columns and lists.
+- **Priority & Due Date Tracking:** Categorize tasks with Low, Medium, High, and Urgent priority flags, accompanied by deadline scheduling.
+- **Pomodoro Estimation:** Assign estimated focus sessions per task and increment completed sessions directly from the card.
+- **Search & Filtering:** Real-time fuzzy query filtering across task titles and descriptions.
+
+#### Interactive Monthly Calendar & Heatmap
+- **Monthly Schedule Grid:** Responsive monthly grid displaying daily productivity heatmaps based on completed focus time.
+- **Task & Reminder Indicators:** Day pills displaying scheduled tasks, due tasks, and active recurring reminders.
+- **Pinned Date Preview:** Click or hover on dates to inspect scheduled items and execute quick task or reminder creation.
+- **Monthly Productivity Summary:** Automatic calculations for total focus hours, session counts, completed tasks, and active workdays.
+
+#### Recurring Reminders & Alerts
+- **Flexible Recurrence Intervals:** Schedule daily, weekday, weekly, and monthly repeating reminder notifications.
+- **Native macOS Notifications:** Timed alerts delivered via Apple UserNotifications framework with action triggers.
+- **Active Reminder HUD:** Non-intrusive in-app banner alerts preventing duplicate notifications while the app is in the foreground.
+- **Sound Testing & Verification:** Per-reminder sound audition and upcoming alert countdowns.
+
+#### Multi-Notebook Encrypted Scratchpad
+- **Ultra-Fluid 120 FPS Typing:** 400ms debounced persistence avoiding UI thread blocking during rapid typing.
+- **Encrypted Local Storage:** All notes, titles, and notebook metadata are encrypted locally using AES-GCM 256-bit cryptography.
+- **Notebooks & Folder Organization:** Group notes into custom folders with quick sidebar navigation and search.
+- **Word & Character Counters:** Live stats and clean distraction-free typography.
+
+#### Focus Hub & Menu Bar Control Center
+- **Instant Menu Bar Access:** Fast popover panel from the macOS menu bar icon.
+- **Quick Controls:** Start, pause, or switch focus modes without leaving active fullscreen applications.
+- **Quick Note & Task Capture:** Add thoughts or new tasks straight into your notebooks and Kanban columns.
+- **Project Bookmarks:** Fast launcher for essential documentation, design tools, and development URLs.
+
+#### System-Wide Global Keyboard Shortcuts
+- **Carbon Hotkey Integration:** Native system-wide keyboard shortcuts operating across any application:
+  - `⌥ ⌘ F` — Start / Pause Focus Timer
+  - `⌥ ⌘ 1` — Start Deep Focus
+  - `⌥ ⌘ 2` — Start Short Break
+  - `⌥ ⌘ 3` — Start Long Break
+  - `⌥ ⌘ R` — Reset Timer
+  - `⌥ ⌘ S` — Skip Session
+- **Custom Shortcut Schemes:** Select between Standard (`⌥ ⌘`), Power User (`⌃ ⌥ ⌘`), and Compact (`⌃ ⌥`) with keycap preview badges.
+
+#### 5 Handcrafted Visual Themes
+- **Zen Calm Light:** Soothing minimalist light theme with high-contrast slate accents.
+- **Obsidian Minimal Dark:** Deep true-black dark theme optimized for low-light focus sessions.
+- **Warm Sandstone:** Soft, warm neutral tones for extended work sessions.
+- **Nordic Frost:** Cool glacial blues and crisp styling.
+- **Forest Matcha:** Earthy greens and calm botanical hues.
+
+#### Privacy, Security & Offline-First Architecture
+- **100% Local & Offline:** Zero telemetry, no cloud analytics, and zero external tracking.
+- **Apple CryptoKit Encryption:** Authenticated encryption using hardware-backed cryptographic keys.
+- **Hermetic In-App Updates:** Check for official releases securely on GitHub with signed DMGs (`Focenda-macOS.dmg`).
 
 ---
 
