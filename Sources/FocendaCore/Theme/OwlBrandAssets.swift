@@ -11,8 +11,8 @@ public enum OwlBrandAssets {
     /// Base64 encoded 2x PNG of the Menu Bar Owl Face Template icon (18x18pt / 36x36px @2x)
     private static let menuBarIconBase64 = "iVBORw0KGgoAAAANSUhEUgAAACQAAAAkCAYAAADhAJiYAAAAAXNSR0IArs4c6QAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAJKADAAQAAAABAAAAJAAAAAAJxsHGAAABdUlEQVRYCe1UO04DMRA1UShyhEgUCAnEKdKlASouEMQVgsQhaCiSIl0kxIkQgjoniJQyBYyJBz2Px971rjZJYUvW/N57M5q11phyygbKBsoGgg2cB5nmiYvmVGO+ifwDdwJib5BHDPpLwD8I/AfUPPfEi/zAind51N69Ljs20S4DVW0ttaFNFblFfR3jqg/LgQ/yqGMDdT0MLyjon/pkTNqr1Qa62+MEN3V64d9W+sy/JUfWZMzYswR2y6CUlcIcPzrSgmyf7gtdrkm7pJo97ztj7slKDMcOEjcMlFYyBokmdmB5pB7HHk57Qx4AghH41n0SMYayNsZirs+Taxa1uD6F5DP5nIf0f45raBFngv+AE/RAFYHUsM1yjsfXPtl1jhphcQD068hcSZA3HRRzhVfEPaU7BI06btA/SIBK7lBAreWqvdUkyHU1VLSv9oZgnr9HP8dES39G/OgwTbQvifRK94uu3V7qfjqs5ZRTNlA2cDQb+AXV3X2TTVtt0AAAAABJRU5ErkJggg=="
 
-    /// Native macOS Menu Bar template icon of the Owl Head
-    public static var menuBarIcon: NSImage {
+    /// Native macOS Menu Bar template icon of the Owl Head (cached in RAM)
+    public static let menuBarIcon: NSImage = {
         if let data = Data(base64Encoded: menuBarIconBase64),
            let image = NSImage(data: data) {
             image.size = NSSize(width: 18, height: 18)
@@ -20,10 +20,10 @@ public enum OwlBrandAssets {
             return image
         }
         return NSImage(systemSymbolName: "timer", accessibilityDescription: "Focenda") ?? NSImage()
-    }
+    }()
 
-    /// Full mascot image (Full Body Owl) for app branding and Dock icon
-    public static var mascotImage: NSImage {
+    /// Full mascot image (Full Body Owl) for app branding and Dock icon (cached in RAM)
+    public static let mascotImage: NSImage = {
         // Check main bundle, bundle resources, or assets directory
         let searchPaths = [
             Bundle.main.path(forResource: "focenda-mascot", ofType: "png"),
@@ -46,10 +46,10 @@ public enum OwlBrandAssets {
         }
 
         return menuBarIcon
-    }
+    }()
 
-    /// Head icon image (Owl Face)
-    public static var headIconImage: NSImage {
+    /// Head icon image (Owl Face) (cached in RAM)
+    public static let headIconImage: NSImage = {
         let searchPaths = [
             Bundle.main.path(forResource: "focenda-icon", ofType: "png"),
             Bundle.main.resourcePath.map { "\($0)/focenda-icon.png" },
@@ -65,7 +65,7 @@ public enum OwlBrandAssets {
         }
 
         return menuBarIcon
-    }
+    }()
 
     /// Configures the macOS Dock icon to display the full body mascot
     public static func configureDockIcon() {

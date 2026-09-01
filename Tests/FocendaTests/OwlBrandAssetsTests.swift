@@ -23,6 +23,20 @@ final class OwlBrandAssetsTests: XCTestCase {
         XCTAssertTrue(head.isValid, "Head icon image should be valid")
     }
 
+    func testAssetsAreCachedInMemory() {
+        let firstMenuBar = OwlBrandAssets.menuBarIcon
+        let secondMenuBar = OwlBrandAssets.menuBarIcon
+        XCTAssertTrue(firstMenuBar === secondMenuBar, "MenuBar icon should return cached instance in RAM")
+
+        let firstMascot = OwlBrandAssets.mascotImage
+        let secondMascot = OwlBrandAssets.mascotImage
+        XCTAssertTrue(firstMascot === secondMascot, "Mascot image should return cached instance in RAM")
+
+        let firstHead = OwlBrandAssets.headIconImage
+        let secondHead = OwlBrandAssets.headIconImage
+        XCTAssertTrue(firstHead === secondHead, "Head icon image should return cached instance in RAM")
+    }
+
     func testConfigureDockIconExecutesSafely() {
         OwlBrandAssets.configureDockIcon()
         // Should execute without throwing or crashing
