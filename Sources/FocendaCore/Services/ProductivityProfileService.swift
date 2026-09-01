@@ -64,7 +64,7 @@ public protocol ProductivityWindowManagerProtocol: AnyObject {
     func defaultWindowLayout() -> ProductivityWindowLayout
     func isApplicationRunning(_ application: ProductivityProfileApplication) -> Bool
     func launch(application: ProductivityProfileApplication) async -> Bool
-    func arrange(application: ProductivityProfileApplication, layout: ProductivityWindowLayout) -> ProductivityWindowArrangementResult
+    func arrange(application: ProductivityProfileApplication, layout: ProductivityWindowLayout) async -> ProductivityWindowArrangementResult
     func captureWindowLayout(for application: ProductivityProfileApplication) -> ProductivityWindowLayout?
 }
 
@@ -100,7 +100,7 @@ public final class ProductivityProfileActivationService: ProductivityProfileActi
                 launchedNames.append(application.name)
             }
 
-            switch windowManager.arrange(application: application, layout: application.windowLayout) {
+            switch await windowManager.arrange(application: application, layout: application.windowLayout) {
             case .arranged:
                 arrangedNames.append(application.name)
             case .accessibilityDenied:
@@ -124,6 +124,11 @@ public final class ProductivityProfileActivationService: ProductivityProfileActi
 #if os(macOS)
 /// Native macOS implementation backed by NSWorkspace and the Accessibility API.
 public final class AccessibilityWindowManager: ProductivityWindowManagerProtocol {
+    private static let launchAttemptCount = 50
+    private static let arrangementAttemptCount = 25
+    private static let arrangementRetryDelayNanoseconds: UInt64 = 100_000_000
+    private static let frameVerificationTolerance: CGFloat = 2
+
     public init() {}
 
     public var isAccessibilityTrusted: Bool {
@@ -180,6 +185,7 @@ public final class AccessibilityWindowManager: ProductivityWindowManagerProtocol
         }
 
         let configuration = NSWorkspace.OpenConfiguration()
+        configuration.activates = true
         let launched = await withCheckedContinuation { continuation in
             NSWorkspace.shared.openApplication(at: applicationURL, configuration: configuration) { application, _ in
                 continuation.resume(returning: application != nil)
@@ -189,68 +195,65 @@ public final class AccessibilityWindowManager: ProductivityWindowManagerProtocol
         guard launched else { return false }
 
         // NSWorkspace reports success just before the app has necessarily
-        // created its first window. Give it a short, cancellable settling time.
-        for _ in 0..<30 {
+        // created its first window. Wait for the process here; arrangement has
+        // its own retry loop for the window and its geometry becoming ready.
+        for _ in 0..<Self.launchAttemptCount {
             if let runningApplication = runningApplication(for: application), !runningApplication.isTerminated {
-                if !isAccessibilityTrusted || hasWindow(for: runningApplication) {
-                    return true
-                }
+                return true
             }
             try? await Task.sleep(for: .milliseconds(100))
         }
 
-        guard let runningApplication = runningApplication(for: application) else { return false }
-        return !isAccessibilityTrusted || hasWindow(for: runningApplication)
+        return runningApplication(for: application) != nil
     }
 
     public func arrange(
         application: ProductivityProfileApplication,
         layout: ProductivityWindowLayout
-    ) -> ProductivityWindowArrangementResult {
-        guard isAccessibilityTrusted else { return .accessibilityDenied }
-        guard let runningApplication = runningApplication(for: application) else {
+    ) async -> ProductivityWindowArrangementResult {
+        var sawRunningApplication = false
+        var sawWindow = false
+
+        for attempt in 0..<Self.arrangementAttemptCount {
+            guard isAccessibilityTrusted else { return .accessibilityDenied }
+
+            guard let runningApplication = runningApplication(for: application) else {
+                await waitBeforeArrangementRetry(ifNeeded: attempt)
+                continue
+            }
+            sawRunningApplication = true
+
+            // Existing applications are not necessarily frontmost or unhidden.
+            // Bringing them forward before querying AX makes their main window
+            // available consistently, especially immediately after launch.
+            _ = runningApplication.unhide()
+            if attempt == 0 {
+                _ = runningApplication.activate(options: [])
+            }
+
+            let appElement = AXUIElementCreateApplication(runningApplication.processIdentifier)
+            guard let window = firstWindow(for: appElement) else {
+                await waitBeforeArrangementRetry(ifNeeded: attempt)
+                continue
+            }
+            sawWindow = true
+
+            guard let screen = screen(for: layout) else {
+                return .failed
+            }
+
+            let targetFrame = layout.sanitized.appKitFrame(in: screen.visibleFrame)
+            if apply(targetFrame: targetFrame, to: window) {
+                return .arranged
+            }
+
+            await waitBeforeArrangementRetry(ifNeeded: attempt)
+        }
+
+        if !sawRunningApplication {
             return .applicationNotRunning
         }
-
-        let appElement = AXUIElementCreateApplication(runningApplication.processIdentifier)
-        guard let window = firstWindow(for: appElement) else {
-            return .noWindow
-        }
-        guard let screen = screen(for: layout) else {
-            return .failed
-        }
-
-        _ = runningApplication.unhide()
-        let targetFrame = layout.sanitized.appKitFrame(in: screen.visibleFrame)
-        let accessibilityPosition = accessibilityPosition(for: targetFrame)
-        var position = accessibilityPosition
-        var size = targetFrame.size
-
-        guard let positionValue = AXValueCreate(.cgPoint, &position),
-              let sizeValue = AXValueCreate(.cgSize, &size) else {
-            return .failed
-        }
-
-        _ = AXUIElementSetAttributeValue(
-            window,
-            kAXMinimizedAttribute as CFString,
-            kCFBooleanFalse
-        )
-
-        // Set size first so the final position is calculated from the desired
-        // frame rather than the application's old window dimensions.
-        let sizeResult = AXUIElementSetAttributeValue(
-            window,
-            kAXSizeAttribute as CFString,
-            sizeValue
-        )
-        let positionResult = AXUIElementSetAttributeValue(
-            window,
-            kAXPositionAttribute as CFString,
-            positionValue
-        )
-
-        return sizeResult == .success && positionResult == .success ? .arranged : .failed
+        return sawWindow ? .failed : .noWindow
     }
 
     public func captureWindowLayout(for application: ProductivityProfileApplication) -> ProductivityWindowLayout? {
@@ -328,19 +331,116 @@ public final class AccessibilityWindowManager: ProductivityWindowManagerProtocol
             return nil
         }
 
-        for window in windows {
+        let standardWindows = windows.filter { window in
             var roleValue: CFTypeRef?
-            if AXUIElementCopyAttributeValue(window, kAXRoleAttribute as CFString, &roleValue) == .success,
-               let role = roleValue as? String,
-               role == kAXWindowRole as String {
-                return window
+            return AXUIElementCopyAttributeValue(window, kAXRoleAttribute as CFString, &roleValue) == .success
+                && (roleValue as? String) == (kAXWindowRole as String)
+        }
+
+        var mainWindowValue: CFTypeRef?
+        if AXUIElementCopyAttributeValue(
+            appElement,
+            kAXMainWindowAttribute as CFString,
+            &mainWindowValue
+        ) == .success,
+           let mainWindowValue,
+           CFGetTypeID(mainWindowValue) == AXUIElementGetTypeID() {
+            let mainWindow = mainWindowValue as! AXUIElement
+            if isGeometrySettable(mainWindow) {
+                return mainWindow
             }
         }
-        return windows.first
+
+        // Prefer a standard window whose geometry attributes are writable.
+        // Some applications expose sheets, tool windows, or transient launch
+        // windows before their actual workspace window.
+        if let writableWindow = standardWindows.first(where: isGeometrySettable) {
+            return writableWindow
+        }
+        return standardWindows.first ?? windows.first
     }
 
-    private func hasWindow(for runningApplication: NSRunningApplication) -> Bool {
-        firstWindow(for: AXUIElementCreateApplication(runningApplication.processIdentifier)) != nil
+    private func isGeometrySettable(_ window: AXUIElement) -> Bool {
+        var positionSettable = DarwinBoolean(false)
+        var sizeSettable = DarwinBoolean(false)
+        let positionError = AXUIElementIsAttributeSettable(
+            window,
+            kAXPositionAttribute as CFString,
+            &positionSettable
+        )
+        let sizeError = AXUIElementIsAttributeSettable(
+            window,
+            kAXSizeAttribute as CFString,
+            &sizeSettable
+        )
+        return positionError == .success
+            && sizeError == .success
+            && positionSettable.boolValue
+            && sizeSettable.boolValue
+    }
+
+    private func apply(targetFrame: CGRect, to window: AXUIElement) -> Bool {
+        var position = accessibilityPosition(for: targetFrame)
+        var size = targetFrame.size
+
+        guard let positionValue = AXValueCreate(.cgPoint, &position),
+              let sizeValue = AXValueCreate(.cgSize, &size) else {
+            return false
+        }
+
+        if frame(of: window).map({ matches($0, targetFrame) }) == true {
+            return true
+        }
+
+        _ = AXUIElementSetAttributeValue(
+            window,
+            kAXMinimizedAttribute as CFString,
+            kCFBooleanFalse
+        )
+        _ = AXUIElementPerformAction(window, kAXRaiseAction as CFString)
+
+        // Different window frameworks commit geometry in different orders. Try
+        // both common orders and verify the resulting frame instead of treating
+        // an accepted AX message as proof that the window moved.
+        let sizeThenPosition = AXUIElementSetAttributeValue(
+            window,
+            kAXSizeAttribute as CFString,
+            sizeValue
+        ) == .success
+            && AXUIElementSetAttributeValue(
+                window,
+                kAXPositionAttribute as CFString,
+                positionValue
+            ) == .success
+
+        if sizeThenPosition, frame(of: window).map({ matches($0, targetFrame) }) == true {
+            return true
+        }
+
+        let positionThenSize = AXUIElementSetAttributeValue(
+            window,
+            kAXPositionAttribute as CFString,
+            positionValue
+        ) == .success
+            && AXUIElementSetAttributeValue(
+                window,
+                kAXSizeAttribute as CFString,
+                sizeValue
+            ) == .success
+
+        return positionThenSize && frame(of: window).map({ matches($0, targetFrame) }) == true
+    }
+
+    private func matches(_ actualFrame: CGRect, _ targetFrame: CGRect) -> Bool {
+        abs(actualFrame.minX - targetFrame.minX) <= Self.frameVerificationTolerance
+            && abs(actualFrame.minY - targetFrame.minY) <= Self.frameVerificationTolerance
+            && abs(actualFrame.width - targetFrame.width) <= Self.frameVerificationTolerance
+            && abs(actualFrame.height - targetFrame.height) <= Self.frameVerificationTolerance
+    }
+
+    private func waitBeforeArrangementRetry(ifNeeded attempt: Int) async {
+        guard attempt < Self.arrangementAttemptCount - 1 else { return }
+        try? await Task.sleep(nanoseconds: Self.arrangementRetryDelayNanoseconds)
     }
 
     private func frame(of window: AXUIElement) -> CGRect? {
@@ -350,6 +450,11 @@ public final class AccessibilityWindowManager: ProductivityWindowManagerProtocol
               AXUIElementCopyAttributeValue(window, kAXSizeAttribute as CFString, &sizeValue) == .success,
               let positionValue,
               let sizeValue else {
+            return nil
+        }
+
+        guard CFGetTypeID(positionValue) == AXValueGetTypeID(),
+              CFGetTypeID(sizeValue) == AXValueGetTypeID() else {
             return nil
         }
 

@@ -319,7 +319,7 @@ private final class FakeProductivityWindowManager: ProductivityWindowManagerProt
     func arrange(
         application: ProductivityProfileApplication,
         layout: ProductivityWindowLayout
-    ) -> ProductivityWindowArrangementResult {
+    ) async -> ProductivityWindowArrangementResult {
         guard isAccessibilityTrusted else { return .accessibilityDenied }
         guard isApplicationRunning(application) else { return .applicationNotRunning }
         arrangedApplications.append(application)
