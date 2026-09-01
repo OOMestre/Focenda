@@ -50,7 +50,7 @@ public struct ProductivityProfileActivationResult: Equatable, Sendable {
 
         let failed = failedApplicationNames.joined(separator: ", ")
         if requiresAccessibilityPermission {
-            return "Give Focenda Accessibility access to organize: \(failed)."
+            return "Allow Focenda in Accessibility, then activate this profile again. \(failed) were not opened, so their window layout stays intact."
         }
         return "Profile activated partially. Could not organize: \(failed)."
     }
@@ -88,8 +88,15 @@ public final class ProductivityProfileActivationService: ProductivityProfileActi
 
         if !windowManager.isAccessibilityTrusted {
             windowManager.requestAccessibilityAccess()
+            return ProductivityProfileActivationResult(
+                profileName: profile.displayName,
+                failedApplicationNames: profile.applications.map(\.name),
+                requiresAccessibilityPermission: true
+            )
         }
 
+        // Apps often restore their first window after their process starts.
+        // Begin every launch before asking Accessibility to move any window.
         for application in profile.applications {
             let wasRunning = windowManager.isApplicationRunning(application)
             if !wasRunning {
@@ -99,7 +106,9 @@ public final class ProductivityProfileActivationService: ProductivityProfileActi
                 }
                 launchedNames.append(application.name)
             }
+        }
 
+        for application in profile.applications where !failedNames.contains(application.name) {
             switch await windowManager.arrange(application: application, layout: application.windowLayout) {
             case .arranged:
                 arrangedNames.append(application.name)
@@ -125,7 +134,7 @@ public final class ProductivityProfileActivationService: ProductivityProfileActi
 /// Native macOS implementation backed by NSWorkspace and the Accessibility API.
 public final class AccessibilityWindowManager: ProductivityWindowManagerProtocol {
     private static let launchAttemptCount = 50
-    private static let arrangementAttemptCount = 25
+    private static let arrangementAttemptCount = 40
     private static let arrangementRetryDelayNanoseconds: UInt64 = 100_000_000
     private static let frameVerificationTolerance: CGFloat = 2
 

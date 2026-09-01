@@ -244,6 +244,7 @@ private struct ProductivityProfileEditor: View {
                     accessibilityPermissionCard
                 }
 
+                desktopSpaceInformationCard
                 applicationsSection
                 shortcutSection
 
@@ -286,7 +287,7 @@ private struct ProductivityProfileEditor: View {
                     .textFieldStyle(.plain)
                     .foregroundStyle(AppTheme.textPrimary)
 
-                Text("Open the apps you need and restore their workspace in one action.")
+                Text("Open the apps you need and restore their window layout in one action.")
                     .font(.subheadline)
                     .foregroundStyle(AppTheme.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -360,6 +361,33 @@ private struct ProductivityProfileEditor: View {
         )
     }
 
+    private var desktopSpaceInformationCard: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "rectangle.on.rectangle")
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(AppTheme.accent)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Profiles arrange windows on the current desktop")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(AppTheme.textPrimary)
+                Text("macOS does not provide a supported way for Focenda to create a new desktop or move other apps between Spaces. Choose the desktop you want in Mission Control first, then use this profile's shortcut to open and arrange its windows there.")
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(12)
+        .background(AppTheme.accent.opacity(0.08))
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .stroke(AppTheme.accent.opacity(0.20), lineWidth: 1)
+        )
+    }
+
     private var applicationsSection: some View {
         GroupBox {
             VStack(alignment: .leading, spacing: 12) {
@@ -412,7 +440,7 @@ private struct ProductivityProfileEditor: View {
             }
             .padding(4)
         } label: {
-            Label("Workspace", systemImage: "macwindow.on.rectangle")
+            Label("Window layout", systemImage: "macwindow.on.rectangle")
                 .foregroundStyle(AppTheme.textPrimary)
         }
     }

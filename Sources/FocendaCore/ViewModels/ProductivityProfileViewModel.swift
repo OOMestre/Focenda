@@ -206,6 +206,7 @@ public final class ProductivityProfileViewModel {
                 self.activeProfileID = id
                 self.isActivatingProfileID = nil
                 self.lastActivationResult = result
+                self.isAccessibilityTrusted = self.windowManager.isAccessibilityTrusted
             }
         }
     }
@@ -225,6 +226,7 @@ public final class ProductivityProfileViewModel {
         activeProfileID = id
         isActivatingProfileID = nil
         lastActivationResult = result
+        isAccessibilityTrusted = windowManager.isAccessibilityTrusted
         return result
     }
 

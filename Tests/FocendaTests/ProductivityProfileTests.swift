@@ -128,6 +128,24 @@ final class ProductivityProfileTests: XCTestCase {
         XCTAssertTrue(result.requiresAccessibilityPermission)
         XCTAssertEqual(result.failedApplicationNames, ["Editor", "Browser"])
         XCTAssertFalse(result.succeeded)
+        XCTAssertTrue(windowManager.launchedApplications.isEmpty)
+        XCTAssertTrue(windowManager.arrangedApplications.isEmpty)
+        XCTAssertEqual(
+            result.summary,
+            "Allow Focenda in Accessibility, then activate this profile again. Editor, Browser were not opened, so their window layout stays intact."
+        )
+    }
+
+    func testActivationLaunchesEveryMissingAppBeforeArrangingAnyWindow() async {
+        let windowManager = FakeProductivityWindowManager()
+        let activationService = ProductivityProfileActivationService(windowManager: windowManager)
+
+        _ = await activationService.activate(sampleProfile())
+
+        XCTAssertEqual(
+            windowManager.operations,
+            ["launch:Editor", "launch:Browser", "arrange:Editor", "arrange:Browser"]
+        )
     }
 
     func testAccessibilityStatusRefreshesAfterPermissionChanges() {
@@ -293,6 +311,7 @@ private final class FakeProductivityWindowManager: ProductivityWindowManagerProt
     var didRequestAccessibilityAccess = false
     var launchedApplications: [ProductivityProfileApplication] = []
     var arrangedApplications: [ProductivityProfileApplication] = []
+    var operations: [String] = []
 
     func requestAccessibilityAccess() {
         didRequestAccessibilityAccess = true
@@ -312,6 +331,7 @@ private final class FakeProductivityWindowManager: ProductivityWindowManagerProt
 
     func launch(application: ProductivityProfileApplication) async -> Bool {
         launchedApplications.append(application)
+        operations.append("launch:\(application.name)")
         runningBundleIdentifiers.insert(application.bundleIdentifier)
         return true
     }
@@ -323,6 +343,7 @@ private final class FakeProductivityWindowManager: ProductivityWindowManagerProt
         guard isAccessibilityTrusted else { return .accessibilityDenied }
         guard isApplicationRunning(application) else { return .applicationNotRunning }
         arrangedApplications.append(application)
+        operations.append("arrange:\(application.name)")
         return .arranged
     }
 

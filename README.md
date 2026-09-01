@@ -96,7 +96,7 @@ Floating, top-down animated macOS menu bar utility providing quick timer control
 Responsive quick-launch directory for essential development references, tools, and documentation with 1-click browser integration.
 
 ### Productivity Profiles
-Save a complete workspace with selected applications, per-window monitor/position/size layouts, and a global shortcut that opens and organizes it on demand.
+Save a complete window layout with selected applications, per-window monitor/position/size layouts, and a global shortcut that opens and organizes it on demand. Profiles restore windows on the current macOS desktop; macOS does not offer a supported API for an app to create or control Spaces.
 
 ### Guided First-Launch Onboarding
 A complete tour of every workspace section and the menu bar control center, replayable from Settings whenever needed.
@@ -120,7 +120,7 @@ On the first launch, Focenda opens a guided tour covering the Dashboard, Focus T
 2. **Manage Tasks in Kanban:** Navigate to Tasks & Kanban to organize items across columns, set priority levels (High, Medium, Low), or switch to the linear list view.
 3. **Inspect Schedule in Calendar:** Open Calendar and hover over any date to preview scheduled items; click a date to keep the preview open and use its quick actions.
 4. **Capture Notes:** Use Scratchpad or the Menu Bar popover to take quick notes into dedicated notebooks.
-5. **Restore a Workspace:** Open Profiles, add your applications, choose each monitor and a simple position on it, adjust window sizes, record a shortcut, and activate the profile whenever you want to return to that setup.
+5. **Restore a Workspace:** Open Profiles, grant Focenda Accessibility access, add your applications, choose each monitor and a simple position on it, adjust window sizes, record a shortcut, and activate the profile whenever you want to return to that setup. To keep a profile on a specific macOS desktop, switch to that desktop in Mission Control before activating it.
 
 ---
 
