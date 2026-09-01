@@ -499,7 +499,7 @@ public final class AppUpdateManager {
             secureStore: resolvedSecureStore
         )
         self.completedUpdateGuide = pendingUpdateGuide
-        self.lastUpdateGuide = pendingUpdateGuide ?? persistedLastUpdateGuide
+        self.lastUpdateGuide = pendingUpdateGuide ?? persistedLastUpdateGuide ?? AppUpdateGuide.defaultGuide(for: currentReleaseIdentifier)
 
         // A pending guide is only promoted after the app relaunches on the
         // matching installed version, which means the update completed.

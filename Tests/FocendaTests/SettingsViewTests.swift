@@ -215,4 +215,22 @@ final class SettingsViewTests: XCTestCase {
         XCTAssertNotNil(settingsView)
         XCTAssertNotNil(settingsView.body)
     }
+
+    func testAppUpdateManagerProvidesDefaultGuideOnFreshInstall() {
+        let suiteName = "Focenda.FreshInstallUpdateGuideTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let secureStore = SecureStore(defaults: defaults)
+        let manager = AppUpdateManager(
+            currentReleaseIdentifier: "0.1.0",
+            userDefaults: defaults,
+            secureStore: secureStore
+        )
+
+        XCTAssertNotNil(manager.lastUpdateGuide)
+        XCTAssertEqual(manager.lastUpdateGuide?.version, "0.1.0")
+        XCTAssertFalse(manager.lastUpdateGuide?.sections.isEmpty ?? true)
+    }
 }
+

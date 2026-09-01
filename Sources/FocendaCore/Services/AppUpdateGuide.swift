@@ -43,6 +43,29 @@ public struct AppUpdateGuide: Codable, Equatable, Identifiable, Sendable {
         self.sections = sections
     }
 
+    public static func defaultGuide(for currentReleaseIdentifier: String) -> AppUpdateGuide {
+        let versionDescription = AppVersion(currentReleaseIdentifier)?.description ?? currentReleaseIdentifier
+        let normalizedTag = currentReleaseIdentifier.hasPrefix("v") || currentReleaseIdentifier.hasPrefix("V")
+            ? currentReleaseIdentifier
+            : "v\(currentReleaseIdentifier)"
+        return AppUpdateGuide(
+            releaseTag: normalizedTag,
+            version: versionDescription,
+            title: "Focenda \(versionDescription)",
+            sections: [
+                AppUpdateGuideSection(
+                    title: "What's New in Focenda",
+                    items: [
+                        "Productivity Profiles with semantic window placement and global shortcuts.",
+                        "Direct macOS .dmg installer releases and background updates.",
+                        "Guided first-launch onboarding with interactive tour.",
+                        "Encrypted on-device storage for notes, tasks, calendar items, and preferences."
+                    ]
+                )
+            ]
+        )
+    }
+
     private static func makeSections(from body: String?, updateName: String) -> [AppUpdateGuideSection] {
         guard let body,
               !body.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
