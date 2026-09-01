@@ -139,4 +139,4 @@ If you encounter a bug or have an idea for improvement:
 
 ## License
 
-By contributing to Focenda, you agree that your contributions will be licensed under the project's [MIT License](LICENSE).
+By contributing to Focenda, you agree that your contributions will be licensed under the project's [GNU General Public License v3 (GPL-3.0)](LICENSE).

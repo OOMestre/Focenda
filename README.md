@@ -12,7 +12,7 @@
 *100% Swift | Free & Open Source | Designed for Apple Silicon & Intel macOS*
 
 [![CI Build & Test](https://github.com/OOMestre/Focenda/actions/workflows/ci.yml/badge.svg)](https://github.com/OOMestre/Focenda/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0-blue.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-macOS%2014.0%2B-black?logo=apple)](https://apple.com/macos)
 [![Swift](https://img.shields.io/badge/Swift-6.0-orange?logo=swift)](https://swift.org)
 [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-omestre-FFDD00?logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/omestre)
@@ -241,6 +241,6 @@ details.
 
 ## License & Trademarks
 
-Distributed under the **MIT License**. See [LICENSE](LICENSE) for details.
+Distributed under the **GNU General Public License v3.0 (GPL-3.0)**. See [LICENSE](LICENSE) for details.
 
 For trademark, logo, and project branding guidelines, see [TRADEMARKS.md](TRADEMARKS.md).
