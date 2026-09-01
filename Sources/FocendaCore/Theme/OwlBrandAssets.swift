@@ -142,16 +142,27 @@ public struct OwlFaceView: View {
 /// SwiftUI View displaying the Full Body Owl Mascot
 public struct OwlMascotView: View {
     public var size: CGFloat
+    public var isCircular: Bool
 
-    public init(size: CGFloat = 64) {
+    public init(size: CGFloat = 64, isCircular: Bool = false) {
         self.size = size
+        self.isCircular = isCircular
     }
 
     public var body: some View {
+        if isCircular {
+            mascotImage
+                .clipShape(Circle())
+        } else {
+            mascotImage
+                .clipShape(RoundedRectangle(cornerRadius: size * 0.22, style: .continuous))
+        }
+    }
+
+    private var mascotImage: some View {
         Image(nsImage: OwlBrandAssets.mascotImage)
             .resizable()
             .scaledToFit()
             .frame(width: size, height: size)
-            .clipShape(RoundedRectangle(cornerRadius: size * 0.22, style: .continuous))
     }
 }

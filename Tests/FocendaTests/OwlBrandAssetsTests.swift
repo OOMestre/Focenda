@@ -61,6 +61,11 @@ final class OwlBrandAssetsTests: XCTestCase {
 
         let mascotView = OwlMascotView(size: 96)
         XCTAssertEqual(mascotView.size, 96)
+        XCTAssertFalse(mascotView.isCircular)
         XCTAssertNotNil(mascotView.body)
+
+        let circularMascotView = OwlMascotView(size: 96, isCircular: true)
+        XCTAssertTrue(circularMascotView.isCircular)
+        XCTAssertNotNil(circularMascotView.body)
     }
 }

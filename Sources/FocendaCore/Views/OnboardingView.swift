@@ -155,7 +155,7 @@ public struct OnboardingView: View {
                 .frame(width: 126, height: 126)
 
             if currentStep == .welcome {
-                OwlMascotView(size: 94)
+                OwlMascotView(size: 94, isCircular: true)
             } else {
                 Image(systemName: currentStep.systemImage)
                     .font(.system(size: 42, weight: .semibold))
