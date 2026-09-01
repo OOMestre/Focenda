@@ -90,6 +90,9 @@ public struct ScratchpadView: View {
         .sheet(isPresented: $showingNewFolderSheet) {
             newFolderSheet
         }
+        .onDisappear {
+            viewModel.flushPendingSaves()
+        }
     }
 
     // MARK: - Header Bar
@@ -744,9 +747,6 @@ public struct ScratchpadView: View {
                     .background(Color.clear)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 14)
-                    .onChange(of: viewModel.currentContent) { _, _ in
-                        viewModel.saveToUserDefaults()
-                    }
             }
             .frame(minWidth: 0, maxWidth: .infinity, maxHeight: .infinity)
             .background(AppTheme.background)
@@ -831,9 +831,6 @@ public struct ScratchpadView: View {
             .textFieldStyle(.plain)
             .foregroundStyle(AppTheme.textPrimary)
             .focused($isTitleFocused)
-            .onChange(of: viewModel.currentTitle) { _, _ in
-                viewModel.saveToUserDefaults()
-            }
     }
 
     private var notePinButton: some View {
@@ -1030,15 +1027,27 @@ public struct ScratchpadView: View {
 
     private var savedIndicator: some View {
         HStack(spacing: 4) {
-            Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 10))
-                .foregroundStyle(AppTheme.success)
+            if viewModel.hasPendingSaves {
+                Image(systemName: "arrow.triangle.2.circlepath")
+                    .font(.system(size: 10))
+                    .foregroundStyle(AppTheme.accent)
 
-            Text("Saved")
-                .font(.caption.weight(.medium))
-                .foregroundStyle(AppTheme.textSecondary)
-                .lineLimit(1)
+                Text("Saving...")
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(AppTheme.textSecondary)
+                    .lineLimit(1)
+            } else {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 10))
+                    .foregroundStyle(AppTheme.success)
+
+                Text("Saved")
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(AppTheme.textSecondary)
+                    .lineLimit(1)
+            }
         }
+        .animation(.easeInOut(duration: 0.2), value: viewModel.hasPendingSaves)
     }
 
     // MARK: - New Folder Sheet

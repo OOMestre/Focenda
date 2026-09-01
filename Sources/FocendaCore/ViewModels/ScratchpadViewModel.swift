@@ -142,6 +142,7 @@ public final class ScratchpadViewModel {
 
     public static let defaultFolders = ["General", "Projects", "Work", "Personal", "Ideas"]
     public static let allNotesFolder = "All Notes"
+    public static let defaultDebounceInterval: TimeInterval = 0.4
     private static let legacyGeneratedTitles = [
         "Amber Scratchpad",
         "Lavender Scratchpad",
@@ -158,13 +159,49 @@ public final class ScratchpadViewModel {
     public var showFoldersSidebar: Bool = true
     public var showNotesSidebar: Bool = true
 
+    public var debounceInterval: TimeInterval = ScratchpadViewModel.defaultDebounceInterval
+    public private(set) var hasPendingSaves: Bool = false
+
     private let secureStore: SecureStore
     private var notesPersistenceReady = false
     private var foldersPersistenceReady = false
+    private var saveWorkItem: DispatchWorkItem?
 
-    public init(userDefaults: UserDefaults = .standard, secureStore: SecureStore? = nil) {
+    #if os(macOS)
+    private var lifecycleObservers: [NSObjectProtocol] = []
+    #endif
+
+    public init(
+        userDefaults: UserDefaults = .standard,
+        secureStore: SecureStore? = nil,
+        debounceInterval: TimeInterval = ScratchpadViewModel.defaultDebounceInterval
+    ) {
+        self.debounceInterval = debounceInterval
         self.secureStore = secureStore ?? SecureStore(defaults: userDefaults)
         loadFromUserDefaults()
+        setupLifecycleObservers()
+    }
+
+    public convenience init(
+        userDefaults: UserDefaults = .standard,
+        secureStore: SecureStore? = nil
+    ) {
+        self.init(
+            userDefaults: userDefaults,
+            secureStore: secureStore,
+            debounceInterval: ScratchpadViewModel.defaultDebounceInterval
+        )
+    }
+
+    deinit {
+        removeLifecycleObservers()
+        saveWorkItem?.cancel()
+        saveWorkItem = nil
+        if hasPendingSaves && notesPersistenceReady {
+            if let data = try? JSONEncoder().encode(notes) {
+                secureStore.setData(data, forKey: Self.userDefaultsKey)
+            }
+        }
     }
 
     /// SF Symbol icon associated with folder name
@@ -279,11 +316,14 @@ public final class ScratchpadViewModel {
     // MARK: - Folder Management
 
     public func selectFolder(_ folder: String) {
-        selectedFolder = folder
-        if let firstInFolder = filteredNotes.first {
-            selectedNoteId = firstInFolder.id
-        } else {
-            selectedNoteId = nil
+        if selectedFolder != folder {
+            flushPendingSaves()
+            selectedFolder = folder
+            if let firstInFolder = filteredNotes.first {
+                selectedNoteId = firstInFolder.id
+            } else {
+                selectedNoteId = nil
+            }
         }
     }
 
@@ -304,6 +344,7 @@ public final class ScratchpadViewModel {
     }
 
     public func deleteFolder(_ name: String) {
+        flushPendingSaves()
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard trimmed.caseInsensitiveCompare(Self.allNotesFolder) != .orderedSame else { return }
 
@@ -333,6 +374,7 @@ public final class ScratchpadViewModel {
         let targetFolder = folder.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !targetFolder.isEmpty && targetFolder != Self.allNotesFolder else { return }
 
+        flushPendingSaves()
         if let index = notes.firstIndex(where: { $0.id == id }) {
             notes[index].folder = targetFolder
             notes[index].updatedAt = Date()
@@ -351,11 +393,14 @@ public final class ScratchpadViewModel {
     // MARK: - Note Selection & Management
 
     public func selectNote(_ note: ScratchpadNote) {
-        selectedNoteId = note.id
+        selectNote(id: note.id)
     }
 
     public func selectNote(id: UUID) {
-        selectedNoteId = id
+        if selectedNoteId != id {
+            flushPendingSaves()
+            selectedNoteId = id
+        }
     }
 
     @discardableResult
@@ -364,6 +409,7 @@ public final class ScratchpadViewModel {
         content: String = "",
         folder: String? = nil
     ) -> ScratchpadNote {
+        flushPendingSaves()
         let targetFolder: String
         if let folder = folder, !folder.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             targetFolder = folder
@@ -386,6 +432,7 @@ public final class ScratchpadViewModel {
     }
 
     public func deleteNote(id: UUID) {
+        flushPendingSaves()
         notes.removeAll(where: { $0.id == id })
         if selectedNoteId == id {
             selectedNoteId = filteredNotes.first?.id ?? notes.first?.id
@@ -402,6 +449,7 @@ public final class ScratchpadViewModel {
     }
 
     public func togglePin(for note: ScratchpadNote) {
+        flushPendingSaves()
         if let index = notes.firstIndex(where: { $0.id == note.id }) {
             notes[index].isPinned.toggle()
             notes[index].updatedAt = Date()
@@ -409,12 +457,17 @@ public final class ScratchpadViewModel {
         }
     }
 
-    public func updateContent(_ text: String) {
+    public func updateContent(_ text: String, debounce: Bool = true) {
         let targetId = currentNote.id
         if let index = notes.firstIndex(where: { $0.id == targetId }) {
+            guard notes[index].content != text else { return }
             notes[index].content = text
             notes[index].updatedAt = Date()
-            saveToUserDefaults()
+            if debounce {
+                scheduleDebouncedSave()
+            } else {
+                saveToUserDefaults()
+            }
         } else {
             let activeFolder = selectedFolder == Self.allNotesFolder ? "General" : selectedFolder
             var newNote = ScratchpadNote(
@@ -424,34 +477,77 @@ public final class ScratchpadViewModel {
             newNote.updatedAt = Date()
             notes.insert(newNote, at: 0)
             selectedNoteId = newNote.id
-            saveToUserDefaults()
+            if debounce {
+                scheduleDebouncedSave()
+            } else {
+                saveToUserDefaults()
+            }
         }
     }
 
-    public func updateTitle(_ title: String) {
+    public func updateTitle(_ title: String, debounce: Bool = true) {
         let targetId = currentNote.id
         if let index = notes.firstIndex(where: { $0.id == targetId }) {
+            guard notes[index].title != title else { return }
             notes[index].title = title
             notes[index].updatedAt = Date()
-            saveToUserDefaults()
+            if debounce {
+                scheduleDebouncedSave()
+            } else {
+                saveToUserDefaults()
+            }
         } else {
             let activeFolder = selectedFolder == Self.allNotesFolder ? "General" : selectedFolder
             var newNote = ScratchpadNote(title: title, folder: activeFolder)
             newNote.updatedAt = Date()
             notes.insert(newNote, at: 0)
             selectedNoteId = newNote.id
-            saveToUserDefaults()
+            if debounce {
+                scheduleDebouncedSave()
+            } else {
+                saveToUserDefaults()
+            }
         }
     }
 
     public func clearCurrentNote() {
-        updateContent("")
+        updateContent("", debounce: false)
     }
 
     public func copyCurrentNoteToClipboard() {
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
         pasteboard.setString(currentContent, forType: .string)
+    }
+
+    // MARK: - Debounced Persistence & Flush
+
+    /// Schedules a debounced persistence operation (default: 400ms).
+    ///
+    /// Memory state is updated instantly for 120 FPS fluid typing, while the
+    /// heavy AES-GCM encryption and disk writes are deferred until typing ceases.
+    public func scheduleDebouncedSave(delay: TimeInterval? = nil) {
+        hasPendingSaves = true
+        saveWorkItem?.cancel()
+        let interval = delay ?? debounceInterval
+        let workItem = DispatchWorkItem { [weak self] in
+            guard let self = self else { return }
+            self.saveWorkItem = nil
+            self.hasPendingSaves = false
+            self.performSaveToUserDefaults()
+        }
+        self.saveWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + interval, execute: workItem)
+    }
+
+    /// Immediately flushes any pending debounced note save to disk.
+    public func flushPendingSaves() {
+        saveWorkItem?.cancel()
+        saveWorkItem = nil
+        if hasPendingSaves {
+            hasPendingSaves = false
+            performSaveToUserDefaults()
+        }
     }
 
     // MARK: - Persistence
@@ -514,7 +610,15 @@ public final class ScratchpadViewModel {
         }
     }
 
+    /// Saves notes immediately to encrypted storage, cancelling any pending debounced save.
     public func saveToUserDefaults() {
+        saveWorkItem?.cancel()
+        saveWorkItem = nil
+        hasPendingSaves = false
+        performSaveToUserDefaults()
+    }
+
+    private func performSaveToUserDefaults() {
         guard notesPersistenceReady else { return }
         if let data = try? JSONEncoder().encode(notes) {
             secureStore.setData(data, forKey: Self.userDefaultsKey)
@@ -525,4 +629,47 @@ public final class ScratchpadViewModel {
         guard foldersPersistenceReady else { return }
         secureStore.set(folders, forKey: Self.foldersUserDefaultsKey)
     }
+
+    // MARK: - App Lifecycle Observers
+
+    private func setupLifecycleObservers() {
+        #if os(macOS)
+        let center = NotificationCenter.default
+        let termObserver = center.addObserver(
+            forName: NSApplication.willTerminateNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.flushPendingSaves()
+        }
+
+        let resignObserver = center.addObserver(
+            forName: NSApplication.willResignActiveNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.flushPendingSaves()
+        }
+
+        let hideObserver = center.addObserver(
+            forName: NSApplication.willHideNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.flushPendingSaves()
+        }
+
+        lifecycleObservers = [termObserver, resignObserver, hideObserver]
+        #endif
+    }
+
+    private func removeLifecycleObservers() {
+        #if os(macOS)
+        for observer in lifecycleObservers {
+            NotificationCenter.default.removeObserver(observer)
+        }
+        lifecycleObservers.removeAll()
+        #endif
+    }
 }
+
