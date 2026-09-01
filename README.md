@@ -38,7 +38,7 @@ Combining structured focus cycles (Pomodoro and deep work timers), visual Kanban
 
 ## Key Features & Visual Showcase
 
-### ⏱️ Intelligent Focus Timer
+### Intelligent Focus Timer
 Configurable intervals for deep focus, short breaks, and long breaks with smooth circular progress animations, audio chimes, and quick time adjustments (+5m / -5m).
 
 <p align="center">
@@ -47,7 +47,7 @@ Configurable intervals for deep focus, short breaks, and long breaks with smooth
 
 ---
 
-### 📋 Unified Tasks & Kanban Board
+### Unified Tasks & Kanban Board
 Interactive 3-column Kanban workflow with drag-and-drop support, direct status progression pills (To Do, In Progress, Done), Pomodoro counters, due dates, and seamless toggling to a linear list view.
 
 <p align="center">
@@ -56,7 +56,7 @@ Interactive 3-column Kanban workflow with drag-and-drop support, direct status p
 
 ---
 
-### 📅 Interactive Calendar & Day Previews
+### Interactive Calendar & Day Previews
 Full monthly calendar grid with daily focus heatmaps, scheduled tasks, due date milestone indicators, and compact hover previews that stay pinned after clicking a date for quick actions.
 
 <p align="center">
@@ -65,7 +65,7 @@ Full monthly calendar grid with daily focus heatmaps, scheduled tasks, due date 
 
 ---
 
-### 🔔 Recurring Reminders
+### Recurring Reminders
 Dedicated scheduler for daily, weekday, weekly, and monthly recurring tasks with native macOS banner alerts, rich chime notifications, and overdue tracking.
 
 <p align="center">
@@ -74,7 +74,7 @@ Dedicated scheduler for daily, weekday, weekly, and monthly recurring tasks with
 
 ---
 
-### 📝 Multi-Notebook Scratchpad
+### Multi-Notebook Scratchpad
 Master-detail quick notes system organized into custom folders (General, Projects, Work, Personal, Ideas) with live character/word counters, search, and keystroke persistence.
 
 <p align="center">
@@ -83,7 +83,7 @@ Master-detail quick notes system organized into custom folders (General, Project
 
 ---
 
-### ⚡ Menu Bar Control Center
+### Menu Bar Control Center
 Floating, top-down animated macOS menu bar utility providing quick timer controls, instant note capture into user folders, rapid task creation, and bookmark access without interrupting your workflow.
 
 <p align="center">
@@ -92,22 +92,22 @@ Floating, top-down animated macOS menu bar utility providing quick timer control
 
 ---
 
-### 🔗 Focus Hub & Bookmarks
+### Focus Hub & Bookmarks
 Responsive quick-launch directory for essential development references, tools, and documentation with 1-click browser integration.
 
-### 🖥️ Productivity Profiles
+### Productivity Profiles
 Save a complete workspace with selected applications, per-window monitor/position/size layouts, and a global shortcut that opens and organizes it on demand.
 
-### 🧭 Guided First-Launch Onboarding
+### Guided First-Launch Onboarding
 A complete tour of every workspace section and the menu bar control center, replayable from Settings whenever needed.
 
-### 🎨 Customizable Visual Themes
+### Customizable Visual Themes
 Five refined aesthetic themes selectable in Settings (Zen Calm Light, Obsidian Minimal Dark, Warm Sandstone, Nordic Frost, Forest Matcha) without disruptive automatic color shifts.
 
-### 🔄 Private In-App Updates
+### Private In-App Updates
 Settings can check GitHub Releases manually or once a day, show native macOS update notifications, and install validated Focenda archives locally without sending personal data or app content anywhere.
 
-### 🔒 100% Local, Private & Secure
+### 100% Local, Private & Secure
 Tasks, notes, reminders, bookmarks, and preferences stay on device in authenticated encrypted local storage. Zero telemetry, no third-party accounts, and zero cloud tracking.
 
 ---
