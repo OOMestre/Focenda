@@ -17,11 +17,11 @@ final class BookmarksViewTests: XCTestCase {
         super.tearDown()
     }
 
-    func testBookmarksViewInitializesWithDefaultBookmarks() {
+    func testBookmarksViewInitializesWithoutBookmarks() {
         let viewModel = BookmarkViewModel(userDefaults: testDefaults)
         let view = BookmarksView(viewModel: viewModel)
 
-        XCTAssertFalse(viewModel.filteredBookmarks.isEmpty)
+        XCTAssertTrue(viewModel.filteredBookmarks.isEmpty)
         XCTAssertNotNil(view.body)
     }
 
@@ -145,9 +145,10 @@ final class BookmarksViewTests: XCTestCase {
 
     func testBookmarksViewDeleteBookmarkFlow() {
         let viewModel = BookmarkViewModel(userDefaults: testDefaults)
+        viewModel.addBookmark(title: "Bookmark to Delete", url: "https://delete.example")
         let initialCount = viewModel.bookmarks.count
         guard let first = viewModel.bookmarks.first else {
-            XCTFail("Expected at least one default bookmark")
+            XCTFail("Expected at least one bookmark")
             return
         }
 

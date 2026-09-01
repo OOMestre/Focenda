@@ -172,8 +172,7 @@ final class MenuBarCardViewTests: XCTestCase {
 
     func testQuickLinksModel() {
         let defaultLinks = QuickLink.defaultLinks
-        XCTAssertFalse(defaultLinks.isEmpty)
-        XCTAssertTrue(defaultLinks.contains { $0.title == "GitHub" })
+        XCTAssertTrue(defaultLinks.isEmpty)
 
         let customLink = QuickLink(title: "Linear", urlString: "https://linear.app", iconName: "target")
         XCTAssertEqual(customLink.url?.absoluteString, "https://linear.app")

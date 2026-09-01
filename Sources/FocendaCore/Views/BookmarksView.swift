@@ -156,7 +156,6 @@ public struct BookmarksView: View {
 
                 Spacer(minLength: 8)
 
-                moreActionsMenu
             }
 
             if usesCompactControls {
@@ -243,24 +242,6 @@ public struct BookmarksView: View {
         .controlSize(.regular)
         .fixedSize(horizontal: true, vertical: false)
         .help("Add a new focus link")
-    }
-
-    private var moreActionsMenu: some View {
-        Menu {
-            Button {
-                viewModel.resetToDefaults()
-            } label: {
-                Label("Reset Default Links", systemImage: "arrow.counterclockwise")
-            }
-        } label: {
-            Image(systemName: "ellipsis.circle")
-                .font(.system(size: 14))
-                .foregroundStyle(AppTheme.textSecondary)
-                .padding(6)
-        }
-        .menuStyle(.borderlessButton)
-        .fixedSize()
-        .help("More options")
     }
 
     // MARK: - Category Filters
@@ -667,12 +648,7 @@ public struct BookmarksView: View {
                     .frame(maxWidth: 400)
             }
 
-            ViewThatFits(in: .horizontal) {
-                emptyStateActions(stacksButtons: false)
-                    .fixedSize(horizontal: true, vertical: false)
-
-                emptyStateActions(stacksButtons: true)
-            }
+            emptyStateActions
 
             Spacer()
         }
@@ -683,22 +659,14 @@ public struct BookmarksView: View {
     }
 
     @ViewBuilder
-    private func emptyStateActions(stacksButtons: Bool) -> some View {
+    private var emptyStateActions: some View {
         if !viewModel.searchQuery.isEmpty {
             Button("Clear Search") {
                 viewModel.searchQuery = ""
             }
             .buttonStyle(.bordered)
-        } else if stacksButtons {
-            VStack(spacing: 8) {
-                addBookmarkEmptyStateButton
-                resetDefaultBookmarksButton
-            }
         } else {
-            HStack(spacing: 12) {
-                addBookmarkEmptyStateButton
-                resetDefaultBookmarksButton
-            }
+            addBookmarkEmptyStateButton
         }
     }
 
@@ -711,13 +679,6 @@ public struct BookmarksView: View {
         }
         .buttonStyle(.borderedProminent)
         .tint(AppTheme.deepFocus)
-    }
-
-    private var resetDefaultBookmarksButton: some View {
-        Button("Reset Default Links") {
-            viewModel.resetToDefaults()
-        }
-        .buttonStyle(.bordered)
     }
 
     // MARK: - Bookmark Editor Sheet

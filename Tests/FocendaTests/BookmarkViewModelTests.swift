@@ -6,6 +6,77 @@ final class BookmarkViewModelTests: XCTestCase {
     var testDefaults: UserDefaults!
     private let testKey = "test_focenda_bookmarks_isolated"
 
+    private var fixtureBookmarks: [BookmarkItem] {
+        [
+            BookmarkItem(
+                title: "Apple Developer Documentation",
+                url: "https://developer.apple.com/documentation",
+                iconName: "apple.logo",
+                category: "Documentation",
+                isPinned: true,
+                clickCount: 12
+            ),
+            BookmarkItem(
+                title: "Swift.org Reference",
+                url: "https://www.swift.org/documentation/",
+                iconName: "swift",
+                category: "Documentation",
+                isPinned: true,
+                clickCount: 9
+            ),
+            BookmarkItem(
+                title: "GitHub Repositories",
+                url: "https://github.com",
+                iconName: "chevron.left.forwardslash.chevron.right",
+                category: "Development",
+                isPinned: true,
+                clickCount: 15
+            ),
+            BookmarkItem(
+                title: "Human Interface Guidelines",
+                url: "https://developer.apple.com/design/human-interface-guidelines",
+                iconName: "macwindow.on.rectangle",
+                category: "Design & UI",
+                clickCount: 5
+            ),
+            BookmarkItem(
+                title: "Brain.fm Focus Audio",
+                url: "https://brain.fm",
+                iconName: "headphones",
+                category: "Focus & Flow",
+                clickCount: 7
+            ),
+            BookmarkItem(
+                title: "Lofi Cafe Stream",
+                url: "https://lofi.cafe",
+                iconName: "music.note",
+                category: "Focus & Flow",
+                clickCount: 4
+            ),
+            BookmarkItem(
+                title: "Excalidraw Whiteboard",
+                url: "https://excalidraw.com",
+                iconName: "pencil.and.ruler.fill",
+                category: "Design & UI",
+                clickCount: 3
+            ),
+            BookmarkItem(
+                title: "Raycast Store & Script Commands",
+                url: "https://www.raycast.com/store",
+                iconName: "command",
+                category: "Utilities",
+                clickCount: 2
+            )
+        ]
+    }
+
+    private func populatedViewModel() -> BookmarkViewModel {
+        let viewModel = BookmarkViewModel(userDefaults: testDefaults)
+        viewModel.bookmarks = fixtureBookmarks
+        viewModel.saveToUserDefaults()
+        return viewModel
+    }
+
     override func setUp() {
         super.setUp()
         testDefaults = UserDefaults.standard
@@ -20,16 +91,12 @@ final class BookmarkViewModelTests: XCTestCase {
         super.tearDown()
     }
 
-    func testInitializationWithDefaultBookmarks() {
+    func testInitializationStartsEmpty() {
         let viewModel = BookmarkViewModel(userDefaults: testDefaults)
 
-        XCTAssertFalse(viewModel.bookmarks.isEmpty)
-        XCTAssertEqual(viewModel.bookmarks.count, 8)
+        XCTAssertTrue(viewModel.bookmarks.isEmpty)
+        XCTAssertTrue(BookmarkViewModel.defaultBookmarks.isEmpty)
         XCTAssertEqual(viewModel.selectedCategory, "All")
-
-        let devBookmark = viewModel.bookmarks.first(where: { $0.category == "Development" })
-        XCTAssertNotNil(devBookmark)
-        XCTAssertEqual(devBookmark?.title, "GitHub Repositories")
     }
 
     func testAddBookmark() {
@@ -79,10 +146,11 @@ final class BookmarkViewModelTests: XCTestCase {
 
     func testUpdateBookmark() {
         let viewModel = BookmarkViewModel(userDefaults: testDefaults)
-        guard var firstBookmark = viewModel.bookmarks.first else {
-            XCTFail("Expected default bookmark")
-            return
-        }
+        var firstBookmark = viewModel.addBookmark(
+            title: "Original Title",
+            url: "https://original.org",
+            category: "General"
+        )
 
         firstBookmark.title = "Updated Title"
         firstBookmark.url = "https://updated.org"
@@ -99,6 +167,7 @@ final class BookmarkViewModelTests: XCTestCase {
 
     func testDeleteBookmark() {
         let viewModel = BookmarkViewModel(userDefaults: testDefaults)
+        viewModel.addBookmark(title: "Bookmark to Delete", url: "https://delete.example")
         let initialCount = viewModel.bookmarks.count
         guard let first = viewModel.bookmarks.first else {
             XCTFail("Expected bookmark")
@@ -117,6 +186,7 @@ final class BookmarkViewModelTests: XCTestCase {
 
     func testDeleteBookmarkItemInstance() {
         let viewModel = BookmarkViewModel(userDefaults: testDefaults)
+        viewModel.addBookmark(title: "Bookmark to Delete", url: "https://delete.example")
         let initialCount = viewModel.bookmarks.count
         guard let first = viewModel.bookmarks.first else {
             XCTFail("Expected bookmark")
@@ -129,6 +199,7 @@ final class BookmarkViewModelTests: XCTestCase {
 
     func testTogglePin() {
         let viewModel = BookmarkViewModel(userDefaults: testDefaults)
+        viewModel.addBookmark(title: "Bookmark to Pin", url: "https://pin.example")
         guard let unpinnedBookmark = viewModel.bookmarks.first(where: { !$0.isPinned }) else {
             XCTFail("Expected unpinned bookmark")
             return
@@ -144,6 +215,7 @@ final class BookmarkViewModelTests: XCTestCase {
 
     func testOpenBookmarkIncrementsClickCount() {
         let viewModel = BookmarkViewModel(userDefaults: testDefaults)
+        viewModel.addBookmark(title: "Bookmark to Open", url: "https://open.example")
         guard let target = viewModel.bookmarks.first else {
             XCTFail("Expected bookmark")
             return
@@ -157,7 +229,7 @@ final class BookmarkViewModelTests: XCTestCase {
     }
 
     func testFilterBookmarksByCategory() {
-        let viewModel = BookmarkViewModel(userDefaults: testDefaults)
+        let viewModel = populatedViewModel()
 
         viewModel.selectedCategory = "Documentation"
         XCTAssertEqual(viewModel.filteredBookmarks.count, 2)
@@ -176,7 +248,7 @@ final class BookmarkViewModelTests: XCTestCase {
     }
 
     func testSearchBookmarks() {
-        let viewModel = BookmarkViewModel(userDefaults: testDefaults)
+        let viewModel = populatedViewModel()
 
         viewModel.searchQuery = "GitHub"
         XCTAssertEqual(viewModel.filteredBookmarks.count, 1)
@@ -191,7 +263,7 @@ final class BookmarkViewModelTests: XCTestCase {
     }
 
     func testSearchByUrlAndHostAndCategory() {
-        let viewModel = BookmarkViewModel(userDefaults: testDefaults)
+        let viewModel = populatedViewModel()
 
         viewModel.searchQuery = "developer.apple.com"
         XCTAssertEqual(viewModel.filteredBookmarks.count, 2)
@@ -206,7 +278,7 @@ final class BookmarkViewModelTests: XCTestCase {
     }
 
     func testSortingPinnedAndClicks() {
-        let viewModel = BookmarkViewModel(userDefaults: testDefaults)
+        let viewModel = populatedViewModel()
         viewModel.selectedCategory = "All"
         viewModel.searchQuery = ""
 
@@ -240,11 +312,11 @@ final class BookmarkViewModelTests: XCTestCase {
 
     func testResetToDefaults() {
         let viewModel = BookmarkViewModel(userDefaults: testDefaults)
-        viewModel.bookmarks.removeAll()
-        XCTAssertEqual(viewModel.bookmarks.count, 0)
+        viewModel.addBookmark(title: "User Link", url: "https://example.com")
+        XCTAssertEqual(viewModel.bookmarks.count, 1)
 
         viewModel.resetToDefaults()
-        XCTAssertEqual(viewModel.bookmarks.count, 8)
+        XCTAssertTrue(viewModel.bookmarks.isEmpty)
     }
 
     func testExplicitlySavedEmptyBookmarkListRemainsEmptyAfterReload() throws {
@@ -257,7 +329,7 @@ final class BookmarkViewModelTests: XCTestCase {
     }
 
     func testCategoryCountsAndAllCategories() {
-        let viewModel = BookmarkViewModel(userDefaults: testDefaults)
+        let viewModel = populatedViewModel()
         XCTAssertEqual(viewModel.categoryCount(for: "All"), 8)
         XCTAssertEqual(viewModel.categoryCount(for: "Development"), 1)
         XCTAssertEqual(viewModel.categoryCount(for: "Documentation"), 2)

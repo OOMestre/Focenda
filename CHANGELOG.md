@@ -49,6 +49,7 @@ Focenda v1.0.0 is the first official release of the native macOS focus, task, an
 - **Quick Controls:** Start, pause, or switch focus modes without leaving active fullscreen applications.
 - **Quick Note & Task Capture:** Add thoughts or new tasks straight into your notebooks and Kanban columns.
 - **Project Bookmarks:** Fast launcher for essential documentation, design tools, and development URLs.
+- **Clean First Launch:** New installations start with empty bookmarks, tasks, and quick links; user data is created only through user actions.
 
 #### System-Wide Global Keyboard Shortcuts
 - **Carbon Hotkey Integration:** Native system-wide keyboard shortcuts operating across any application:

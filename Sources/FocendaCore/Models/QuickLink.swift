@@ -23,11 +23,6 @@ public struct QuickLink: Identifiable, Codable, Equatable {
         URL(string: urlString)
     }
 
-    public static let defaultLinks: [QuickLink] = [
-        QuickLink(title: "GitHub", urlString: "https://github.com", iconName: "chevron.left.forwardslash.chevron.right"),
-        QuickLink(title: "Notion", urlString: "https://notion.so", iconName: "doc.text"),
-        QuickLink(title: "Linear", urlString: "https://linear.app", iconName: "target"),
-        QuickLink(title: "Calendar", urlString: "https://calendar.google.com", iconName: "calendar"),
-        QuickLink(title: "Figma", urlString: "https://figma.com", iconName: "paintbrush.pointed")
-    ]
+    /// A fresh installation starts without any preconfigured quick links.
+    public static let defaultLinks: [QuickLink] = []
 }

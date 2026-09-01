@@ -17,6 +17,10 @@ final class TaskListViewModelTests: XCTestCase {
         super.tearDown()
     }
 
+    func testInitializationStartsEmpty() {
+        XCTAssertTrue(viewModel.tasks.isEmpty)
+    }
+
     func testAddTask() {
         let initialCount = viewModel.tasks.count
         let reminder = Date().addingTimeInterval(7200)
@@ -44,8 +48,9 @@ final class TaskListViewModelTests: XCTestCase {
     }
 
     func testMoveTask() {
+        viewModel.addTask(title: "Task to Move")
         guard let task = viewModel.tasks.first else {
-            XCTFail("Should contain sample tasks")
+            XCTFail("Should contain task")
             return
         }
 
@@ -115,8 +120,9 @@ final class TaskListViewModelTests: XCTestCase {
     }
 
     func testToggleTaskCompletion() {
+        viewModel.addTask(title: "Task to Toggle")
         guard let task = viewModel.tasks.first else {
-            XCTFail("Should contain initial sample task")
+            XCTFail("Should contain task")
             return
         }
 
@@ -128,8 +134,9 @@ final class TaskListViewModelTests: XCTestCase {
     }
 
     func testDeleteTask() {
+        viewModel.addTask(title: "Task to Delete")
         guard let task = viewModel.tasks.first else {
-            XCTFail("Should contain initial sample task")
+            XCTFail("Should contain task")
             return
         }
 
@@ -141,8 +148,9 @@ final class TaskListViewModelTests: XCTestCase {
     }
 
     func testUpdateTask() {
+        viewModel.addTask(title: "Task to Update")
         guard var task = viewModel.tasks.first else {
-            XCTFail("Should contain initial sample task")
+            XCTFail("Should contain task")
             return
         }
 
