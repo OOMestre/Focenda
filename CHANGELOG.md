@@ -4,10 +4,10 @@ All notable changes, new features, and bug fixes for **Focenda** are documented 
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.1.0] - 2026-09-01
+## [1.0.0] - 2026-09-01
 
 ### Summary
-Focenda v0.1.0 is the first official release of the native macOS focus, task, and calendar productivity suite. It provides a complete, distraction-free productivity environment combining intelligent focus timers, unified Kanban task workflows, an interactive monthly calendar, recurring reminders, a multi-notebook scratchpad, an instant-access menu bar control center, 5 refined visual themes, global keyboard shortcuts, guided onboarding, and encrypted local storage.
+Focenda v1.0.0 is the first official release of the native macOS focus, task, and calendar productivity suite. It provides a complete, distraction-free productivity environment combining intelligent focus timers, unified Kanban task workflows, an interactive monthly calendar, recurring reminders, a multi-notebook scratchpad, an instant-access menu bar control center, 5 refined visual themes, global keyboard shortcuts, guided onboarding, and encrypted local storage.
 
 ### Key Highlights & Features
 - **Intelligent Focus Timer:** Deep focus, short break, and long break intervals with circular progress animations, mini floating HUD, and session counters.
