@@ -1,5 +1,11 @@
 import Foundation
 
+/// Controls whether the Productivity Profiles experience is exposed by the app.
+/// The implementation and saved profile data remain available for reactivation.
+public enum ProductivityProfilesFeature {
+    public static let isEnabled = false
+}
+
 /// A simple anchor for a profile window on its selected display.
 ///
 /// The nine choices cover the three horizontal zones (left, center, right)

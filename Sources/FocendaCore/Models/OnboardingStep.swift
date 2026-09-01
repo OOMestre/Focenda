@@ -50,15 +50,25 @@ public enum OnboardingStep: Int, CaseIterable, Identifiable, Hashable {
 
     /// All pages that explain a navigable Focenda section.
     public static var featureSteps: [Self] {
-        allCases.filter { $0.appTab != nil || $0 == .menuBar }
+        availableCases.filter { $0.appTab != nil || $0 == .menuBar }
+    }
+
+    /// Onboarding pages exposed in the current app build.
+    public static var availableCases: [Self] {
+        allCases.filter { step in
+            step.appTab?.isAvailableInApp ?? true
+        }
     }
 
     public var progressLabel: String {
-        "\(rawValue + 1) of \(Self.allCases.count)"
+        guard let index = Self.availableCases.firstIndex(of: self) else {
+            return "Unavailable"
+        }
+        return "\(index + 1) of \(Self.availableCases.count)"
     }
 
     public var isLast: Bool {
-        self == Self.allCases.last
+        self == Self.availableCases.last
     }
 
     public var eyebrow: String {

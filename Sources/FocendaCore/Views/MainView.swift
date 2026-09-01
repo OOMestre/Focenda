@@ -112,7 +112,15 @@ public struct MainView: View {
                         case .bookmarks:
                             BookmarksView(viewModel: bookmarkVM)
                         case .profiles:
-                            ProductivityProfilesView(viewModel: productivityProfileVM)
+                            if ProductivityProfilesFeature.isEnabled {
+                                ProductivityProfilesView(viewModel: productivityProfileVM)
+                            } else {
+                                DashboardView(
+                                    appState: appState,
+                                    timerVM: timerVM,
+                                    taskVM: taskVM
+                                )
+                            }
                         case .settings:
                             SettingsView(
                                 appState: appState,

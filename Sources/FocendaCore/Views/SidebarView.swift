@@ -24,7 +24,7 @@ public struct SidebarView: View {
     }
 
     public var body: some View {
-        List(AppTab.allCases, id: \.self, selection: $appState.selectedTab) { tab in
+        List(AppTab.availableCases, id: \.self, selection: $appState.selectedTab) { tab in
             NavigationLink(value: tab) {
                 SidebarRowItem(
                     tab: tab,

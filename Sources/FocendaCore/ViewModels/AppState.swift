@@ -20,6 +20,21 @@ public enum AppTab: String, CaseIterable, Identifiable {
 
     public var id: String { rawValue }
 
+    /// Tabs exposed in the current app build. Hidden tabs remain in the enum so
+    /// their implementation and persisted data can be restored later.
+    public var isAvailableInApp: Bool {
+        switch self {
+        case .profiles:
+            return ProductivityProfilesFeature.isEnabled
+        default:
+            return true
+        }
+    }
+
+    public static var availableCases: [Self] {
+        allCases.filter { $0.isAvailableInApp }
+    }
+
     public var iconName: String {
         switch self {
         case .dashboard: return "square.grid.2x2"
@@ -42,7 +57,12 @@ public final class AppState {
     /// Stable key used to remember that the first-launch guided tour was seen.
     public static let onboardingCompletionKey = "focenda_onboarding_completed_v1"
 
-    public var selectedTab: AppTab = .dashboard
+    public var selectedTab: AppTab = .dashboard {
+        didSet {
+            guard !selectedTab.isAvailableInApp else { return }
+            selectedTab = oldValue.isAvailableInApp ? oldValue : .dashboard
+        }
+    }
     public private(set) var hasCompletedOnboarding: Bool
     public var dailyFocusGoalMinutes: Int = 120
     public var soundEnabled: Bool = true

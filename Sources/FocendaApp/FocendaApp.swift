@@ -55,7 +55,8 @@ struct FocendaApp: App {
                 // Visual feedback or state synchronization handled reactively
             }
             .onReceive(NotificationCenter.default.publisher(for: .productivityProfileShortcutTriggered)) { notification in
-                guard let profileID = notification.userInfo?["profileID"] as? UUID else { return }
+                guard ProductivityProfilesFeature.isEnabled,
+                      let profileID = notification.userInfo?["profileID"] as? UUID else { return }
                 productivityProfileVM.activateProfile(id: profileID)
             }
             .onReceive(NotificationCenter.default.publisher(for: NotificationManager.openFocusTabNotification)) { _ in

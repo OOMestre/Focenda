@@ -9,9 +9,10 @@ final class OnboardingTests: XCTestCase {
         let coveredTabs = Set(
             OnboardingStep.featureSteps.compactMap { $0.appTab?.rawValue }
         )
-        let appTabs = Set(AppTab.allCases.map(\.rawValue))
+        let appTabs = Set(AppTab.availableCases.map(\.rawValue))
 
         XCTAssertEqual(coveredTabs, appTabs)
+        XCTAssertFalse(OnboardingStep.availableCases.contains(.profiles))
         XCTAssertTrue(OnboardingStep.featureSteps.contains(.menuBar))
         XCTAssertEqual(OnboardingStep.allCases.first, .welcome)
         XCTAssertEqual(OnboardingStep.allCases.last, .support)

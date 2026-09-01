@@ -271,8 +271,10 @@ final class ProductivityProfileTests: XCTestCase {
         XCTAssertEqual(manager.lastTriggeredProfileID, profileID)
     }
 
-    func testProfilesTabAndViewAreAvailable() {
+    func testProfilesImplementationRemainsAvailableForFutureReactivation() {
         XCTAssertTrue(AppTab.allCases.contains(.profiles))
+        XCTAssertFalse(ProductivityProfilesFeature.isEnabled)
+        XCTAssertFalse(AppTab.availableCases.contains(.profiles))
         XCTAssertEqual(AppTab.profiles.rawValue, "Profiles")
         XCTAssertEqual(AppTab.profiles.iconName, "rectangle.3.group")
 
@@ -284,6 +286,14 @@ final class ProductivityProfileTests: XCTestCase {
         let profilesView = ProductivityProfilesView(viewModel: viewModel)
 
         XCTAssertNotNil(profilesView.body)
+    }
+
+    func testHiddenProfilesTabFallsBackToDashboardWhenSelectedDirectly() {
+        let appState = AppState(secureStore: secureStore)
+
+        appState.selectedTab = .profiles
+
+        XCTAssertEqual(appState.selectedTab, .dashboard)
     }
 
     private func sampleProfile() -> ProductivityProfile {

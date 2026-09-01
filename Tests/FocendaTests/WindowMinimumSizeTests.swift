@@ -68,7 +68,7 @@ final class WindowMinimumSizeTests: XCTestCase {
     }
 
     func testMainViewRendersAllTabsAtMinimumWindowSize() {
-        for tab in AppTab.allCases {
+        for tab in AppTab.availableCases {
             appState.selectedTab = tab
             let mainView = MainView(
                 appState: appState,

@@ -134,10 +134,10 @@ public final class GlobalShortcutManager: GlobalShortcutManagerProtocol {
 
     /// Updates the profile shortcuts registered alongside the built-in focus shortcuts.
     public func setProductivityProfileShortcuts(_ profiles: [ProductivityProfile]) {
-        productivityProfileShortcuts = profiles.compactMap { profile in
+        productivityProfileShortcuts = ProductivityProfilesFeature.isEnabled ? profiles.compactMap { profile in
             guard let shortcut = profile.globalShortcut, shortcut.isUsable else { return nil }
             return (profileID: profile.id, shortcut: shortcut)
-        }
+        } : []
 
         if isEnabled && hasBeenSetup {
             registerAll()

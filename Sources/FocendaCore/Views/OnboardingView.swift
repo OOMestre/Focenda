@@ -16,7 +16,8 @@ public struct OnboardingView: View {
 
     public init(appState: AppState, initialStep: OnboardingStep = .welcome) {
         self.appState = appState
-        _currentStepIndex = State(initialValue: initialStep.rawValue)
+        let availableSteps = OnboardingStep.availableCases
+        _currentStepIndex = State(initialValue: availableSteps.firstIndex(of: initialStep) ?? 0)
     }
 
     public var body: some View {
@@ -58,7 +59,10 @@ public struct OnboardingView: View {
     }
 
     private var currentStep: OnboardingStep {
-        OnboardingStep(rawValue: currentStepIndex) ?? .welcome
+        guard OnboardingStep.availableCases.indices.contains(currentStepIndex) else {
+            return .welcome
+        }
+        return OnboardingStep.availableCases[currentStepIndex]
     }
 
     private var header: some View {
@@ -97,9 +101,9 @@ public struct OnboardingView: View {
 
     private var progressIndicator: some View {
         HStack(spacing: 5) {
-            ForEach(OnboardingStep.allCases) { step in
+            ForEach(Array(OnboardingStep.availableCases.enumerated()), id: \.element.id) { index, step in
                 Capsule(style: .continuous)
-                    .fill(step.rawValue <= currentStepIndex ? AppTheme.accent : AppTheme.border)
+                    .fill(index <= currentStepIndex ? AppTheme.accent : AppTheme.border)
                     .frame(height: 4)
                     .animation(.easeInOut(duration: 0.2), value: currentStepIndex)
             }
