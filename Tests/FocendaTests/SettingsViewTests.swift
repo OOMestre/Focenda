@@ -247,13 +247,13 @@ final class SettingsViewTests: XCTestCase {
 
         let secureStore = SecureStore(defaults: defaults)
         let manager = AppUpdateManager(
-            currentReleaseIdentifier: "0.1.0",
+            currentReleaseIdentifier: "1.0.0",
             userDefaults: defaults,
             secureStore: secureStore
         )
 
         XCTAssertNotNil(manager.lastUpdateGuide)
-        XCTAssertEqual(manager.lastUpdateGuide?.version, "0.1.0")
+        XCTAssertEqual(manager.lastUpdateGuide?.version, "1.0.0")
         XCTAssertFalse(manager.lastUpdateGuide?.sections.isEmpty ?? true)
     }
 }
