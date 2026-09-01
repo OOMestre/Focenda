@@ -104,6 +104,12 @@ Floating, top-down animated macOS menu bar utility providing quick timer control
 ### Focus Hub & Bookmarks
 Responsive quick-launch directory for essential development references, tools, and documentation with 1-click browser integration.
 
+<p align="center">
+  <img src="assets/gifs/bookmarks.gif" alt="Focus Hub & Bookmarks" width="650" />
+</p>
+
+---
+
 ### Productivity Profiles
 Save a complete window layout with selected applications, per-window monitor/position/size layouts, and a global shortcut that opens and organizes it on demand. Profiles restore windows on the current macOS desktop; macOS does not offer a supported API for an app to create or control Spaces.
 
