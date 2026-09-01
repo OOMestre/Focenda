@@ -288,6 +288,7 @@ final class AppUpdateTests: XCTestCase {
             assets: [asset]
         )
         let update = try XCTUnwrap(AppUpdate(release: release, asset: asset))
+        let guide = AppUpdateGuide(update: update)
         let provider = StubUpdateProvider(update: update)
         let manager = AppUpdateManager(
             provider: provider,
@@ -315,10 +316,24 @@ final class AppUpdateTests: XCTestCase {
         XCTAssertEqual(relaunchedManager.completedUpdateGuide?.sections.first?.items, [
             "A guided tour appears after updating."
         ])
+        XCTAssertEqual(relaunchedManager.lastUpdateGuide, guide)
 
         relaunchedManager.dismissCompletedUpdateGuide()
         XCTAssertNil(relaunchedManager.completedUpdateGuide)
+        XCTAssertEqual(relaunchedManager.lastUpdateGuide, guide)
         XCTAssertNil(secureStore.value(AppUpdateGuide.self, forKey: AppUpdatePreferences.pendingUpdateGuideKey))
+        XCTAssertEqual(
+            secureStore.value(AppUpdateGuide.self, forKey: AppUpdatePreferences.lastUpdateGuideKey),
+            guide
+        )
+
+        let replayManager = AppUpdateManager(
+            provider: provider,
+            currentReleaseIdentifier: "v1.2.0",
+            secureStore: secureStore
+        )
+        XCTAssertNil(replayManager.completedUpdateGuide)
+        XCTAssertEqual(replayManager.lastUpdateGuide, guide)
     }
 
     func testInstallerReplacesOnlyTheCompatibleAppBundle() throws {

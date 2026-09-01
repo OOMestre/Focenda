@@ -243,6 +243,7 @@ public enum AppUpdatePreferences {
     public static let lastNotifiedVersionKey = "appUpdateLastNotifiedVersion"
     public static let pendingUpdateTagKey = "appUpdatePendingTag"
     public static let pendingUpdateGuideKey = "appUpdatePendingGuide"
+    public static let lastUpdateGuideKey = "appUpdateLastGuide"
 }
 
 public enum AppRuntime {
@@ -465,6 +466,7 @@ public final class AppUpdateManager {
     public private(set) var lastCheckedAt: Date?
     public private(set) var errorMessage: String?
     public private(set) var completedUpdateGuide: AppUpdateGuide?
+    public private(set) var lastUpdateGuide: AppUpdateGuide?
 
     private let provider: AppUpdateProviding
     private let currentReleaseIdentifier: String
@@ -488,10 +490,25 @@ public final class AppUpdateManager {
         self.secureStore = resolvedSecureStore
         self.notificationManager = notificationManager
         self.lastCheckedAt = resolvedSecureStore.date(forKey: AppUpdatePreferences.lastCheckDateKey)
-        self.completedUpdateGuide = Self.loadCompletedUpdateGuide(
+        let persistedLastUpdateGuide = resolvedSecureStore.value(
+            AppUpdateGuide.self,
+            forKey: AppUpdatePreferences.lastUpdateGuideKey
+        )
+        let pendingUpdateGuide = Self.loadCompletedUpdateGuide(
             currentReleaseIdentifier: currentReleaseIdentifier,
             secureStore: resolvedSecureStore
         )
+        self.completedUpdateGuide = pendingUpdateGuide
+        self.lastUpdateGuide = pendingUpdateGuide ?? persistedLastUpdateGuide
+
+        // A pending guide is only promoted after the app relaunches on the
+        // matching installed version, which means the update completed.
+        if let pendingUpdateGuide {
+            resolvedSecureStore.set(
+                pendingUpdateGuide,
+                forKey: AppUpdatePreferences.lastUpdateGuideKey
+            )
+        }
     }
 
     /// Starts a manual check without blocking the Settings view.
@@ -572,7 +589,7 @@ public final class AppUpdateManager {
         }
     }
 
-    /// Closes the post-update guide and prevents it from appearing again.
+    /// Closes the post-update guide while keeping it available for replay in Settings.
     public func dismissCompletedUpdateGuide() {
         completedUpdateGuide = nil
         secureStore.removeObject(forKey: AppUpdatePreferences.pendingUpdateGuideKey)

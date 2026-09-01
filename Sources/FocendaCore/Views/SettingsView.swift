@@ -12,6 +12,7 @@ public struct SettingsView: View {
     @State private var isTestingSound: Bool = false
     @State private var testingTask: Task<Void, Never>?
     @State private var isShowingOnboarding: Bool = false
+    @State private var isShowingUpdateGuide: Bool = false
 
     public init(
         appState: AppState,
@@ -157,6 +158,15 @@ public struct SettingsView: View {
         .sheet(isPresented: $isShowingOnboarding) {
             OnboardingView(appState: appState)
         }
+        .sheet(isPresented: $isShowingUpdateGuide) {
+            if let guide = updateManager.lastUpdateGuide {
+                AppUpdateGuideView(guide: guide) {
+                    isShowingUpdateGuide = false
+                }
+            } else {
+                EmptyView()
+            }
+        }
     }
 
     // MARK: - Getting Started Section
@@ -243,6 +253,8 @@ public struct SettingsView: View {
                     .disabled(updateManager.status.isBusy)
                 }
 
+                lastUpdateGuideSection
+
                 if let update = updateManager.availableUpdate {
                     VStack(alignment: .leading, spacing: 10) {
                         HStack(alignment: .top, spacing: 10) {
@@ -305,6 +317,44 @@ public struct SettingsView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
             .padding(12)
+        }
+    }
+
+    private var lastUpdateGuideSection: some View {
+        Group {
+            if let guide = updateManager.lastUpdateGuide {
+                Divider()
+
+                HStack(alignment: .center, spacing: 10) {
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(AppTheme.accent)
+                        .frame(width: 22)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Review the latest update")
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(AppTheme.textPrimary)
+
+                        Text("See what changed in Focenda \(guide.version) • \(guide.title)")
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.textSecondary)
+                            .lineLimit(2)
+                    }
+
+                    Spacer(minLength: 12)
+
+                    Button {
+                        isShowingUpdateGuide = true
+                    } label: {
+                        Label("Replay Last Update", systemImage: "arrow.counterclockwise")
+                            .font(.caption.weight(.semibold))
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    .accessibilityIdentifier("settingsReplayUpdateButton")
+                }
+            }
         }
     }
 
