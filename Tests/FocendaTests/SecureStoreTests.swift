@@ -114,6 +114,13 @@ final class SecureStoreTests: XCTestCase {
         XCTAssertNil(readKeychainItem(service: service))
     }
 
+    func testLegacyKeychainMigrationNeverRequestsAuthenticationUI() throws {
+        let query = SecureStore.keychainReadQuery(service: "com.oomestre.focenda.test-store")
+        let authenticationUI = try XCTUnwrap(query[kSecUseAuthenticationUI as String] as? String)
+
+        XCTAssertEqual(authenticationUI, kSecUseAuthenticationUISkip as String)
+    }
+
     func testLocalKeyIsReusedAcrossStoreInstances() throws {
         let isolatedSuite = "Focenda.SecureStoreLocalKey.\(UUID().uuidString)"
         let isolatedDefaults = try XCTUnwrap(UserDefaults(suiteName: isolatedSuite))
