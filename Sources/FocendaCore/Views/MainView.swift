@@ -46,6 +46,8 @@ public struct MainView: View {
     }
 
     public var body: some View {
+        let activeThemeID = appState.selectedTheme.rawValue
+
         NavigationSplitView(columnVisibility: $columnVisibility) {
             SidebarView(
                 appState: appState,
@@ -56,6 +58,10 @@ public struct MainView: View {
             )
             .navigationSplitViewColumnWidth(min: 220, ideal: 240, max: 300)
             .background(AppTheme.sidebarBackground)
+            // AppTheme colors are resolved from a shared theme cache. Rebuild
+            // the column when that cache changes while keeping the split view
+            // itself stable so its geometry and selection are preserved.
+            .id(activeThemeID)
         } detail: {
             VStack(spacing: 0) {
                 // Keep update notices in the layout so they never cover page content.
@@ -228,6 +234,9 @@ public struct MainView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
             .background(AppTheme.background)
+            // Recreate the detail subtree so every page, including Settings,
+            // resolves the newly selected palette in the same render pass.
+            .id(activeThemeID)
         }
         .navigationSplitViewStyle(.balanced)
         .frame(

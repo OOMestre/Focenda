@@ -637,9 +637,10 @@ public struct SettingsView: View {
                             theme: theme,
                             isSelected: appState.selectedTheme == theme
                         ) {
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
-                                appState.selectedTheme = theme
-                            }
+                            // Theme changes rebuild the visible columns as a
+                            // unit. Keep the switch atomic so old and new
+                            // palettes are never animated together.
+                            appState.selectedTheme = theme
                         }
                     }
                 }
