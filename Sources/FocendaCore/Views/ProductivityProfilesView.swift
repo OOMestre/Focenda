@@ -333,7 +333,7 @@ private struct ProductivityProfileEditor: View {
                 Text("Window organization needs Accessibility access")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(AppTheme.textPrimary)
-                Text("macOS requires your approval before Focenda can move and resize windows in other apps.")
+                Text("macOS requires your approval before Focenda can move and resize windows in other apps. If it was already enabled before an app update, turn the toggle off and on once so macOS can re-associate this version.")
                     .font(.caption)
                     .foregroundStyle(AppTheme.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)

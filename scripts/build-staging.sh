@@ -14,6 +14,9 @@ RELEASE_TAG="${FOCENDA_RELEASE_TAG:-}"
 SIGNING_IDENTITY="${FOCENDA_SIGNING_IDENTITY:--}"
 DIST_DIRECTORY="$REPOSITORY_ROOT/dist"
 APP_BUNDLE="$DIST_DIRECTORY/$APP_NAME.app"
+# Keep local ad-hoc builds recognizable across recompilations so macOS privacy
+# permissions stay associated with the staging bundle instead of its cdhash.
+LOCAL_DESIGNATED_REQUIREMENT="=designated => identifier \"$BUNDLE_IDENTIFIER\""
 
 fail() {
   echo "Focenda staging build failed: $*" >&2
@@ -125,7 +128,11 @@ PLIST_EOF
 # A Developer ID identity should be supplied for distributable builds through
 # FOCENDA_SIGNING_IDENTITY; ad-hoc signing remains useful for local staging.
 if [ "$SIGNING_IDENTITY" = "-" ]; then
-  codesign --force --options runtime --entitlements "$ENTITLEMENTS_FILE" --sign - "$TEMP_APP"
+  codesign --force --options runtime \
+    --entitlements "$ENTITLEMENTS_FILE" \
+    --identifier "$BUNDLE_IDENTIFIER" \
+    --requirements "$LOCAL_DESIGNATED_REQUIREMENT" \
+    --sign - "$TEMP_APP"
 else
   codesign --force --options runtime --timestamp --entitlements "$ENTITLEMENTS_FILE" --sign "$SIGNING_IDENTITY" "$TEMP_APP"
 fi

@@ -37,4 +37,17 @@ final class DMGPackagingTests: XCTestCase {
 
         XCTAssertNotEqual(process.terminationStatus, 0, "Script should exit with non-zero code on missing arguments")
     }
+
+    func testStagingBuildUsesStableDesignatedRequirementForAdHocSigning() throws {
+        let currentFilePath = URL(fileURLWithPath: #file)
+        let repositoryRoot = currentFilePath
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let scriptURL = repositoryRoot.appendingPathComponent("scripts/build-staging.sh")
+        let script = try String(contentsOf: scriptURL, encoding: .utf8)
+
+        XCTAssertTrue(script.contains("LOCAL_DESIGNATED_REQUIREMENT"))
+        XCTAssertTrue(script.contains("--requirements \"$LOCAL_DESIGNATED_REQUIREMENT\""))
+    }
 }

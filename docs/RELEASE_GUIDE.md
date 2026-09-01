@@ -103,7 +103,11 @@ sandboxed so the in-app updater can replace the installed app automatically,
 without asking the user to select its containing folder.
 For a distributable artifact, set `FOCENDA_SIGNING_IDENTITY` to a Developer ID
 Application identity; without it, the script intentionally uses an ad-hoc
-signature for local/CI staging only.
+signature for local/CI staging only. Local ad-hoc builds use an explicit
+designated requirement based on the bundle identifier, so Accessibility
+permission survives normal recompilations. If a Mac already has an
+Accessibility entry created by an older ad-hoc build, turn Focenda Staging off
+and on once after installing the first build with this behavior.
 
 #### Advanced Beta Options
 You can also run `./scripts/release-staging-beta.sh` directly with flags:
