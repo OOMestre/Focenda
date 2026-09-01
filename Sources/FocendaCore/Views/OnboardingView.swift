@@ -7,6 +7,8 @@ public struct OnboardingView: View {
 
     @State private var currentStepIndex: Int
 
+    private static let heroDiameter: CGFloat = 126
+
     public static let minimumWidth: CGFloat = 760
     public static let idealWidth: CGFloat = 860
     public static let minimumHeight: CGFloat = 560
@@ -146,22 +148,22 @@ public struct OnboardingView: View {
 
     private var stepHero: some View {
         ZStack {
-            Circle()
-                .fill(AppTheme.accent.opacity(0.12))
-                .frame(width: 126, height: 126)
-
-            Circle()
-                .stroke(AppTheme.accent.opacity(0.22), lineWidth: 1)
-                .frame(width: 126, height: 126)
-
             if currentStep == .welcome {
-                OwlMascotView(size: 94, isCircular: true)
+                OwlMascotView(size: Self.heroDiameter, isCircular: true)
             } else {
+                Circle()
+                    .fill(AppTheme.accent.opacity(0.12))
+                    .frame(width: Self.heroDiameter, height: Self.heroDiameter)
+
                 Image(systemName: currentStep.systemImage)
                     .font(.system(size: 42, weight: .semibold))
                     .foregroundStyle(AppTheme.accent)
                     .symbolRenderingMode(.hierarchical)
             }
+
+            Circle()
+                .stroke(AppTheme.accent.opacity(0.22), lineWidth: 1)
+                .frame(width: Self.heroDiameter, height: Self.heroDiameter)
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(currentStep.title)
