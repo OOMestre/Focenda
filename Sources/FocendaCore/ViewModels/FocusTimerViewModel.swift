@@ -112,11 +112,13 @@ public final class FocusTimerViewModel {
         timeRemainingAtSegmentStart = timeRemainingSeconds
 
         timer?.invalidate()
-        timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+        let timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
             Task { @MainActor [weak self] in
                 self?.tick()
             }
         }
+        timer.tolerance = 0.1
+        self.timer = timer
     }
 
     public func pause() {
