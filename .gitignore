@@ -12,6 +12,9 @@ worktrees/
 dist/
 build/
 DerivedData/
+*.app/
+*.dmg
+*.zip
 
 # Xcode Project Files
 *.xcodeproj/
