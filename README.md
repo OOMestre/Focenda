@@ -15,12 +15,14 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-macOS%2014.0%2B-black?logo=apple)](https://apple.com/macos)
 [![Swift](https://img.shields.io/badge/Swift-6.0-orange?logo=swift)](https://swift.org)
+[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-omestre-FFDD00?logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/omestre)
 
 [Features](#key-features) |
 [Quick Start](#quick-start) |
 [Installation](#installation) |
 [Local Development](#local-development) |
 [Contributing](#contributing) |
+[Support](#support--buy-me-a-coffee) |
 [Privacy & Security](docs/PRIVACY.md) |
 [License](#license)
 
@@ -208,6 +210,25 @@ make clean
 ## Contributing
 
 Contributions are welcome. Please consult [CONTRIBUTING.md](CONTRIBUTING.md) for code style standards, testing requirements, and submission guidelines.
+
+---
+
+<a id="support--buy-me-a-coffee"></a>
+## Support the Project
+
+Focenda is 100% free, open-source, and independently developed. If Focenda helps you stay focused and productive, consider supporting its continued development!
+
+<p align="center">
+  <a href="https://buymeacoffee.com/omestre" target="_blank">
+    <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" height="50" width="210" />
+  </a>
+</p>
+
+- ☕ **[Buy Me a Coffee](https://buymeacoffee.com/omestre)** — Support independent macOS development.
+- ⭐ **Star on GitHub** — Help Focenda reach more people by starring it on [GitHub](https://github.com/OOMestre/Focenda).
+- 💬 **Feedback & Ideas** — Share ideas or report issues on [GitHub Issues](https://github.com/OOMestre/Focenda/issues).
+
+---
 
 ## Privacy & Security
 
