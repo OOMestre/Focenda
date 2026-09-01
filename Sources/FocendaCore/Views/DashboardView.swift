@@ -501,9 +501,7 @@ private struct DashboardUpcomingTaskCard: View {
         } else if calendar.isDateInTomorrow(date) {
             return "Due Tomorrow"
         } else {
-            let formatter = DateFormatter()
-            formatter.dateFormat = "MMM d"
-            return "Due \(formatter.string(from: date))"
+            return "Due \(AppDateFormatter.monthDay.string(from: date))"
         }
     }
 }

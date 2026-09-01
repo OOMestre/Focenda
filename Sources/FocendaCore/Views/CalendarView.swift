@@ -4,9 +4,7 @@ import AppKit
 /// Model representing a single day in the calendar grid
 public struct CalendarDay: Identifiable, Equatable {
     public var id: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        return formatter.string(from: date)
+        AppDateFormatter.isoDate.string(from: date)
     }
 
     public let date: Date
@@ -1842,17 +1840,13 @@ public struct CalendarView: View {
         } else if calendar.isDateInToday(dueDate) {
             return ("Due Today", AppTheme.sandstone)
         } else {
-            let formatter = DateFormatter()
-            formatter.dateFormat = "MMM d"
-            return ("Due \(formatter.string(from: dueDate))", AppTheme.sandstone)
+            return ("Due \(AppDateFormatter.monthDay.string(from: dueDate))", AppTheme.sandstone)
         }
     }
 
     public func reminderBadge(for task: TaskItem) -> String? {
         guard let reminderDate = task.reminderDate else { return nil }
-        let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm"
-        return "🔔 \(formatter.string(from: reminderDate))"
+        return "🔔 \(AppDateFormatter.time24.string(from: reminderDate))"
     }
 
     /// Builds the initial reminder date from the selected day while preserving a useful time of day.
@@ -1874,11 +1868,9 @@ public struct CalendarView: View {
         let sessionsCount = sessionsInMonth.count
 
         var activeDateSet = Set<String>()
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
 
         for session in sessionsInMonth {
-            activeDateSet.insert(formatter.string(from: session.completedAt))
+            activeDateSet.insert(AppDateFormatter.isoDate.string(from: session.completedAt))
         }
 
         let tasksCompleted = taskVM.tasks.filter { task in
@@ -1920,27 +1912,19 @@ public struct CalendarView: View {
 
     // MARK: - Formatters
     public func formattedMonthTitle(from date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "MMMM yyyy"
-        return formatter.string(from: date)
+        AppDateFormatter.monthYear.string(from: date)
     }
 
     public func formattedDayHeader(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "EEEE"
-        return formatter.string(from: date)
+        AppDateFormatter.dayOfWeek.string(from: date)
     }
 
     public func formattedFullDate(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "MMMM d, yyyy"
-        return formatter.string(from: date)
+        AppDateFormatter.fullDate.string(from: date)
     }
 
     public func formattedSessionTime(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "h:mm a"
-        return formatter.string(from: date)
+        AppDateFormatter.time12.string(from: date)
     }
 
     public func relativeDayLabel(_ date: Date) -> String {

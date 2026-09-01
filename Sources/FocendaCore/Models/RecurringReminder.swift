@@ -67,9 +67,7 @@ public struct RecurringReminder: Identifiable, Codable, Equatable, Sendable {
 
     /// Formatted time string (e.g. "9:00 AM")
     public var formattedTime: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "h:mm a"
-        return formatter.string(from: time)
+        AppDateFormatter.time12.string(from: time)
     }
 
     /// Checks if this recurring reminder is scheduled on a given calendar date

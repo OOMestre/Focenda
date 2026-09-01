@@ -624,9 +624,7 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
 
         playUserReminderSound()
 
-        let formatter = DateFormatter()
-        formatter.dateFormat = "h:mm a"
-        let timeStr = task.reminderDate != nil ? formatter.string(from: task.reminderDate!) : ""
+        let timeStr = task.reminderDate != nil ? AppDateFormatter.time12.string(from: task.reminderDate!) : ""
 
         NotificationCenter.default.post(
             name: Self.taskReminderFiredNotification,

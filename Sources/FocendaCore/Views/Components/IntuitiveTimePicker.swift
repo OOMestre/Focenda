@@ -51,10 +51,7 @@ public struct IntuitiveTimePicker: View {
     }
 
     public var formattedTimeString: String {
-        let formatter = DateFormatter()
-        formatter.locale = Locale.current
-        formatter.dateFormat = "HH:mm"
-        return formatter.string(from: selection)
+        AppDateFormatter.time24.string(from: selection)
     }
 
     public func setTime(hour: Int, minute: Int) {
