@@ -171,7 +171,7 @@ public final class GlobalShortcutManager: GlobalShortcutManagerProtocol {
             )
 
             if status != noErr {
-                print("⚠️ [GlobalShortcutManager] Failed to install Carbon event handler: \(status)")
+                print("[GlobalShortcutManager] Failed to install Carbon event handler: \(status)")
             }
         }
 
@@ -192,7 +192,7 @@ public final class GlobalShortcutManager: GlobalShortcutManagerProtocol {
             if status == noErr, let ref = hotKeyRef {
                 registeredHotKeyRefs[combo.action.numericId] = ref
             } else {
-                print("⚠️ [GlobalShortcutManager] Failed to register HotKey for \(combo.action.rawValue): \(status)")
+                print("[GlobalShortcutManager] Failed to register HotKey for \(combo.action.rawValue): \(status)")
             }
         }
 
@@ -214,7 +214,7 @@ public final class GlobalShortcutManager: GlobalShortcutManagerProtocol {
             if status == noErr, let ref = hotKeyRef {
                 registeredHotKeyRefs[numericID] = ref
             } else {
-                print("⚠️ [GlobalShortcutManager] Failed to register profile HotKey for \(profileShortcut.profileID): \(status)")
+                print("[GlobalShortcutManager] Failed to register profile HotKey for \(profileShortcut.profileID): \(status)")
             }
         }
         #endif

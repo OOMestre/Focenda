@@ -15,7 +15,7 @@ WORKTREES_DIR="$ROOT_DIR/.worktrees"
 case "$ACTION" in
     add|create|new)
         if [ -z "$NAME" ]; then
-            echo "❌ Usage: $0 add <name> [branch-name]"
+            echo "Usage: $0 add <name> [branch-name]"
             echo "   Example: $0 add bookmark-stats feat/bookmark-stats"
             exit 1
         fi
@@ -26,32 +26,32 @@ case "$ACTION" in
         mkdir -p "$WORKTREES_DIR"
 
         if [ -d "$TARGET_DIR" ]; then
-            echo "⚠️ Worktree already exists at: $TARGET_DIR"
+            echo "Worktree already exists at: $TARGET_DIR"
             exit 0
         fi
 
-        echo "🔄 Ensuring staging is up to date..."
+        echo "Ensuring staging is up to date..."
         git fetch origin staging:staging 2>/dev/null || true
 
-        echo "🌿 Creating worktree at '$TARGET_DIR' on branch '$TARGET_BRANCH' from staging..."
+        echo "Creating worktree at '$TARGET_DIR' on branch '$TARGET_BRANCH' from staging..."
         if git show-ref --verify --quiet "refs/heads/$TARGET_BRANCH"; then
             git worktree add "$TARGET_DIR" "$TARGET_BRANCH"
         else
             git worktree add -b "$TARGET_BRANCH" "$TARGET_DIR" staging
         fi
 
-        echo "✅ Worktree ready at: $TARGET_DIR"
-        echo "💡 In your new chat, you can work inside: $TARGET_DIR"
+        echo "Worktree ready at: $TARGET_DIR"
+        echo "In your new chat, you can work inside: $TARGET_DIR"
         ;;
 
     list|ls)
-        echo "📂 Active Git Worktrees:"
+        echo "Active Git Worktrees:"
         git worktree list
         ;;
 
     remove|rm|delete)
         if [ -z "$NAME" ]; then
-            echo "❌ Usage: $0 remove <name> [branch-name]"
+            echo "Usage: $0 remove <name> [branch-name]"
             echo "   Example: $0 remove bookmark-stats feat/bookmark-stats"
             exit 1
         fi
@@ -60,15 +60,15 @@ case "$ACTION" in
         TARGET_BRANCH="${BRANCH:-feat/$NAME}"
 
         if [ -d "$TARGET_DIR" ]; then
-            echo "🗑️ Removing worktree at: $TARGET_DIR"
+            echo "Removing worktree at: $TARGET_DIR"
             git worktree remove "$TARGET_DIR" --force 2>/dev/null || git worktree remove "$TARGET_DIR"
-            echo "✅ Worktree removed."
+            echo "Worktree removed."
         else
             if git worktree list | grep -q "$NAME"; then
                 git worktree remove "$NAME" --force
-                echo "✅ Worktree removed."
+                echo "Worktree removed."
             else
-                echo "⚠️ Worktree not found for: $NAME"
+                echo "Worktree not found for: $NAME"
             fi
         fi
         git worktree prune
@@ -76,12 +76,12 @@ case "$ACTION" in
         # Clean local and remote branch if specified or standard convention
         for b in "$TARGET_BRANCH" "fix/$NAME" "feat/$NAME"; do
             if git show-ref --verify --quiet "refs/heads/$b"; then
-                echo "🗑️ Deleting local branch: $b"
+                echo "Deleting local branch: $b"
                 git branch -D "$b" 2>/dev/null || true
             fi
             # Try deleting remote branch if it exists on origin
             if git ls-remote --heads origin "$b" | grep -q "$b"; then
-                echo "🌐 Deleting remote branch on origin: $b"
+                echo "Deleting remote branch on origin: $b"
                 git push origin --delete "$b" 2>/dev/null || true
             fi
         done

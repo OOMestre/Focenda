@@ -193,14 +193,14 @@ The `scripts/generate-release-notes.sh` script parses commit messages into categ
 
 | Conventional Commit Prefix | Generated Section |
 | :--- | :--- |
-| `feat:`, `feature:`, `add:` | ✨ New Features & Enhancements |
-| `ui:`, `ux:`, `style:` | 🎨 User Interface & Experience |
-| `fix:`, `bugfix:`, `patch:` | 🐛 Bug Fixes & Improvements |
-| `perf:`, `performance:` | ⚡ Performance Improvements |
-| `refactor:` | 🛠️ Architecture & Refactoring |
-| `docs:`, `doc:` | 📚 Documentation |
-| `ci:`, `chore:`, `build:`, `tooling:` | ⚙️ CI/CD & Build Infrastructure |
-| `test:`, `tests:` | 🧪 Testing & Quality Assurance |
+| `feat:`, `feature:`, `add:` | New Features & Enhancements |
+| `ui:`, `ux:`, `style:` | User Interface & Experience |
+| `fix:`, `bugfix:`, `patch:` | Bug Fixes & Improvements |
+| `perf:`, `performance:` | Performance Improvements |
+| `refactor:` | Architecture & Refactoring |
+| `docs:`, `doc:` | Documentation |
+| `ci:`, `chore:`, `build:`, `tooling:` | CI/CD & Build Infrastructure |
+| `test:`, `tests:` | Testing & Quality Assurance |
 
 ### Custom Arguments & Flags
 ```bash

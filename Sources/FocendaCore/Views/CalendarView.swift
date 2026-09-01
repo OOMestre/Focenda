@@ -1228,7 +1228,7 @@ public struct CalendarView: View {
         .clipShape(Capsule())
     }
 
-    // MARK: - 🔔 Recurring Reminders Section
+    // MARK: - Recurring Reminders Section
     private var recurringRemindersSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
@@ -1394,7 +1394,7 @@ public struct CalendarView: View {
         closeQuickAction()
     }
 
-    // MARK: - ⏱️ Focus Sessions Log Section
+    // MARK: - Focus Sessions Log Section
     private var focusSessionsLogSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {

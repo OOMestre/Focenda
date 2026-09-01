@@ -55,7 +55,7 @@ cleanup() {
 trap cleanup EXIT INT TERM
 
 echo "========================================"
-echo "📦 Packaging DMG: $VOLUME_NAME"
+echo "Packaging DMG: $VOLUME_NAME"
 echo "  - Source: $APP_ABS_PATH"
 echo "  - Target: $OUTPUT_DMG_ABS"
 echo "========================================"
@@ -83,4 +83,4 @@ hdiutil imageinfo "$OUTPUT_DMG_ABS" >/dev/null 2>&1 || {
   exit 1
 }
 
-echo "✅ DMG created successfully at: $OUTPUT_DMG_ABS"
+echo "DMG created successfully at: $OUTPUT_DMG_ABS"
