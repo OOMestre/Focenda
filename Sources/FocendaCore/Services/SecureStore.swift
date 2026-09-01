@@ -6,15 +6,21 @@ import Security
 ///
 /// The encrypted payload remains in UserDefaults so existing preference domains
 /// and the app's lightweight persistence model keep working. The AES-GCM key is
-/// stored separately in the macOS Keychain and never in UserDefaults.
+/// stored in a private local file instead of the macOS Keychain so app updates do
+/// not trigger Keychain authorization prompts.
 public final class SecureStore {
     public static let shared = SecureStore()
+
+    /// Keychain service used by releases that stored the local encryption key in
+    /// the Keychain. It is retained only as a one-time migration source.
     public static let defaultKeychainService = "com.oomestre.focenda.secure-store"
-    /// Keychain service used by the first encrypted Focenda release.
+
+    /// Keychain service used by the first encrypted Focenda release. It is
+    /// retained only as a one-time migration source.
     ///
-    /// Keep this identifier in the read path forever. Changing a Keychain
-    /// service creates a new encryption key and makes previously encrypted
-    /// UserDefaults values look like they disappeared.
+    /// Keep this identifier in the migration path. Changing a Keychain service
+    /// creates a new encryption key and makes previously encrypted UserDefaults
+    /// values look like they disappeared.
     public static let legacyKeychainService = "com.oomestre.focenda.secure-storage"
 
     /// Stable preference suite shared by staging and production bundles.
@@ -31,6 +37,7 @@ public final class SecureStore {
     ]
 
     private static let keychainAccount = "master-key-v1"
+    private static let localKeyFileName = ".vault_key"
     private static let envelopeMarker = Data("FocendaSecureStoreV1".utf8)
     private static let previewKey = SymmetricKey(data: Data(repeating: 0x42, count: 32))
 
@@ -38,7 +45,6 @@ public final class SecureStore {
     private let sharedDefaults: UserDefaults?
     private let legacyDefaults: [UserDefaults]
     private let encryptionKey: SymmetricKey
-    private let decryptionKeys: [SymmetricKey]
 
     private static var isRunningForPreviews: Bool {
         ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1"
@@ -53,14 +59,16 @@ public final class SecureStore {
     /// Creates a store backed by the supplied defaults domain.
     ///
     /// `encryptionKey` is injectable so tests can use an isolated key without
-    /// touching the user's Keychain. Production callers should use the default.
+    /// touching the user's local key file or the legacy Keychain migration path.
+    /// `keyFileURL` is injectable for isolated persistence tests.
     public init(
         defaults: UserDefaults = .standard,
         encryptionKey: SymmetricKey? = nil,
         keychainService: String = SecureStore.defaultKeychainService,
         sharedDefaults: UserDefaults? = nil,
         legacyDefaults: [UserDefaults]? = nil,
-        legacyKeychainServices: [String]? = nil
+        legacyKeychainServices: [String]? = nil,
+        keyFileURL: URL? = nil
     ) {
         self.defaults = defaults
         let useStableProductionStorage = sharedDefaults != nil || Self.shouldUseSharedStorage(
@@ -71,15 +79,18 @@ public final class SecureStore {
         self.sharedDefaults = sharedDefaults ?? (useStableProductionStorage ? UserDefaults(suiteName: Self.sharedDefaultsSuiteName) : nil)
         self.legacyDefaults = legacyDefaults ?? (useStableProductionStorage ? Self.makeLegacyDefaults(excluding: defaults) : [])
 
-        let legacyServices = legacyKeychainServices ?? (
-            keychainService == Self.defaultKeychainService ? [Self.legacyKeychainService] : []
-        )
-        let keyRing = encryptionKey.map { [$0] } ?? Self.loadKeyRing(
+        let migrationServices = Self.keychainServices(
             service: keychainService,
-            legacyServices: legacyServices
+            legacyServices: legacyKeychainServices
         )
-        self.encryptionKey = keyRing[0]
-        self.decryptionKeys = keyRing
+        if let encryptionKey {
+            self.encryptionKey = encryptionKey
+        } else {
+            self.encryptionKey = Self.loadOrCreateKey(
+                keyFileURL: keyFileURL ?? Self.fallbackKeyURL,
+                keychainServices: migrationServices
+            )
+        }
     }
 
     /// Stores an encodable value as authenticated ciphertext.
@@ -225,17 +236,11 @@ public final class SecureStore {
             return nil
         }
 
-        for candidateKey in decryptionKeys {
-            if let plaintext = try? AES.GCM.open(
-                sealedBox,
-                using: candidateKey,
-                authenticating: Data(key.utf8)
-            ) {
-                return plaintext
-            }
-        }
-
-        return nil
+        return try? AES.GCM.open(
+            sealedBox,
+            using: encryptionKey,
+            authenticating: Data(key.utf8)
+        )
     }
 
     private func isEnvelope(_ data: Data) -> Bool {
@@ -266,54 +271,42 @@ public final class SecureStore {
         return nil
     }
 
-    private static func loadKeyRing(service: String, legacyServices: [String]) -> [SymmetricKey] {
+    private static func loadOrCreateKey(keyFileURL: URL?, keychainServices: [String]) -> SymmetricKey {
         if isRunningForPreviews {
-            return [previewKey]
+            return previewKey
         }
 
-        let isDefaultService = service == defaultKeychainService
-        var keyDataCandidates: [Data] = []
-
-        if let keyData = readKeychainData(service: service), keyData.count == 32 {
-            keyDataCandidates.append(keyData)
+        if let localKeyData = readLocalKeyData(from: keyFileURL) {
+            return SymmetricKey(data: localKeyData)
         }
 
-        if isDefaultService,
-           let fallbackData = readFallbackKeyData(),
-           fallbackData.count == 32 {
-            keyDataCandidates.append(fallbackData)
-        }
-
-        for legacyService in legacyServices where legacyService != service {
-            if let legacyKeyData = readKeychainData(service: legacyService),
-               legacyKeyData.count == 32 {
-                keyDataCandidates.append(legacyKeyData)
+        // Older releases stored this key in the Keychain. Read those entries
+        // only when the local key has not been created yet, then persist the
+        // result locally so future launches and app updates never query the
+        // Keychain again.
+        for service in keychainServices {
+            if let legacyKeyData = readKeychainData(service: service),
+                legacyKeyData.count == 32 {
+                saveLocalKeyData(legacyKeyData, to: keyFileURL)
+                return SymmetricKey(data: legacyKeyData)
             }
         }
 
-        if keyDataCandidates.isEmpty {
-            let generatedKey = SymmetricKey(size: .bits256)
-            let keyData = generatedKey.withUnsafeBytes { Data($0) }
-            let saveStatus = saveKeychainData(keyData, service: service)
-            if isDefaultService, saveStatus != errSecSuccess {
-                saveFallbackKeyData(keyData)
-            }
-            return [generatedKey]
-        }
+        let generatedKey = SymmetricKey(size: .bits256)
+        let keyData = generatedKey.withUnsafeBytes { Data($0) }
+        saveLocalKeyData(keyData, to: keyFileURL)
+        return generatedKey
+    }
 
-        // If the current service did not exist but an older key did, adopt the
-        // older key under the current service. This prevents a later launch
-        // from generating yet another key and makes the migration one-way.
-        if !legacyServices.isEmpty,
-           readKeychainData(service: service)?.count != 32,
-           let firstKeyData = keyDataCandidates.first {
-            let saveStatus = saveKeychainData(firstKeyData, service: service)
-            if saveStatus != errSecSuccess {
-                saveFallbackKeyData(firstKeyData)
-            }
-        }
+    private static func keychainServices(service: String, legacyServices: [String]?) -> [String] {
+        let configuredLegacyServices = legacyServices ?? (
+            service == defaultKeychainService ? [legacyKeychainService] : []
+        )
 
-        return keyDataCandidates.map { SymmetricKey(data: $0) }
+        return ([service] + configuredLegacyServices).reduce(into: []) { result, candidate in
+            guard !result.contains(candidate) else { return }
+            result.append(candidate)
+        }
     }
 
     private static func shouldUseSharedStorage(
@@ -337,13 +330,6 @@ public final class SecureStore {
         }
     }
 
-    private static func createOpenAccess(service: String) -> SecAccess? {
-        var access: SecAccess?
-        let status = SecAccessCreate(service as CFString, (nil as CFArray?), &access)
-        guard status == errSecSuccess else { return nil }
-        return access
-    }
-
     private static func readKeychainData(service: String) -> Data? {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
@@ -359,49 +345,23 @@ public final class SecureStore {
         return result as? Data
     }
 
-    @discardableResult
-    private static func saveKeychainData(_ data: Data, service: String) -> OSStatus {
-        var attributes: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: keychainAccount,
-            kSecValueData as String: data
-        ]
-
-        if let access = createOpenAccess(service: service) {
-            attributes[kSecAttrAccess as String] = access
-        }
-
-        let addStatus = SecItemAdd(attributes as CFDictionary, nil)
-        guard addStatus == errSecDuplicateItem else { return addStatus }
-
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: keychainAccount
-        ]
-        var update: [String: Any] = [kSecValueData as String: data]
-        if let access = createOpenAccess(service: service) {
-            update[kSecAttrAccess as String] = access
-        }
-        return SecItemUpdate(query as CFDictionary, update as CFDictionary)
-    }
-
     private static var fallbackKeyURL: URL? {
         guard let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
             return nil
         }
-        let folder = appSupport.appendingPathComponent("com.oomestre.Focenda", isDirectory: true)
+        let baseDirectory = isRunningInTests ? FileManager.default.temporaryDirectory : appSupport
+        let folderName = isRunningInTests ? "FocendaTests-\(ProcessInfo.processInfo.processIdentifier)" : "com.oomestre.Focenda"
+        let folder = baseDirectory.appendingPathComponent(folderName, isDirectory: true)
         if !FileManager.default.fileExists(atPath: folder.path) {
             try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true, attributes: [
                 .posixPermissions: 0o700
             ])
         }
-        return folder.appendingPathComponent(".vault_key")
+        return folder.appendingPathComponent(localKeyFileName)
     }
 
-    private static func readFallbackKeyData() -> Data? {
-        guard let url = fallbackKeyURL,
+    private static func readLocalKeyData(from url: URL?) -> Data? {
+        guard let url,
               let data = try? Data(contentsOf: url),
               data.count == 32 else {
             return nil
@@ -409,8 +369,16 @@ public final class SecureStore {
         return data
     }
 
-    private static func saveFallbackKeyData(_ data: Data) {
-        guard let url = fallbackKeyURL else { return }
+    private static func saveLocalKeyData(_ data: Data, to url: URL?) {
+        guard let url else { return }
+
+        let folder = url.deletingLastPathComponent()
+        try? FileManager.default.createDirectory(
+            at: folder,
+            withIntermediateDirectories: true,
+            attributes: [.posixPermissions: 0o700]
+        )
+        try? FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: folder.path)
         try? data.write(to: url, options: [.atomic, .completeFileProtection])
         try? FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)
     }

@@ -1,6 +1,6 @@
 # Focenda Privacy and Security Policy
 
-Last updated: 2026-08-28
+Last updated: 2026-08-31
 
 Focenda is designed to work locally. It does not require an account, does not
 run telemetry, and does not sync your productivity content to a Focenda
@@ -12,17 +12,21 @@ Focenda stores tasks, task notes, reminders, scratchpad notes, bookmarks,
 quick links, productivity profiles, saved app layouts, and app preferences
 locally. Before these values are written to the app's local preference store,
 they are encrypted with authenticated AES-GCM encryption. The 256-bit
-encryption key is stored in the macOS Keychain, separately from the encrypted
-values.
+encryption key is stored in a private file under Focenda's Application Support
+directory, separately from the encrypted values. The key file is protected with
+owner-only permissions and macOS file protection; Focenda does not ask for a
+Keychain password.
 
 The canonical preference store has a stable name that is independent of the
 installed bundle identifier. This lets beta and production Focenda builds
 share the same local data when an update changes the app bundle from
 `com.oomestre.focenda.staging` to `com.oomestre.focenda` (or back again).
-During upgrades, Focenda also checks the previous bundle preference domains
-and the previous Keychain service, then migrates any readable values into the
-stable store. A failed read is never treated as an empty list and is never
-used to overwrite the existing saved payload.
+During upgrades, Focenda also checks the previous bundle preference domains.
+Installations created by an older release can have their existing encryption
+key read once from the previous Keychain service and copied to the private local
+file. New releases never create or update Keychain items, and stop querying the
+Keychain after that migration. A failed read is never treated as an empty list
+and is never used to overwrite the existing saved payload.
 
 Older Focenda versions stored some values as cleartext `UserDefaults` data.
 After an upgrade, Focenda migrates a legacy value when it is read and writes
@@ -33,7 +37,7 @@ as a recovery source until that domain or backup is removed.
 The encryption protects data at rest. It does not protect content while it is
 visible in the running app, displayed by macOS, copied to the clipboard, or
 accessible to a user or process that already has access to the unlocked macOS
-account and Keychain.
+account and Focenda's local Application Support files.
 
 ## Network communication
 
