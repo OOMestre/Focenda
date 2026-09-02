@@ -9,6 +9,7 @@ public final class ReminderAlertHUDPanel: NSPanel {
 
     private var autoDismissTimer: Timer?
     private var hostingView: NSHostingView<ReminderAlertHUDView>?
+    private var onDismiss: (() -> Void)?
     public private(set) var isShowingAlert: Bool = false
     public private(set) var currentTitle: String = ""
     public private(set) var currentSubtitle: String = ""
@@ -45,13 +46,15 @@ public final class ReminderAlertHUDPanel: NSPanel {
         timeoutSeconds: TimeInterval = 25.0,
         onSnooze: (() -> Void)? = nil,
         onComplete: (() -> Void)? = nil,
-        onOpenApp: (() -> Void)? = nil
+        onOpenApp: (() -> Void)? = nil,
+        onDismiss: (() -> Void)? = nil
     ) {
         self.currentTitle = title
         self.currentSubtitle = subtitle
         self.currentNotes = notes
         self.currentType = type
         self.isShowingAlert = true
+        self.onDismiss = onDismiss
 
         autoDismissTimer?.invalidate()
         autoDismissTimer = nil
@@ -117,6 +120,8 @@ public final class ReminderAlertHUDPanel: NSPanel {
 
         autoDismissTimer?.invalidate()
         autoDismissTimer = nil
+        let dismissalHandler = onDismiss
+        onDismiss = nil
         isShowingAlert = false
         self.orderOut(nil)
 
@@ -124,6 +129,8 @@ public final class ReminderAlertHUDPanel: NSPanel {
             name: NotificationManager.reminderAlertDismissedNotification,
             object: nil
         )
+
+        dismissalHandler?()
     }
 }
 

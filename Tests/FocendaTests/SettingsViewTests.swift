@@ -26,6 +26,7 @@ final class SettingsViewTests: XCTestCase {
             "reminderCustomSoundPath",
             "reminderCustomSoundName",
             "reminderCustomSoundBookmarkData",
+            AppState.reminderSoundRepeatUntilDoneKey,
             "globalShortcutsEnabled",
             "shortcutPreset",
             "showShortcutFeedback",
@@ -191,6 +192,7 @@ final class SettingsViewTests: XCTestCase {
         appState.reminderSoundEnabled = true
         appState.reminderSoundType = .glass
         appState.reminderSoundRepeatCount = 4
+        appState.reminderSoundRepeatUntilDone = true
         appState.reminderCustomSoundPath = "/path/to/custom.mp3"
         appState.reminderCustomSoundName = "custom.mp3"
         appState.savePreferences()
@@ -198,6 +200,7 @@ final class SettingsViewTests: XCTestCase {
         XCTAssertTrue(secureStore.bool(forKey: "reminderSoundEnabled") ?? false)
         XCTAssertEqual(secureStore.string(forKey: "reminderSoundType"), ReminderSoundType.glass.rawValue)
         XCTAssertEqual(secureStore.integer(forKey: "reminderSoundRepeatCount") ?? 0, 4)
+        XCTAssertTrue(secureStore.bool(forKey: AppState.reminderSoundRepeatUntilDoneKey) ?? false)
         XCTAssertEqual(secureStore.string(forKey: "reminderCustomSoundPath"), "/path/to/custom.mp3")
         XCTAssertEqual(secureStore.string(forKey: "reminderCustomSoundName"), "custom.mp3")
 
@@ -205,12 +208,14 @@ final class SettingsViewTests: XCTestCase {
         XCTAssertTrue(reloadedAppState.reminderSoundEnabled)
         XCTAssertEqual(reloadedAppState.reminderSoundType, .glass)
         XCTAssertEqual(reloadedAppState.reminderSoundRepeatCount, 4)
+        XCTAssertTrue(reloadedAppState.reminderSoundRepeatUntilDone)
         XCTAssertEqual(reloadedAppState.reminderCustomSoundPath, "/path/to/custom.mp3")
         XCTAssertEqual(reloadedAppState.reminderCustomSoundName, "custom.mp3")
     }
 
     func testAppStateReminderSoundRepeatClamping() {
         let appState = AppState()
+        XCTAssertFalse(appState.reminderSoundRepeatUntilDone)
         appState.reminderSoundRepeatCount = 10
         XCTAssertEqual(appState.reminderSoundRepeatCount, ReminderSoundType.maxRepeatCount)
 

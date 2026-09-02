@@ -512,14 +512,35 @@ public struct SettingsView: View {
                             Text("Chime Repetitions:")
                                 .font(.subheadline.weight(.medium))
                                 .foregroundStyle(AppTheme.textPrimary)
-                            Text("Repeat the chime 1 to 5 times so you don't miss reminders or Pomodoro alerts.")
+                            Text(appState.reminderSoundRepeatUntilDone
+                                ? "Keep the chime playing until you press Done on the alert."
+                                : "Repeat the chime 1 to 5 times so you don't miss reminders or Pomodoro alerts.")
                                 .font(.caption)
                                 .foregroundStyle(AppTheme.textSecondary)
                         }
                         Spacer()
-                        Stepper("\(appState.reminderSoundRepeatCount)x", value: $appState.reminderSoundRepeatCount, in: ReminderSoundType.minRepeatCount...ReminderSoundType.maxRepeatCount, step: 1)
-                            .foregroundStyle(AppTheme.textPrimary)
+                        if appState.reminderSoundRepeatUntilDone {
+                            Text("Until Done")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(AppTheme.accent)
+                        } else {
+                            Stepper("\(appState.reminderSoundRepeatCount)x", value: $appState.reminderSoundRepeatCount, in: ReminderSoundType.minRepeatCount...ReminderSoundType.maxRepeatCount, step: 1)
+                                .foregroundStyle(AppTheme.textPrimary)
+                        }
                     }
+
+                    Toggle(isOn: $appState.reminderSoundRepeatUntilDone) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Repeat until Done")
+                                .font(.subheadline.weight(.medium))
+                                .foregroundStyle(AppTheme.textPrimary)
+                            Text("Use the alert like an alarm and stop it when you're ready.")
+                                .font(.caption)
+                                .foregroundStyle(AppTheme.textSecondary)
+                        }
+                    }
+                    .toggleStyle(.switch)
+                    .tint(AppTheme.accent)
 
                     Divider()
 
@@ -529,7 +550,9 @@ public struct SettingsView: View {
                             Text("Sound Preview:")
                                 .font(.subheadline.weight(.medium))
                                 .foregroundStyle(AppTheme.textPrimary)
-                            Text("Test how the alert chime will sound with \(appState.reminderSoundRepeatCount) repetitions.")
+                            Text(appState.reminderSoundRepeatUntilDone
+                                ? "Test the alert chime until you press Stop Sound."
+                                : "Test how the alert chime will sound with \(appState.reminderSoundRepeatCount) repetitions.")
                                 .font(.caption)
                                 .foregroundStyle(AppTheme.textSecondary)
                         }
@@ -596,19 +619,29 @@ public struct SettingsView: View {
             let interval: TimeInterval = 0.85
 
             isTestingSound = true
-            NotificationManager.shared.playReminderAlertChime(
-                soundName: soundName,
-                customFilePath: customPath,
-                repeatCount: count,
-                interval: interval
-            )
+            if appState.reminderSoundRepeatUntilDone {
+                NotificationManager.shared.playReminderAlertChimeUntilDone(
+                    soundName: soundName,
+                    customFilePath: customPath,
+                    interval: interval
+                )
+            } else {
+                NotificationManager.shared.playReminderAlertChime(
+                    soundName: soundName,
+                    customFilePath: customPath,
+                    repeatCount: count,
+                    interval: interval
+                )
+            }
 
             testingTask?.cancel()
-            let totalEstimatedDuration = Double(count) * interval + 0.5
-            testingTask = Task { @MainActor in
-                try? await Task.sleep(nanoseconds: UInt64(totalEstimatedDuration * 1_000_000_000))
-                if !Task.isCancelled {
-                    isTestingSound = false
+            if !appState.reminderSoundRepeatUntilDone {
+                let totalEstimatedDuration = Double(count) * interval + 0.5
+                testingTask = Task { @MainActor in
+                    try? await Task.sleep(nanoseconds: UInt64(totalEstimatedDuration * 1_000_000_000))
+                    if !Task.isCancelled {
+                        isTestingSound = false
+                    }
                 }
             }
         }
