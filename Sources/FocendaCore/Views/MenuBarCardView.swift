@@ -24,6 +24,13 @@ public enum MenuBarSection: String, CaseIterable, Identifiable {
 
 /// An interactive multi-action control center designed for MenuBarExtra popover style
 public struct MenuBarCardView: View {
+    /// The menu bar window must keep a stable frame while its section changes.
+    /// MenuBarExtra positions its window from the content's measured size, so
+    /// letting each section report a different height makes the popover jump
+    /// away from the status item during the transition.
+    public static let popoverWidth: CGFloat = 360
+    public static let popoverHeight: CGFloat = 424
+
     public var timerVM: FocusTimerViewModel
     public var taskVM: TaskListViewModel
     public var scratchpadVM: ScratchpadViewModel
@@ -31,7 +38,6 @@ public struct MenuBarCardView: View {
     public var appState: AppState?
 
     @State public var selectedSection: MenuBarSection = .focus
-    @State public var isPresented: Bool = false
     @State private var isHovered: Bool = false
     @State private var completionAlertMessage: String? = nil
 
@@ -88,11 +94,12 @@ public struct MenuBarCardView: View {
     public var body: some View {
         cardBody
             .padding(18)
-            .frame(width: 360)
+            .frame(width: Self.popoverWidth, height: Self.popoverHeight, alignment: .top)
             .background(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .fill(AppTheme.cardBackground)
             )
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .stroke(
@@ -106,30 +113,20 @@ public struct MenuBarCardView: View {
                 x: 0,
                 y: isHovered ? 3 : 1
             )
-            .scaleEffect(x: 1.0, y: isPresented ? 1.0 : 0.88, anchor: .top)
-            .opacity(isPresented ? 1.0 : 0.0)
             .animation(.spring(response: 0.28, dampingFraction: 0.75), value: isHovered)
-            .animation(.spring(response: 0.32, dampingFraction: 0.76), value: isPresented)
             .preferredColorScheme(appState?.selectedTheme.colorScheme ?? AppTheme.current.colorScheme)
             .onHover { hovering in
                 isHovered = hovering
             }
             .onAppear {
-                isPresented = false
                 synchronizeQuickNoteFolder()
                 resetQuickNoteDraft()
                 loadCustomLinks()
-                DispatchQueue.main.async {
-                    withAnimation(.spring(response: 0.32, dampingFraction: 0.76)) {
-                        isPresented = true
-                    }
-                    if selectedSection == .quickNote {
+                if selectedSection == .quickNote {
+                    DispatchQueue.main.async {
                         isQuickNoteTitleFocused = true
                     }
                 }
-            }
-            .onDisappear {
-                isPresented = false
             }
             .onReceive(NotificationCenter.default.publisher(for: .focusSessionCompleted)) { notification in
                 let mode = notification.userInfo?["mode"] as? FocusMode ?? timerVM.currentMode
@@ -290,8 +287,12 @@ public struct MenuBarCardView: View {
                     quickLinksSection
                 }
             }
-            .transition(.opacity.combined(with: .scale(scale: 0.98)))
-            .animation(.spring(response: 0.28, dampingFraction: 0.75), value: selectedSection)
+            .transition(.opacity)
+            .animation(.easeInOut(duration: 0.15), value: selectedSection)
+
+            // Keep the footer in a stable position even when a section has
+            // less content than the fixed popover height.
+            Spacer(minLength: 0)
 
             // Footer actions (Open Main App, Quit)
             footerSection
