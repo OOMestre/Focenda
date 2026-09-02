@@ -570,6 +570,88 @@ final class AppUpdateTests: XCTestCase {
         XCTAssertEqual(process.terminationStatus, 0)
     }
 
+    private func makeDMG(from sourceFolderURL: URL, at dmgURL: URL) throws {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/hdiutil")
+        process.arguments = [
+            "create",
+            "-volname", "FocendaDMGTest",
+            "-srcfolder", sourceFolderURL.path,
+            "-ov",
+            "-format", "UDZO",
+            dmgURL.path
+        ]
+        try process.run()
+        process.waitUntilExit()
+        XCTAssertEqual(process.terminationStatus, 0)
+    }
+
+    func testInstallerReplacesAppFromDMGArchive() throws {
+        let fileManager = FileManager.default
+        let root = fileManager.temporaryDirectory.appendingPathComponent("FocendaDMGTests-\(UUID().uuidString)", isDirectory: true)
+        defer { try? fileManager.removeItem(at: root) }
+
+        let installedApp = root.appendingPathComponent("Focenda.app", isDirectory: true)
+        let sourceFolder = root.appendingPathComponent("Source", isDirectory: true)
+        let updateApp = sourceFolder.appendingPathComponent("Focenda.app", isDirectory: true)
+        let dmg = root.appendingPathComponent("Focenda-macOS.dmg")
+
+        try makeAppBundle(at: installedApp, releaseTag: "v1.0.0", bundleIdentifier: "com.oomestre.focenda")
+        try makeAppBundle(at: updateApp, releaseTag: "v1.0.1", bundleIdentifier: "com.oomestre.focenda")
+        try makeDMG(from: sourceFolder, at: dmg)
+
+        let asset = AppUpdateAsset(
+            name: "Focenda-macOS.dmg",
+            downloadURL: try XCTUnwrap(URL(string: "https://github.com/OOMestre/Focenda/releases/download/v1.0.1/Focenda-macOS.dmg"))
+        )
+        let release = AppUpdateRelease(tagName: "v1.0.1", assets: [asset])
+        let update = try XCTUnwrap(AppUpdate(release: release, asset: asset))
+        let installer = AppUpdateInstaller(
+            applicationURL: installedApp,
+            expectedBundleIdentifier: "com.oomestre.focenda",
+            relaunchAfterInstall: false
+        )
+
+        try installer.install(update: update, downloadedFile: dmg)
+
+        let installedBundle = try XCTUnwrap(Bundle(url: installedApp))
+        XCTAssertEqual(installedBundle.object(forInfoDictionaryKey: "FocendaReleaseTag") as? String, "v1.0.1")
+    }
+
+    func testInstallerReplacesAppFromDMGWithTmpFileExtension() throws {
+        let fileManager = FileManager.default
+        let root = fileManager.temporaryDirectory.appendingPathComponent("FocendaDMGTmpTests-\(UUID().uuidString)", isDirectory: true)
+        defer { try? fileManager.removeItem(at: root) }
+
+        let installedApp = root.appendingPathComponent("Focenda.app", isDirectory: true)
+        let sourceFolder = root.appendingPathComponent("Source", isDirectory: true)
+        let updateApp = sourceFolder.appendingPathComponent("Focenda.app", isDirectory: true)
+        let dmg = root.appendingPathComponent("Focenda-macOS.dmg")
+        let tmpFile = root.appendingPathComponent("CFNetworkDownload_12345.tmp")
+
+        try makeAppBundle(at: installedApp, releaseTag: "v1.0.0", bundleIdentifier: "com.oomestre.focenda")
+        try makeAppBundle(at: updateApp, releaseTag: "v1.0.1", bundleIdentifier: "com.oomestre.focenda")
+        try makeDMG(from: sourceFolder, at: dmg)
+        try fileManager.moveItem(at: dmg, to: tmpFile)
+
+        let asset = AppUpdateAsset(
+            name: "Focenda-macOS.dmg",
+            downloadURL: try XCTUnwrap(URL(string: "https://github.com/OOMestre/Focenda/releases/download/v1.0.1/Focenda-macOS.dmg"))
+        )
+        let release = AppUpdateRelease(tagName: "v1.0.1", assets: [asset])
+        let update = try XCTUnwrap(AppUpdate(release: release, asset: asset))
+        let installer = AppUpdateInstaller(
+            applicationURL: installedApp,
+            expectedBundleIdentifier: "com.oomestre.focenda",
+            relaunchAfterInstall: false
+        )
+
+        try installer.install(update: update, downloadedFile: tmpFile)
+
+        let installedBundle = try XCTUnwrap(Bundle(url: installedApp))
+        XCTAssertEqual(installedBundle.object(forInfoDictionaryKey: "FocendaReleaseTag") as? String, "v1.0.1")
+    }
+
     func testServiceSelectsDMGAssetWhenAvailable() async throws {
         let dmgAsset = AppUpdateAsset(
             name: "Focenda-macOS.dmg",

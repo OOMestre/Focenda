@@ -7,12 +7,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 ## [1.0.1] - 2026-09-02
 
 ### Summary
-Focenda v1.0.1 introduces the Repeat Until Done reminder alert mode, Menu Bar bookmark synchronization with Focus Hub, Menu Bar popover geometry stabilization, an intuitive 12-hour AM/PM time picker, and smart audio playback for sound tests.
+Focenda v1.0.1 introduces the Repeat Until Done reminder alert mode, Menu Bar bookmark synchronization with Focus Hub, Menu Bar popover geometry stabilization, an intuitive 12-hour AM/PM time picker, smart audio playback for sound tests, and a resilient in-app DMG auto-updater.
 
 ### Added
 - **Repeat Until Done Alert Mode:** Added configurable persistent repeat chimes and banner reminders until explicitly acknowledged or completed in the alert HUD.
 
 ### Fixed & Changed
+- **Resilient In-App DMG Auto-Updater:** Implemented robust disk image mounting (`hdiutil attach / detach`), temporary extraction sandboxing, and atomic bundle replacement in `/Applications`.
 - **Menu Bar Bookmark Synchronization:** Menu Bar Links and Focus Hub bookmarks share synchronized local storage and categorized launching.
 - **Menu Bar Popover Geometry Stabilization:** Fixed popover height jumping and stabilized layout sizing across tab transitions.
 - **Intuitive 12-Hour Time Format Picker:** Standardized time input in reminder creation to a clean 12-hour AM/PM layout.

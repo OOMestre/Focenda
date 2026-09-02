@@ -371,7 +371,7 @@ public struct SettingsView: View {
         case .installing:
             return "Installing update..."
         case .failed:
-            return "Update check could not be completed"
+            return updateManager.availableUpdate != nil ? "Update could not be installed" : "Update check could not be completed"
         }
     }
 
