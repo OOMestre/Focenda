@@ -195,6 +195,14 @@ final class MenuBarCardViewTests: XCTestCase {
         XCTAssertTrue(closed)
     }
 
+    func testFloatingControlCenterUsesTheSharedBookmarkViewModel() {
+        let timerVM = FocusTimerViewModel()
+        let bookmarkVM = BookmarkViewModel()
+        let floatingView = FloatingMiniTimerView(timerVM: timerVM, bookmarkVM: bookmarkVM)
+
+        XCTAssertTrue(floatingView.bookmarkVM === bookmarkVM)
+    }
+
     func testCardBodyRendering() {
         let timerVM = FocusTimerViewModel()
         let taskVM = TaskListViewModel()
@@ -359,6 +367,26 @@ final class MenuBarCardViewTests: XCTestCase {
 
         XCTAssertNotNil(cardView.body)
         XCTAssertEqual(cardView.selectedSection, .quickLinks)
+    }
+
+    func testMenuBarCardViewUsesTheSharedBookmarkViewModel() {
+        let timerVM = FocusTimerViewModel()
+        let bookmarkVM = BookmarkViewModel()
+        let bookmark = BookmarkItem(
+            title: "Shared Bookmark",
+            url: "https://shared.example",
+            isPinned: true
+        )
+        bookmarkVM.bookmarks = [bookmark]
+
+        let cardView = MenuBarCardView(
+            timerVM: timerVM,
+            bookmarkVM: bookmarkVM,
+            initialSection: .quickLinks
+        )
+
+        XCTAssertTrue(cardView.bookmarkVM === bookmarkVM)
+        XCTAssertEqual(cardView.bookmarkVM.sortedBookmarks, [bookmark])
     }
 
     func testMenuBarCardViewFormInputsWithLightThemes() {

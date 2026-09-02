@@ -159,7 +159,7 @@ struct FocendaApp: App {
                 scratchpadVM: scratchpadVM,
                 recurringReminderVM: recurringReminderVM,
                 appState: appState,
-                secureStore: secureStore
+                bookmarkVM: bookmarkVM
             )
         } label: {
             HStack(spacing: 4) {

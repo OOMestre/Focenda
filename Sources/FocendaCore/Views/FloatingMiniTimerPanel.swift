@@ -32,12 +32,14 @@ public final class FloatingMiniTimerPanel: NSPanel {
         timerVM: FocusTimerViewModel,
         taskVM: TaskListViewModel = TaskListViewModel(),
         scratchpadVM: ScratchpadViewModel = ScratchpadViewModel(),
+        bookmarkVM: BookmarkViewModel = BookmarkViewModel(),
         at point: NSPoint? = nil
     ) {
         let view = FloatingControlCenterView(
             timerVM: timerVM,
             taskVM: taskVM,
             scratchpadVM: scratchpadVM,
+            bookmarkVM: bookmarkVM,
             onClose: { [weak self] in
                 self?.orderOut(nil)
             }
@@ -69,12 +71,13 @@ public final class FloatingMiniTimerPanel: NSPanel {
     public func toggle(
         timerVM: FocusTimerViewModel,
         taskVM: TaskListViewModel = TaskListViewModel(),
-        scratchpadVM: ScratchpadViewModel = ScratchpadViewModel()
+        scratchpadVM: ScratchpadViewModel = ScratchpadViewModel(),
+        bookmarkVM: BookmarkViewModel = BookmarkViewModel()
     ) {
         if isVisible {
             orderOut(nil)
         } else {
-            show(timerVM: timerVM, taskVM: taskVM, scratchpadVM: scratchpadVM)
+            show(timerVM: timerVM, taskVM: taskVM, scratchpadVM: scratchpadVM, bookmarkVM: bookmarkVM)
         }
     }
 }
@@ -86,6 +89,7 @@ public struct FloatingControlCenterView: View {
     public var timerVM: FocusTimerViewModel
     public var taskVM: TaskListViewModel
     public var scratchpadVM: ScratchpadViewModel
+    public var bookmarkVM: BookmarkViewModel
     public var onClose: (() -> Void)?
 
     @State private var isCompact: Bool = false
@@ -100,11 +104,13 @@ public struct FloatingControlCenterView: View {
         timerVM: FocusTimerViewModel,
         taskVM: TaskListViewModel = TaskListViewModel(),
         scratchpadVM: ScratchpadViewModel = ScratchpadViewModel(),
+        bookmarkVM: BookmarkViewModel = BookmarkViewModel(),
         onClose: (() -> Void)? = nil
     ) {
         self.timerVM = timerVM
         self.taskVM = taskVM
         self.scratchpadVM = scratchpadVM
+        self.bookmarkVM = bookmarkVM
         self.onClose = onClose
     }
 
@@ -521,24 +527,22 @@ public struct FloatingControlCenterView: View {
     // MARK: - Quick Links Tab
     @ViewBuilder
     private var quickLinksTab: some View {
-        if QuickLink.defaultLinks.isEmpty {
+        if bookmarkVM.sortedBookmarks.isEmpty {
             Text("No quick links yet.")
                 .font(.caption)
                 .foregroundStyle(AppTheme.textTertiary)
                 .frame(maxWidth: .infinity, alignment: .leading)
         } else {
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 6) {
-                ForEach(QuickLink.defaultLinks) { link in
+                ForEach(bookmarkVM.sortedBookmarks) { bookmark in
                     Button {
-                        if let url = link.url {
-                            NSWorkspace.shared.open(url)
-                        }
+                        bookmarkVM.openBookmark(bookmark)
                     } label: {
                         HStack(spacing: 6) {
-                            Image(systemName: link.iconName)
+                            Image(systemName: bookmark.iconName)
                                 .font(.caption.bold())
                                 .foregroundStyle(AppTheme.accent)
-                            Text(link.title)
+                            Text(bookmark.title)
                                 .font(.caption.weight(.medium))
                                 .foregroundStyle(AppTheme.textPrimary)
                                 .lineLimit(1)
