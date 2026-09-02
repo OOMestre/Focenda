@@ -20,8 +20,54 @@ final class IntuitiveTimePickerTests: XCTestCase {
         let picker = IntuitiveTimePicker("Test", selection: binding)
 
         XCTAssertEqual(picker.currentHour, 17)
+        XCTAssertEqual(picker.currentHour12, 5)
         XCTAssertEqual(picker.currentMinute, 30)
-        XCTAssertEqual(picker.formattedTimeString, "17:30")
+        XCTAssertEqual(picker.currentMeridiem, "PM")
+        XCTAssertEqual(picker.formattedTimeString, "5:30 PM")
+    }
+
+    func testFormattedTimeStringUses12HourNotationAtMidnightAndNoon() {
+        var calendar = Calendar.current
+        calendar.timeZone = TimeZone.current
+
+        var components = DateComponents()
+        components.year = 2026
+        components.month = 8
+        components.day = 27
+        components.minute = 5
+
+        components.hour = 0
+        let midnightDate = calendar.date(from: components)!
+        let midnightPicker = IntuitiveTimePicker(selection: Binding.constant(midnightDate))
+        XCTAssertEqual(midnightPicker.formattedTimeString, "12:05 AM")
+
+        components.hour = 12
+        let noonDate = calendar.date(from: components)!
+        let noonPicker = IntuitiveTimePicker(selection: Binding.constant(noonDate))
+        XCTAssertEqual(noonPicker.formattedTimeString, "12:05 PM")
+    }
+
+    func testSetMeridiemPreservesDisplayedHourAndMinute() {
+        var calendar = Calendar.current
+        calendar.timeZone = TimeZone.current
+
+        var components = DateComponents()
+        components.year = 2026
+        components.month = 5
+        components.day = 10
+        components.hour = 5
+        components.minute = 15
+        var date = calendar.date(from: components)!
+
+        let binding = Binding(get: { date }, set: { date = $0 })
+        let picker = IntuitiveTimePicker(selection: binding)
+
+        picker.setMeridiem(isPM: true)
+
+        XCTAssertEqual(picker.currentHour, 17)
+        XCTAssertEqual(picker.currentHour12, 5)
+        XCTAssertEqual(picker.currentMinute, 15)
+        XCTAssertEqual(picker.currentMeridiem, "PM")
     }
 
     func testSetTimeMutatesHourAndMinutePreservingDate() {

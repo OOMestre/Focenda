@@ -5,8 +5,9 @@ import SwiftUI
 /// Provides a clean interactive trigger pill and a fluid popover interface with:
 /// - Instant 1-click productivity presets (Morning, Noon, Afternoon, End of Day, Evening, Night)
 /// - Relative time shortcuts (Now, +15m, +30m, +1h)
-/// - Scrollable dual columns for hours (00-23) and minutes (5-min intervals)
+/// - Scrollable dual columns for hours (1-12) and minutes (5-min intervals)
 /// - Digital stepper header for rapid +/- micro adjustments without manual typing
+/// - Consistent 12-hour time display with an explicit AM/PM selector
 public struct IntuitiveTimePicker: View {
     @Binding public var selection: Date
     public var title: String?
@@ -50,8 +51,17 @@ public struct IntuitiveTimePicker: View {
         calendar.component(.minute, from: selection)
     }
 
+    public var currentHour12: Int {
+        let hour = currentHour % 12
+        return hour == 0 ? 12 : hour
+    }
+
+    public var currentMeridiem: String {
+        currentHour >= 12 ? "PM" : "AM"
+    }
+
     public var formattedTimeString: String {
-        AppDateFormatter.time24.string(from: selection)
+        AppDateFormatter.time12.string(from: selection)
     }
 
     public func setTime(hour: Int, minute: Int) {
@@ -63,6 +73,10 @@ public struct IntuitiveTimePicker: View {
         if let newDate = calendar.date(from: components) {
             selection = newDate
         }
+    }
+
+    public func setMeridiem(isPM: Bool) {
+        setTime(hour: hour24(from: currentHour12, isPM: isPM), minute: currentMinute)
     }
 
     public func adjustHour(by delta: Int) {
@@ -104,6 +118,11 @@ public struct IntuitiveTimePicker: View {
         } else {
             setTime(hour: hour, minute: roundedMinute)
         }
+    }
+
+    private func hour24(from hour12: Int, isPM: Bool) -> Int {
+        let normalizedHour = hour12 == 12 ? 0 : hour12
+        return normalizedHour + (isPM ? 12 : 0)
     }
 
     // MARK: - View Body
@@ -245,7 +264,7 @@ public struct IntuitiveTimePicker: View {
 
     // MARK: - Digital Readout & Steppers
     private var digitalReadoutStepperView: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 8) {
             // Hour Stepper
             VStack(spacing: 2) {
                 Button {
@@ -260,7 +279,7 @@ public struct IntuitiveTimePicker: View {
                 }
                 .buttonStyle(.plain)
 
-                Text(String(format: "%02d", currentHour))
+                Text(String(currentHour12))
                     .font(.system(size: 22, weight: .bold, design: .monospaced))
                     .foregroundStyle(AppTheme.textPrimary)
                     .frame(width: 44, height: 32)
@@ -326,7 +345,9 @@ public struct IntuitiveTimePicker: View {
                 .buttonStyle(.plain)
             }
 
-            Spacer()
+            meridiemSelectorView
+
+            Spacer(minLength: 4)
 
             // Micro Fine-tuning Quick Buttons (+5m, -5m, +15m, +30m)
             VStack(alignment: .trailing, spacing: 4) {
@@ -360,6 +381,43 @@ public struct IntuitiveTimePicker: View {
         .buttonStyle(.plain)
     }
 
+    private var meridiemSelectorView: some View {
+        HStack(spacing: 2) {
+            meridiemButton("AM", isSelected: currentMeridiem == "AM") {
+                setMeridiem(isPM: false)
+            }
+
+            meridiemButton("PM", isSelected: currentMeridiem == "PM") {
+                setMeridiem(isPM: true)
+            }
+        }
+        .padding(2)
+        .background(AppTheme.inputBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                .stroke(AppTheme.subtleBorder, lineWidth: 1)
+        )
+        .accessibilityLabel("AM/PM")
+    }
+
+    private func meridiemButton(
+        _ label: String,
+        isSelected: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Text(label)
+                .font(.system(size: 10, weight: isSelected ? .bold : .medium, design: .rounded))
+                .foregroundStyle(isSelected ? AppTheme.textOnAccent : AppTheme.textSecondary)
+                .frame(width: 25, height: 22)
+                .background(isSelected ? AppTheme.accent : Color.clear)
+                .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .help("Set \(label)")
+    }
+
     // MARK: - Presets Section
     private var presetsSectionView: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -368,13 +426,18 @@ public struct IntuitiveTimePicker: View {
                 .foregroundStyle(AppTheme.textTertiary)
 
             // Standard Schedule Presets (Morning, Noon, Afternoon, EOD, Night)
-            HStack(spacing: 4) {
-                presetChip(label: "09:00", name: "Morning", hour: 9, minute: 0)
-                presetChip(label: "12:00", name: "Noon", hour: 12, minute: 0)
-                presetChip(label: "14:00", name: "Afternoon", hour: 14, minute: 0)
-                presetChip(label: "17:00", name: "EOD", hour: 17, minute: 0)
-                presetChip(label: "19:00", name: "Evening", hour: 19, minute: 0)
-                presetChip(label: "21:00", name: "Night", hour: 21, minute: 0)
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 4) {
+                    presetChip(label: "9:00 AM", name: "Morning", hour: 9, minute: 0)
+                    presetChip(label: "12:00 PM", name: "Noon", hour: 12, minute: 0)
+                    presetChip(label: "2:00 PM", name: "Afternoon", hour: 14, minute: 0)
+                }
+
+                HStack(spacing: 4) {
+                    presetChip(label: "5:00 PM", name: "EOD", hour: 17, minute: 0)
+                    presetChip(label: "7:00 PM", name: "Evening", hour: 19, minute: 0)
+                    presetChip(label: "9:00 PM", name: "Night", hour: 21, minute: 0)
+                }
             }
 
             // Relative Presets
@@ -434,7 +497,7 @@ public struct IntuitiveTimePicker: View {
     // MARK: - Dual Column Picker View
     private var dualColumnPickerView: some View {
         HStack(spacing: 12) {
-            // Hours Column (00 - 23)
+            // Hours Column (1 - 12)
             VStack(alignment: .leading, spacing: 4) {
                 Text("HOUR")
                     .font(.system(size: 9, weight: .bold))
@@ -443,12 +506,15 @@ public struct IntuitiveTimePicker: View {
                 ScrollViewReader { proxy in
                     ScrollView(.vertical, showsIndicators: true) {
                         LazyVStack(spacing: 2) {
-                            ForEach(0..<24, id: \.self) { hour in
-                                let isSelected = (currentHour == hour)
+                            ForEach(1...12, id: \.self) { hour in
+                                let isSelected = (currentHour12 == hour)
                                 Button {
-                                    setTime(hour: hour, minute: currentMinute)
+                                    setTime(
+                                        hour: hour24(from: hour, isPM: currentMeridiem == "PM"),
+                                        minute: currentMinute
+                                    )
                                 } label: {
-                                    Text(String(format: "%02d", hour))
+                                    Text(String(hour))
                                         .font(.system(size: 12, weight: isSelected ? .bold : .regular, design: .monospaced))
                                         .foregroundStyle(isSelected ? AppTheme.textOnAccent : AppTheme.textPrimary)
                                         .frame(maxWidth: .infinity)
@@ -470,7 +536,7 @@ public struct IntuitiveTimePicker: View {
                             .stroke(AppTheme.subtleBorder, lineWidth: 1)
                     )
                     .onAppear {
-                        proxy.scrollTo(currentHour, anchor: .center)
+                        proxy.scrollTo(currentHour12, anchor: .center)
                     }
                 }
             }
