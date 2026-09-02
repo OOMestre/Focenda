@@ -75,6 +75,10 @@ Focenda v1.0.0 is the first official release of the native macOS focus, task, an
 
 ### Fixed & Changed
 - **Silent Legacy Keychain Migration:** Legacy Keychain entries are checked without authentication UI, so a first launch after installation or update never asks for the login Keychain password.
+- **Menu Bar Bookmark Synchronization:** Menu Bar Links and Focus Hub bookmarks share synchronized local storage and categorized launching.
+- **Menu Bar Popover Geometry Stabilization:** Fixed popover height jumping and stabilized layout sizing across tab transitions.
+- **Intuitive 12-Hour Time Format Picker:** Standardized time input in reminder creation to a clean 12-hour AM/PM layout.
+- **Repeat Until Done Alert Mode:** Added configurable persistent repeat chimes and banner reminders until explicitly acknowledged in the alert HUD.
 
 ---
 
