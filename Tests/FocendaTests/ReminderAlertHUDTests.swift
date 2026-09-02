@@ -87,6 +87,21 @@ final class ReminderAlertHUDTests: XCTestCase {
         NotificationCenter.default.removeObserver(observer)
     }
 
+    func testReminderAlertHUDPanelDismissalRunsDismissCallback() {
+        let panel = ReminderAlertHUDPanel.shared
+        var didDismiss = false
+
+        panel.show(title: "Persistent Alert", timeoutSeconds: 0, onDismiss: {
+            didDismiss = true
+        })
+
+        XCTAssertTrue(panel.isShowingAlert)
+        panel.dismiss()
+
+        XCTAssertTrue(didDismiss)
+        XCTAssertFalse(panel.isShowingAlert)
+    }
+
     func testReminderAlertHUDViewRendersCorrectly() {
         var snoozeCalled = false
         var completeCalled = false

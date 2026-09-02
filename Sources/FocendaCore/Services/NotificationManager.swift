@@ -29,6 +29,7 @@ struct AlertSoundConfiguration: Equatable {
     let soundName: String
     let customFilePath: String?
     let repeatCount: Int
+    let repeatUntilDone: Bool
 }
 
 /// Service managing native macOS system notifications, rich audible alerts, and in-app banner broadcasts
@@ -219,6 +220,13 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
         !isRunningUnitTests || ProcessInfo.processInfo.environment["ENABLE_TEST_AUDIO"] == "1"
     }
 
+    static func alertHUDTimeoutSeconds(
+        for configuration: AlertSoundConfiguration,
+        soundEnabled: Bool
+    ) -> TimeInterval {
+        soundEnabled && configuration.repeatUntilDone ? 0 : 25.0
+    }
+
     // MARK: - Rich Audible Alerts
 
     /// Plays a single rich native macOS alert chime sequence (e.g. Hero, Ping, Glass) with fallback
@@ -240,6 +248,37 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
         repeatCount: Int = 3,
         interval: TimeInterval = 0.85
     ) {
+        playAlertChimeSequence(
+            soundName: soundName,
+            customFilePath: customFilePath,
+            repeatCount: repeatCount,
+            repeatUntilDone: false,
+            interval: interval
+        )
+    }
+
+    /// Plays the selected alert chime repeatedly until the active alert is dismissed.
+    public func playReminderAlertChimeUntilDone(
+        soundName: String = "Hero",
+        customFilePath: String? = nil,
+        interval: TimeInterval = 0.85
+    ) {
+        playAlertChimeSequence(
+            soundName: soundName,
+            customFilePath: customFilePath,
+            repeatCount: ReminderSoundType.maxRepeatCount,
+            repeatUntilDone: true,
+            interval: interval
+        )
+    }
+
+    private func playAlertChimeSequence(
+        soundName: String,
+        customFilePath: String?,
+        repeatCount: Int,
+        repeatUntilDone: Bool,
+        interval: TimeInterval
+    ) {
         #if canImport(AppKit)
         stopActiveSound()
 
@@ -252,11 +291,12 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
 
         activeSoundTask = Task { @MainActor [weak self] in
             guard let self = self else { return }
-            for index in 0..<repeats {
-                if Task.isCancelled { break }
+            var index = 0
+            while !Task.isCancelled && (repeatUntilDone || index < repeats) {
                 self.playSoundOnce(soundName: soundName, customFilePath: customFilePath)
+                index += 1
 
-                if index < repeats - 1 {
+                if repeatUntilDone || index < repeats {
                     try? await Task.sleep(nanoseconds: UInt64(interval * 1_000_000_000))
                 }
             }
@@ -286,38 +326,54 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
         let repeatCount = savedRepeatCount == 0
             ? ReminderSoundType.defaultRepeatCount
             : max(ReminderSoundType.minRepeatCount, min(ReminderSoundType.maxRepeatCount, savedRepeatCount))
+        let repeatUntilDone = secureStore.bool(forKey: AppState.reminderSoundRepeatUntilDoneKey) ?? false
 
         if soundTypeRaw == ReminderSoundType.custom.rawValue {
             return AlertSoundConfiguration(
                 soundName: Self.standardNotificationSoundName,
                 customFilePath: customPath,
-                repeatCount: repeatCount
+                repeatCount: repeatCount,
+                repeatUntilDone: repeatUntilDone
             )
         } else {
             return AlertSoundConfiguration(
                 soundName: soundTypeRaw,
                 customFilePath: nil,
-                repeatCount: repeatCount
+                repeatCount: repeatCount,
+                repeatUntilDone: repeatUntilDone
             )
         }
     }
 
-    /// Plays the sound selected in Settings with the configured repetition count.
-    private func playConfiguredAlertSound() {
-        let configuration = Self.configuredAlertSound()
-        playReminderAlertChime(
-            soundName: configuration.soundName,
-            customFilePath: configuration.customFilePath,
-            repeatCount: configuration.repeatCount
+    /// Plays the sound selected in Settings with the configured repetition mode.
+    private func playConfiguredAlertSound(_ configuration: AlertSoundConfiguration) {
+        if configuration.repeatUntilDone {
+            playReminderAlertChimeUntilDone(
+                soundName: configuration.soundName,
+                customFilePath: configuration.customFilePath
+            )
+        } else {
+            playReminderAlertChime(
+                soundName: configuration.soundName,
+                customFilePath: configuration.customFilePath,
+                repeatCount: configuration.repeatCount
+            )
+        }
+    }
+
+    private func userReminderSoundSettings() -> (configuration: AlertSoundConfiguration, isEnabled: Bool) {
+        (
+            configuration: Self.configuredAlertSound(),
+            isEnabled: SecureStore.shared.bool(forKey: "reminderSoundEnabled") ?? true
         )
     }
 
     /// Plays the user-configured reminder sound when audible reminders are enabled.
     public func playUserReminderSound() {
-        let isEnabled = SecureStore.shared.bool(forKey: "reminderSoundEnabled") ?? true
-        guard isEnabled else { return }
+        let settings = userReminderSoundSettings()
+        guard settings.isEnabled else { return }
 
-        playConfiguredAlertSound()
+        playConfiguredAlertSound(settings.configuration)
     }
 
     private func playSoundOnce(soundName: String, customFilePath: String?) {
@@ -473,11 +529,12 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
         self.lastNotifiedMode = mode
 
         let soundEnabled = SecureStore.shared.bool(forKey: "soundEnabled") ?? true
+        let soundConfiguration = Self.configuredAlertSound()
 
         // Keep the Pomodoro toggle separate from the Reminder toggle, while sharing
         // the selected sound, custom file, and repetition count from Settings.
         if soundEnabled {
-            playConfiguredAlertSound()
+            playConfiguredAlertSound(soundConfiguration)
         }
 
         #if canImport(AppKit)
@@ -487,13 +544,16 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
                 subtitle: "Pomodoro • \(mode.rawValue)",
                 notes: Self.notificationBody(for: mode),
                 type: "pomodoro",
-                timeoutSeconds: 25.0,
+                timeoutSeconds: Self.alertHUDTimeoutSeconds(for: soundConfiguration, soundEnabled: soundEnabled),
                 onComplete: {
                     self?.stopActiveSound()
                 },
                 onOpenApp: {
                     self?.stopActiveSound()
                     NotificationCenter.default.post(name: Self.openFocusTabNotification, object: mode)
+                },
+                onDismiss: {
+                    self?.stopActiveSound()
                 }
             )
         }
@@ -622,7 +682,10 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
         self.lastFiredTask = task
         markInAppDelivery(for: "task-reminder-\(task.id.uuidString)")
 
-        playUserReminderSound()
+        let soundSettings = userReminderSoundSettings()
+        if soundSettings.isEnabled {
+            playConfiguredAlertSound(soundSettings.configuration)
+        }
 
         let timeStr = task.reminderDate != nil ? AppDateFormatter.time12.string(from: task.reminderDate!) : ""
 
@@ -655,7 +718,7 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
                 subtitle: timeStr.isEmpty ? "Task Reminder" : "\(timeStr) • Task",
                 notes: task.notes,
                 type: "task",
-                timeoutSeconds: 25.0,
+                timeoutSeconds: Self.alertHUDTimeoutSeconds(for: soundSettings.configuration, soundEnabled: soundSettings.isEnabled),
                 onSnooze: {
                     self?.snoozeReminder(
                         title: task.title,
@@ -670,6 +733,9 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
                 onOpenApp: {
                     self?.stopActiveSound()
                     NotificationCenter.default.post(name: Self.openRemindersTabNotification, object: task)
+                },
+                onDismiss: {
+                    self?.stopActiveSound()
                 }
             )
         }
@@ -793,7 +859,10 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
         self.lastFiredRecurringReminder = reminder
         markInAppDelivery(for: "recurring-reminder-\(reminder.id.uuidString)")
 
-        playUserReminderSound()
+        let soundSettings = userReminderSoundSettings()
+        if soundSettings.isEnabled {
+            playConfiguredAlertSound(soundSettings.configuration)
+        }
 
         NotificationCenter.default.post(
             name: Self.recurringReminderFiredNotification,
@@ -825,7 +894,7 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
                 subtitle: "\(reminder.formattedTime) • \(reminder.repeatFrequency.rawValue)",
                 notes: reminder.notes,
                 type: "recurring",
-                timeoutSeconds: 25.0,
+                timeoutSeconds: Self.alertHUDTimeoutSeconds(for: soundSettings.configuration, soundEnabled: soundSettings.isEnabled),
                 onSnooze: {
                     self?.snoozeReminder(
                         title: reminder.title,
@@ -840,6 +909,9 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
                 onOpenApp: {
                     self?.stopActiveSound()
                     NotificationCenter.default.post(name: Self.openRemindersTabNotification, object: reminder)
+                },
+                onDismiss: {
+                    self?.stopActiveSound()
                 }
             )
         }
@@ -881,7 +953,10 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
         let interval = TimeInterval(max(1, minutes) * 60)
         let snoozeTimer = Timer(timeInterval: interval, repeats: false) { [weak self] _ in
             guard let self = self else { return }
-            self.playUserReminderSound()
+            let soundSettings = self.userReminderSoundSettings()
+            if soundSettings.isEnabled {
+                self.playConfiguredAlertSound(soundSettings.configuration)
+            }
 
             NotificationCenter.default.post(
                 name: Self.reminderAlertBannerNotification,
@@ -901,7 +976,7 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
                     subtitle: subtitle,
                     notes: notes,
                     type: "snooze",
-                    timeoutSeconds: 25.0,
+                    timeoutSeconds: Self.alertHUDTimeoutSeconds(for: soundSettings.configuration, soundEnabled: soundSettings.isEnabled),
                     onSnooze: { [weak self] in
                         self?.snoozeReminder(title: title, subtitle: subtitle, notes: notes, minutes: minutes)
                     },
@@ -911,6 +986,9 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
                     onOpenApp: { [weak self] in
                         self?.stopActiveSound()
                         NotificationCenter.default.post(name: Self.openRemindersTabNotification, object: nil)
+                    },
+                    onDismiss: { [weak self] in
+                        self?.stopActiveSound()
                     }
                 )
             }
@@ -934,7 +1012,10 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
         subtitle: String = "Daily Reminder • 6:00 PM",
         notes: String = "Time to review your daily accomplishments and plan ahead!"
     ) {
-        playUserReminderSound()
+        let soundSettings = userReminderSoundSettings()
+        if soundSettings.isEnabled {
+            playConfiguredAlertSound(soundSettings.configuration)
+        }
 
         NotificationCenter.default.post(
             name: Self.reminderAlertBannerNotification,
@@ -954,7 +1035,7 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
                 subtitle: subtitle,
                 notes: notes,
                 type: "test",
-                timeoutSeconds: 25.0,
+                timeoutSeconds: Self.alertHUDTimeoutSeconds(for: soundSettings.configuration, soundEnabled: soundSettings.isEnabled),
                 onSnooze: {
                     self?.snoozeReminder(title: title, subtitle: subtitle, notes: notes, minutes: 5)
                 },
@@ -964,6 +1045,9 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
                 onOpenApp: {
                     self?.stopActiveSound()
                     NotificationCenter.default.post(name: Self.openRemindersTabNotification, object: nil)
+                },
+                onDismiss: {
+                    self?.stopActiveSound()
                 }
             )
         }

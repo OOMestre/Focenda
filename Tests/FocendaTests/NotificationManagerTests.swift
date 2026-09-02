@@ -48,6 +48,7 @@ final class NotificationManagerTests: XCTestCase {
         XCTAssertEqual(configuration.soundName, ReminderSoundType.glass.rawValue)
         XCTAssertNil(configuration.customFilePath)
         XCTAssertEqual(configuration.repeatCount, 4)
+        XCTAssertFalse(configuration.repeatUntilDone)
     }
 
     func testConfiguredAlertSoundUsesCustomFileAndDefaultRepetitions() {
@@ -64,6 +65,32 @@ final class NotificationManagerTests: XCTestCase {
         XCTAssertEqual(configuration.soundName, ReminderSoundType.defaultSound.rawValue)
         XCTAssertEqual(configuration.customFilePath, "/tmp/focenda-alert.wav")
         XCTAssertEqual(configuration.repeatCount, ReminderSoundType.defaultRepeatCount)
+        XCTAssertFalse(configuration.repeatUntilDone)
+    }
+
+    func testConfiguredAlertSoundSupportsRepeatingUntilDone() {
+        let suiteName = "Focenda.NotificationManagerTests.repeatUntilDone"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        defaults.set(ReminderSoundType.ping.rawValue, forKey: "reminderSoundType")
+        defaults.set(2, forKey: "reminderSoundRepeatCount")
+        defaults.set(true, forKey: AppState.reminderSoundRepeatUntilDoneKey)
+
+        let configuration = NotificationManager.configuredAlertSound(from: defaults)
+
+        XCTAssertEqual(configuration.soundName, ReminderSoundType.ping.rawValue)
+        XCTAssertEqual(configuration.repeatCount, 2)
+        XCTAssertTrue(configuration.repeatUntilDone)
+        XCTAssertEqual(
+            NotificationManager.alertHUDTimeoutSeconds(for: configuration, soundEnabled: true),
+            0
+        )
+        XCTAssertEqual(
+            NotificationManager.alertHUDTimeoutSeconds(for: configuration, soundEnabled: false),
+            25
+        )
     }
 
     func testSessionCompletionNotificationKeepsSystemSoundOffForSelectedInAppChime() {
@@ -177,6 +204,14 @@ final class NotificationManagerTests: XCTestCase {
         manager.playReminderAlertChime(soundName: "Hero", repeatCount: 3, interval: 0.1)
         manager.playReminderAlertChime(soundName: "Ping", customFilePath: nil, repeatCount: 5, interval: 0.05)
         manager.stopActiveSound()
+        XCTAssertFalse(manager.isPlayingSound)
+    }
+
+    func testPlayReminderAlertChimeUntilDoneCanBeStopped() {
+        let manager = NotificationManager()
+        manager.playReminderAlertChimeUntilDone(soundName: "Hero", interval: 0.05)
+        manager.stopActiveSound()
+
         XCTAssertFalse(manager.isPlayingSound)
     }
 
