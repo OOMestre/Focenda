@@ -87,6 +87,21 @@ final class ReminderAlertHUDTests: XCTestCase {
         NotificationCenter.default.removeObserver(observer)
     }
 
+    func testReminderAlertHUDPanelDismissalRunsDismissCallback() {
+        let panel = ReminderAlertHUDPanel.shared
+        var didDismiss = false
+
+        panel.show(title: "Persistent Alert", timeoutSeconds: 0, onDismiss: {
+            didDismiss = true
+        })
+
+        XCTAssertTrue(panel.isShowingAlert)
+        panel.dismiss()
+
+        XCTAssertTrue(didDismiss)
+        XCTAssertFalse(panel.isShowingAlert)
+    }
+
     func testReminderAlertHUDViewRendersCorrectly() {
         var snoozeCalled = false
         var completeCalled = false
@@ -263,5 +278,34 @@ final class ReminderAlertHUDTests: XCTestCase {
         NotificationCenter.default.removeObserver(observer2)
 
         XCTAssertEqual(NotificationManager.shared.lastFiredTask?.id, task.id)
+    }
+
+    func testTestReminderAlertHUDUsesFiniteTimeoutEvenWithRepeatUntilDone() {
+        let suiteName = "Focenda.ReminderAlertHUDTests.testAlertTimeout"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        defaults.set(true, forKey: "reminderSoundEnabled")
+        defaults.set(true, forKey: AppState.reminderSoundRepeatUntilDoneKey)
+
+        let expectation = expectation(description: "HUD shown for test alert")
+
+        NotificationManager.shared.testReminderAlertHUD(
+            title: "Test Standup",
+            subtitle: "Test Subtitle",
+            notes: "Test Notes"
+        )
+
+        DispatchQueue.main.async {
+            let panel = ReminderAlertHUDPanel.shared
+            XCTAssertTrue(panel.isShowingAlert)
+            XCTAssertEqual(panel.currentType, "test")
+            XCTAssertEqual(panel.currentTitle, "Test Standup")
+            panel.dismiss()
+            expectation.fulfill()
+        }
+
+        wait(for: [expectation], timeout: 2.0)
     }
 }

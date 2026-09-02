@@ -60,10 +60,11 @@ public struct AppUpdateGuide: Codable, Equatable, Identifiable, Sendable {
                 AppUpdateGuideSection(
                     title: "What's New in Focenda",
                     items: [
-                        "Productivity Profiles with semantic window placement and global shortcuts.",
-                        "Direct macOS .dmg installer releases and background updates.",
-                        "Guided first-launch onboarding with interactive tour.",
-                        "Encrypted on-device storage for notes, tasks, calendar items, and preferences."
+                        "Repeat Until Done alert mode for persistent audio chimes until acknowledged.",
+                        "Menu Bar Links synchronization with Focus Hub Bookmarks.",
+                        "Menu Bar popover geometry stabilization without layout jumping.",
+                        "Intuitive 12-hour AM/PM time selector in Reminders.",
+                        "Encrypted on-device storage with verified zero data loss across updates."
                     ]
                 )
             ]

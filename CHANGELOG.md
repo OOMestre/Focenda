@@ -4,6 +4,23 @@ All notable changes, new features, and bug fixes for **Focenda** are documented 
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2026-09-02
+
+### Summary
+Focenda v1.0.1 introduces the Repeat Until Done reminder alert mode, Menu Bar bookmark synchronization with Focus Hub, Menu Bar popover geometry stabilization, an intuitive 12-hour AM/PM time picker, and smart audio playback for sound tests.
+
+### Added
+- **Repeat Until Done Alert Mode:** Added configurable persistent repeat chimes and banner reminders until explicitly acknowledged or completed in the alert HUD.
+
+### Fixed & Changed
+- **Menu Bar Bookmark Synchronization:** Menu Bar Links and Focus Hub bookmarks share synchronized local storage and categorized launching.
+- **Menu Bar Popover Geometry Stabilization:** Fixed popover height jumping and stabilized layout sizing across tab transitions.
+- **Intuitive 12-Hour Time Format Picker:** Standardized time input in reminder creation to a clean 12-hour AM/PM layout.
+- **Smart Sound Preview & Test Audio:** Limited test alerts and sound previews in Settings and Reminders to 3 gentle pulses with immediate pause support.
+- **Enhanced Persistence & Preference Bindings:** Verified 100% data retention across update cycles with responsive preference persistence.
+
+---
+
 ## [1.0.0] - 2026-09-01
 
 ### Summary

@@ -82,11 +82,13 @@ final class BookmarkViewModelTests: XCTestCase {
         testDefaults = UserDefaults.standard
         testDefaults.removeObject(forKey: testKey)
         testDefaults.removeObject(forKey: BookmarkViewModel.userDefaultsKey)
+        testDefaults.removeObject(forKey: BookmarkViewModel.legacyQuickLinksStorageKey)
     }
 
     override func tearDown() {
         testDefaults.removeObject(forKey: testKey)
         testDefaults.removeObject(forKey: BookmarkViewModel.userDefaultsKey)
+        testDefaults.removeObject(forKey: BookmarkViewModel.legacyQuickLinksStorageKey)
         testDefaults = nil
         super.tearDown()
     }
@@ -326,6 +328,47 @@ final class BookmarkViewModelTests: XCTestCase {
         let viewModel = BookmarkViewModel(userDefaults: testDefaults)
 
         XCTAssertTrue(viewModel.bookmarks.isEmpty)
+    }
+
+    func testLegacyMenuBarQuickLinksAreMigratedIntoSharedBookmarks() throws {
+        let legacyID = UUID()
+        let legacyLink = QuickLink(
+            id: legacyID,
+            title: "Legacy Link",
+            urlString: "https://legacy.example",
+            iconName: "link"
+        )
+        testDefaults.set(
+            try JSONEncoder().encode([legacyLink]),
+            forKey: BookmarkViewModel.legacyQuickLinksStorageKey
+        )
+
+        let viewModel = BookmarkViewModel(userDefaults: testDefaults)
+
+        XCTAssertEqual(viewModel.bookmarks.count, 1)
+        XCTAssertEqual(viewModel.bookmarks.first?.id, legacyID)
+        XCTAssertEqual(viewModel.bookmarks.first?.title, "Legacy Link")
+        XCTAssertEqual(viewModel.bookmarks.first?.url, "https://legacy.example")
+
+        let reloadedViewModel = BookmarkViewModel(userDefaults: testDefaults)
+        XCTAssertEqual(reloadedViewModel.bookmarks, viewModel.bookmarks)
+    }
+
+    func testExplicitBookmarkListTakesPrecedenceOverLegacyMenuBarLinks() throws {
+        let savedBookmarks = [BookmarkItem(title: "Current Link", url: "https://current.example")]
+        let legacyLink = QuickLink(title: "Legacy Link", urlString: "https://legacy.example")
+        testDefaults.set(
+            try JSONEncoder().encode(savedBookmarks),
+            forKey: BookmarkViewModel.userDefaultsKey
+        )
+        testDefaults.set(
+            try JSONEncoder().encode([legacyLink]),
+            forKey: BookmarkViewModel.legacyQuickLinksStorageKey
+        )
+
+        let viewModel = BookmarkViewModel(userDefaults: testDefaults)
+
+        XCTAssertEqual(viewModel.bookmarks, savedBookmarks)
     }
 
     func testCategoryCountsAndAllCategories() {

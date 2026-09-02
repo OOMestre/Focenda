@@ -24,14 +24,21 @@ public enum MenuBarSection: String, CaseIterable, Identifiable {
 
 /// An interactive multi-action control center designed for MenuBarExtra popover style
 public struct MenuBarCardView: View {
+    /// The menu bar window must keep a stable frame while its section changes.
+    /// MenuBarExtra positions its window from the content's measured size, so
+    /// letting each section report a different height makes the popover jump
+    /// away from the status item during the transition.
+    public static let popoverWidth: CGFloat = 360
+    public static let popoverHeight: CGFloat = 424
+
     public var timerVM: FocusTimerViewModel
     public var taskVM: TaskListViewModel
     public var scratchpadVM: ScratchpadViewModel
     public var recurringReminderVM: RecurringReminderViewModel
+    public var bookmarkVM: BookmarkViewModel
     public var appState: AppState?
 
     @State public var selectedSection: MenuBarSection = .focus
-    @State public var isPresented: Bool = false
     @State private var isHovered: Bool = false
     @State private var completionAlertMessage: String? = nil
 
@@ -58,14 +65,9 @@ public struct MenuBarCardView: View {
     @FocusState private var isQuickNoteTitleFocused: Bool
 
     // Quick Links state
-    @State private var customLinks: [QuickLink] = []
-    @State private var customLinksPersistenceReady = false
     @State private var newLinkTitle: String = ""
     @State private var newLinkUrl: String = ""
     @State private var isAddingLink: Bool = false
-
-    private let customLinksStorageKey = "focenda_custom_quick_links"
-    private let secureStore: SecureStore
 
     public init(
         timerVM: FocusTimerViewModel,
@@ -74,6 +76,7 @@ public struct MenuBarCardView: View {
         recurringReminderVM: RecurringReminderViewModel = RecurringReminderViewModel(),
         appState: AppState? = nil,
         secureStore: SecureStore = .shared,
+        bookmarkVM: BookmarkViewModel? = nil,
         initialSection: MenuBarSection = .focus
     ) {
         self.timerVM = timerVM
@@ -81,18 +84,19 @@ public struct MenuBarCardView: View {
         self.scratchpadVM = scratchpadVM
         self.recurringReminderVM = recurringReminderVM
         self.appState = appState
-        self.secureStore = secureStore
+        self.bookmarkVM = bookmarkVM ?? BookmarkViewModel(secureStore: secureStore)
         self._selectedSection = State(initialValue: initialSection)
     }
 
     public var body: some View {
         cardBody
             .padding(18)
-            .frame(width: 360)
+            .frame(width: Self.popoverWidth, height: Self.popoverHeight, alignment: .top)
             .background(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .fill(AppTheme.cardBackground)
             )
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .stroke(
@@ -106,30 +110,19 @@ public struct MenuBarCardView: View {
                 x: 0,
                 y: isHovered ? 3 : 1
             )
-            .scaleEffect(x: 1.0, y: isPresented ? 1.0 : 0.88, anchor: .top)
-            .opacity(isPresented ? 1.0 : 0.0)
             .animation(.spring(response: 0.28, dampingFraction: 0.75), value: isHovered)
-            .animation(.spring(response: 0.32, dampingFraction: 0.76), value: isPresented)
             .preferredColorScheme(appState?.selectedTheme.colorScheme ?? AppTheme.current.colorScheme)
             .onHover { hovering in
                 isHovered = hovering
             }
             .onAppear {
-                isPresented = false
                 synchronizeQuickNoteFolder()
                 resetQuickNoteDraft()
-                loadCustomLinks()
-                DispatchQueue.main.async {
-                    withAnimation(.spring(response: 0.32, dampingFraction: 0.76)) {
-                        isPresented = true
-                    }
-                    if selectedSection == .quickNote {
+                if selectedSection == .quickNote {
+                    DispatchQueue.main.async {
                         isQuickNoteTitleFocused = true
                     }
                 }
-            }
-            .onDisappear {
-                isPresented = false
             }
             .onReceive(NotificationCenter.default.publisher(for: .focusSessionCompleted)) { notification in
                 let mode = notification.userInfo?["mode"] as? FocusMode ?? timerVM.currentMode
@@ -290,8 +283,12 @@ public struct MenuBarCardView: View {
                     quickLinksSection
                 }
             }
-            .transition(.opacity.combined(with: .scale(scale: 0.98)))
-            .animation(.spring(response: 0.28, dampingFraction: 0.75), value: selectedSection)
+            .transition(.opacity)
+            .animation(.easeInOut(duration: 0.15), value: selectedSection)
+
+            // Keep the footer in a stable position even when a section has
+            // less content than the fixed popover height.
+            Spacer(minLength: 0)
 
             // Footer actions (Open Main App, Quit)
             footerSection
@@ -1273,7 +1270,7 @@ public struct MenuBarCardView: View {
                 )
             }
 
-            let allLinks = QuickLink.defaultLinks + customLinks
+            let allLinks = bookmarkVM.sortedBookmarks
             if allLinks.isEmpty {
                 Text("No quick links yet. Add one above to keep it close at hand.")
                     .font(.caption)
@@ -1283,11 +1280,8 @@ public struct MenuBarCardView: View {
             } else {
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
                     ForEach(allLinks) { link in
-                        let isCustom = customLinks.contains(where: { $0.id == link.id })
                         Button {
-                            if let url = link.url {
-                                NSWorkspace.shared.open(url)
-                            }
+                            bookmarkVM.openBookmark(link)
                         } label: {
                             HStack(spacing: 8) {
                                 Image(systemName: link.iconName)
@@ -1319,9 +1313,7 @@ public struct MenuBarCardView: View {
                         .buttonStyle(SpringScaleButtonStyle())
                         .contextMenu {
                             Button {
-                                if let url = link.url {
-                                    NSWorkspace.shared.open(url)
-                                }
+                                bookmarkVM.openBookmark(link)
                             } label: {
                                 Label("Open in Browser", systemImage: "arrow.up.right")
                             }
@@ -1329,21 +1321,19 @@ public struct MenuBarCardView: View {
                             Button {
                                 let pasteboard = NSPasteboard.general
                                 pasteboard.clearContents()
-                                pasteboard.setString(link.urlString, forType: .string)
+                                pasteboard.setString(link.url, forType: .string)
                             } label: {
                                 Label("Copy URL", systemImage: "doc.on.doc")
                             }
 
-                            if isCustom {
-                                Divider()
+                            Divider()
 
-                                Button(role: .destructive) {
-                                    withAnimation(.spring(response: 0.25)) {
-                                        deleteCustomLink(link)
-                                    }
-                                } label: {
-                                    Label("Delete Bookmark", systemImage: "trash")
+                            Button(role: .destructive) {
+                                withAnimation(.spring(response: 0.25)) {
+                                    bookmarkVM.deleteBookmark(link)
                                 }
+                            } label: {
+                                Label("Delete Bookmark", systemImage: "trash")
                             }
                         }
                     }
@@ -1362,46 +1352,23 @@ public struct MenuBarCardView: View {
             urlStr = "https://" + urlStr
         }
 
-        let link = QuickLink(title: title, urlString: urlStr)
-        customLinks.append(link)
-        saveCustomLinks()
+        bookmarkVM.addBookmark(title: title, url: urlStr, iconName: "link")
 
         newLinkTitle = ""
         newLinkUrl = ""
         isAddingLink = false
     }
 
+    /// Kept as a source-compatible bridge for callers of the old menu bar
+    /// quick-link API. The shared BookmarkViewModel is now the source of truth.
     public func deleteCustomLink(_ link: QuickLink) {
-        deleteCustomLink(id: link.id)
+        bookmarkVM.deleteBookmark(id: link.id)
     }
 
+    /// Kept as a source-compatible bridge for callers of the old menu bar
+    /// quick-link API. The shared BookmarkViewModel is now the source of truth.
     public func deleteCustomLink(id: UUID) {
-        customLinks.removeAll(where: { $0.id == id })
-        saveCustomLinks()
-    }
-
-    private func saveCustomLinks() {
-        guard customLinksPersistenceReady else { return }
-        if let data = try? JSONEncoder().encode(customLinks) {
-            secureStore.setData(data, forKey: customLinksStorageKey)
-        }
-    }
-
-    private func loadCustomLinks() {
-        guard secureStore.containsValue(forKey: customLinksStorageKey) else {
-            customLinksPersistenceReady = true
-            return
-        }
-
-        guard let data = secureStore.data(forKey: customLinksStorageKey),
-              let decoded = try? JSONDecoder().decode([QuickLink].self, from: data) else {
-            // Keep the saved payload intact until it can be read or migrated.
-            customLinksPersistenceReady = false
-            return
-        }
-
-        self.customLinks = decoded
-        customLinksPersistenceReady = true
+        bookmarkVM.deleteBookmark(id: id)
     }
 
     // MARK: - Footer Actions

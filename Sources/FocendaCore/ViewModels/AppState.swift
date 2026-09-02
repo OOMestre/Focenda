@@ -56,6 +56,7 @@ public enum AppTab: String, CaseIterable, Identifiable {
 public final class AppState {
     /// Stable key used to remember that the first-launch guided tour was seen.
     public static let onboardingCompletionKey = "focenda_onboarding_completed_v1"
+    public static let reminderSoundRepeatUntilDoneKey = "reminderSoundRepeatUntilDone"
 
     public var selectedTab: AppTab = .dashboard {
         didSet {
@@ -64,8 +65,16 @@ public final class AppState {
         }
     }
     public private(set) var hasCompletedOnboarding: Bool
-    public var dailyFocusGoalMinutes: Int = 120
-    public var soundEnabled: Bool = true
+    public var dailyFocusGoalMinutes: Int = 120 {
+        didSet {
+            savePreferences()
+        }
+    }
+    public var soundEnabled: Bool = true {
+        didSet {
+            savePreferences()
+        }
+    }
     public var reminderSoundEnabled: Bool = true {
         didSet {
             savePreferences()
@@ -101,6 +110,11 @@ public final class AppState {
             } else {
                 savePreferences()
             }
+        }
+    }
+    public var reminderSoundRepeatUntilDone: Bool = false {
+        didSet {
+            savePreferences()
         }
     }
     public var autoStartBreaks: Bool = false
@@ -167,6 +181,7 @@ public final class AppState {
 
         let savedRepeatCount = secureStore.integer(forKey: "reminderSoundRepeatCount") ?? 0
         self.reminderSoundRepeatCount = savedRepeatCount == 0 ? ReminderSoundType.defaultRepeatCount : max(ReminderSoundType.minRepeatCount, min(ReminderSoundType.maxRepeatCount, savedRepeatCount))
+        self.reminderSoundRepeatUntilDone = secureStore.bool(forKey: Self.reminderSoundRepeatUntilDoneKey) ?? false
         
         self.globalShortcutsEnabled = secureStore.bool(forKey: "globalShortcutsEnabled") ?? true
         if let savedPresetRaw = secureStore.string(forKey: "shortcutPreset"),
@@ -221,6 +236,7 @@ public final class AppState {
             secureStore.removeObject(forKey: "reminderCustomSoundBookmarkData")
         }
         secureStore.set(reminderSoundRepeatCount, forKey: "reminderSoundRepeatCount")
+        secureStore.set(reminderSoundRepeatUntilDone, forKey: Self.reminderSoundRepeatUntilDoneKey)
         secureStore.set(globalShortcutsEnabled, forKey: "globalShortcutsEnabled")
         secureStore.set(shortcutPreset.rawValue, forKey: "shortcutPreset")
         secureStore.set(showShortcutFeedback, forKey: "showShortcutFeedback")
@@ -239,6 +255,7 @@ public final class AppState {
             !secureStore.containsValue(forKey: "reminderCustomSoundName") || secureStore.string(forKey: "reminderCustomSoundName") != nil,
             !secureStore.containsValue(forKey: "reminderCustomSoundBookmarkData") || secureStore.data(forKey: "reminderCustomSoundBookmarkData") != nil,
             !secureStore.containsValue(forKey: "reminderSoundRepeatCount") || secureStore.integer(forKey: "reminderSoundRepeatCount") != nil,
+            !secureStore.containsValue(forKey: Self.reminderSoundRepeatUntilDoneKey) || secureStore.bool(forKey: Self.reminderSoundRepeatUntilDoneKey) != nil,
             !secureStore.containsValue(forKey: "globalShortcutsEnabled") || secureStore.bool(forKey: "globalShortcutsEnabled") != nil,
             !secureStore.containsValue(forKey: "shortcutPreset") || secureStore.string(forKey: "shortcutPreset") != nil,
             !secureStore.containsValue(forKey: "showShortcutFeedback") || secureStore.bool(forKey: "showShortcutFeedback") != nil,

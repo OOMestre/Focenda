@@ -32,6 +32,9 @@ public enum BookmarkPresetCategory: String, CaseIterable, Identifiable {
 @Observable
 public final class BookmarkViewModel {
     public static let userDefaultsKey = "focenda_bookmarks"
+    /// Storage key used by the former menu bar-only quick links implementation.
+    /// It remains readable so existing links can be brought into the shared list.
+    public static let legacyQuickLinksStorageKey = "focenda_custom_quick_links"
 
     public var bookmarks: [BookmarkItem] = []
     public var searchQuery: String = ""
@@ -71,7 +74,7 @@ public final class BookmarkViewModel {
 
     /// Filtered and sorted bookmarks
     public var filteredBookmarks: [BookmarkItem] {
-        bookmarks.filter { bookmark in
+        sortedBookmarks.filter { bookmark in
             let matchesCategory: Bool
             if selectedCategory == "All" {
                 matchesCategory = true
@@ -92,7 +95,11 @@ public final class BookmarkViewModel {
 
             return matchesCategory && matchesSearch
         }
-        .sorted { (lhs: BookmarkItem, rhs: BookmarkItem) -> Bool in
+    }
+
+    /// All bookmarks sorted in the same order used by the Bookmarks workspace.
+    public var sortedBookmarks: [BookmarkItem] {
+        bookmarks.sorted { (lhs: BookmarkItem, rhs: BookmarkItem) -> Bool in
             if lhs.isPinned != rhs.isPinned {
                 return lhs.isPinned && !rhs.isPinned
             }
@@ -189,6 +196,13 @@ public final class BookmarkViewModel {
     /// Loads bookmarks from persistent storage or initializes an empty list
     public func loadFromUserDefaults() {
         guard secureStore.containsValue(forKey: Self.userDefaultsKey) else {
+            if let legacyBookmarks = loadLegacyQuickLinks() {
+                self.bookmarks = legacyBookmarks
+                bookmarksPersistenceReady = true
+                saveToUserDefaults()
+                return
+            }
+
             self.bookmarks = Self.defaultBookmarks
             bookmarksPersistenceReady = true
             return
@@ -206,6 +220,25 @@ public final class BookmarkViewModel {
         // An explicitly saved empty list is a valid user choice.
         self.bookmarks = decoded
         bookmarksPersistenceReady = true
+    }
+
+    /// Reads links saved by older versions of the menu bar and converts them
+    /// into the canonical bookmark model. A missing or unreadable legacy value
+    /// is treated as no migration so a later launch can try again safely.
+    private func loadLegacyQuickLinks() -> [BookmarkItem]? {
+        guard let data = secureStore.data(forKey: Self.legacyQuickLinksStorageKey),
+              let legacyLinks = try? JSONDecoder().decode([QuickLink].self, from: data) else {
+            return nil
+        }
+
+        return legacyLinks.map { link in
+            BookmarkItem(
+                id: link.id,
+                title: link.title,
+                url: link.urlString,
+                iconName: link.iconName
+            )
+        }
     }
 
     /// Saves bookmarks to persistent storage
