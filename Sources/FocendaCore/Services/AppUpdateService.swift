@@ -398,7 +398,19 @@ public final class GitHubReleaseClient: AppUpdateClient {
 
         let (temporaryURL, response) = try await session.download(for: request)
         try validate(response: response)
-        return temporaryURL
+
+        let targetDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("FocendaDownload-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: targetDirectory, withIntermediateDirectories: true)
+
+        let suggestedFilename = (response as? HTTPURLResponse)?.suggestedFilename ?? url.lastPathComponent
+        let targetFilename = suggestedFilename.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            ? url.lastPathComponent
+            : suggestedFilename
+        let destinationURL = targetDirectory.appendingPathComponent(targetFilename)
+
+        try FileManager.default.moveItem(at: temporaryURL, to: destinationURL)
+        return destinationURL
     }
 
     private func validate(response: URLResponse) throws {
@@ -744,7 +756,13 @@ public final class AppUpdateService: AppUpdateProviding {
 
     public func install(update: AppUpdate) async throws {
         let downloadedFile = try await client.downloadAsset(from: update.asset.downloadURL)
-        defer { try? FileManager.default.removeItem(at: downloadedFile) }
+        defer {
+            try? FileManager.default.removeItem(at: downloadedFile)
+            let parentDir = downloadedFile.deletingLastPathComponent()
+            if parentDir.lastPathComponent.starts(with: "FocendaDownload-") {
+                try? FileManager.default.removeItem(at: parentDir)
+            }
+        }
 
         // The installer performs synchronous file-system and Process work. Keep it
         // off the caller's actor so an update started from SwiftUI cannot stall the
@@ -807,6 +825,41 @@ public final class AppUpdateInstaller: AppUpdateInstalling {
         self.archiveLimits = archiveLimits
     }
 
+    public enum ArchiveType: Equatable, Sendable {
+        case dmg
+        case zip
+    }
+
+    public func resolveArchiveType(for archiveURL: URL, update: AppUpdate? = nil) -> ArchiveType {
+        if let assetName = update?.asset.name.lowercased() {
+            if assetName.hasSuffix(".dmg") {
+                return .dmg
+            }
+            if assetName.hasSuffix(".zip") {
+                return .zip
+            }
+        }
+
+        let ext = archiveURL.pathExtension.lowercased()
+        if ext == "dmg" {
+            return .dmg
+        }
+        if ext == "zip" {
+            return .zip
+        }
+
+        if let handle = try? FileHandle(forReadingFrom: archiveURL) {
+            defer { try? handle.close() }
+            if let header = try? handle.read(upToCount: 4), header.count >= 4 {
+                if header[0] == 0x50 && header[1] == 0x4B {
+                    return .zip
+                }
+            }
+        }
+
+        return .dmg
+    }
+
     public func install(update: AppUpdate, downloadedFile: URL) throws {
         guard fileManager.fileExists(atPath: downloadedFile.path) else {
             throw AppUpdateError.invalidArchive
@@ -827,10 +880,12 @@ public final class AppUpdateInstaller: AppUpdateInstalling {
             .appendingPathComponent("FocendaUpdate-\(UUID().uuidString)", isDirectory: true)
         let extractionDirectory = temporaryDirectory.appendingPathComponent("Extracted", isDirectory: true)
 
+        let archiveType = resolveArchiveType(for: downloadedFile, update: update)
+
         do {
             try fileManager.createDirectory(at: extractionDirectory, withIntermediateDirectories: true)
-            try inspectArchive(at: downloadedFile)
-            try extract(downloadedFile, to: extractionDirectory)
+            try inspectArchive(at: downloadedFile, type: archiveType)
+            try extract(downloadedFile, type: archiveType, to: extractionDirectory)
             try validateExtractedContents(at: extractionDirectory)
 
             guard let candidateAppURL = findApplication(in: extractionDirectory),
@@ -882,9 +937,10 @@ public final class AppUpdateInstaller: AppUpdateInstalling {
         let uncompressedBytes: UInt64
     }
 
-    private func inspectArchive(at archiveURL: URL) throws {
+    private func inspectArchive(at archiveURL: URL, type: ArchiveType) throws {
         #if os(macOS)
-        if archiveURL.pathExtension.lowercased() == "dmg" {
+        switch type {
+        case .dmg:
             guard let attributes = try? fileManager.attributesOfItem(atPath: archiveURL.path),
                   let fileSize = attributes[.size] as? UInt64 else {
                 throw AppUpdateError.invalidArchive
@@ -893,80 +949,81 @@ public final class AppUpdateInstaller: AppUpdateInstalling {
                 throw AppUpdateError.archiveTooLarge(limit: archiveLimits.maxUncompressedBytes)
             }
             return
-        }
 
-        let handle: FileHandle
-        do {
-            handle = try FileHandle(forReadingFrom: archiveURL)
-        } catch {
-            throw AppUpdateError.invalidArchive
-        }
-        defer { try? handle.close() }
-
-        do {
-            let archiveSize = try handle.seekToEnd()
-            guard archiveSize >= 22 else {
+        case .zip:
+            let handle: FileHandle
+            do {
+                handle = try FileHandle(forReadingFrom: archiveURL)
+            } catch {
                 throw AppUpdateError.invalidArchive
             }
+            defer { try? handle.close() }
 
-            // The EOCD record is followed by at most a 65,535-byte comment.
-            let searchLength = min(archiveSize, UInt64(22 + Int(UInt16.max)))
-            let searchStart = archiveSize - searchLength
-            try handle.seek(toOffset: searchStart)
-            let tail = try readExactly(from: handle, count: Int(searchLength))
-            guard let eocdIndex = endOfCentralDirectoryIndex(in: tail) else {
-                throw AppUpdateError.invalidArchive
-            }
+            do {
+                let archiveSize = try handle.seekToEnd()
+                guard archiveSize >= 22 else {
+                    throw AppUpdateError.invalidArchive
+                }
 
-            let eocdOffset = searchStart + UInt64(eocdIndex)
-            let eocd = tail.subdata(in: eocdIndex..<(eocdIndex + 22))
-            let diskNumber = readUInt16(from: eocd, at: 4)
-            let centralDirectoryDisk = readUInt16(from: eocd, at: 6)
-            let entriesOnDisk = readUInt16(from: eocd, at: 8)
-            let totalEntries = readUInt16(from: eocd, at: 10)
-            let centralDirectorySize = readUInt32(from: eocd, at: 12)
-            let centralDirectoryOffset = readUInt32(from: eocd, at: 16)
+                // The EOCD record is followed by at most a 65,535-byte comment.
+                let searchLength = min(archiveSize, UInt64(22 + Int(UInt16.max)))
+                let searchStart = archiveSize - searchLength
+                try handle.seek(toOffset: searchStart)
+                let tail = try readExactly(from: handle, count: Int(searchLength))
+                guard let eocdIndex = endOfCentralDirectoryIndex(in: tail) else {
+                    throw AppUpdateError.invalidArchive
+                }
 
-            guard diskNumber == 0, centralDirectoryDisk == 0, entriesOnDisk == totalEntries else {
-                throw AppUpdateError.invalidArchive
-            }
+                let eocdOffset = searchStart + UInt64(eocdIndex)
+                let eocd = tail.subdata(in: eocdIndex..<(eocdIndex + 22))
+                let diskNumber = readUInt16(from: eocd, at: 4)
+                let centralDirectoryDisk = readUInt16(from: eocd, at: 6)
+                let entriesOnDisk = readUInt16(from: eocd, at: 8)
+                let totalEntries = readUInt16(from: eocd, at: 10)
+                let centralDirectorySize = readUInt32(from: eocd, at: 12)
+                let centralDirectoryOffset = readUInt32(from: eocd, at: 16)
 
-            let metadata: ArchiveMetadata
-            if totalEntries == UInt16.max
-                || centralDirectorySize == UInt32.max
-                || centralDirectoryOffset == UInt32.max {
-                metadata = try readZIP64Metadata(
-                    from: handle,
-                    archiveSize: archiveSize,
-                    eocdOffset: eocdOffset
-                )
-            } else {
-                let entryCount = UInt64(totalEntries)
-                guard entryCount <= UInt64(archiveLimits.maxFileCount) else {
+                guard diskNumber == 0, centralDirectoryDisk == 0, entriesOnDisk == totalEntries else {
+                    throw AppUpdateError.invalidArchive
+                }
+
+                let metadata: ArchiveMetadata
+                if totalEntries == UInt16.max
+                    || centralDirectorySize == UInt32.max
+                    || centralDirectoryOffset == UInt32.max {
+                    metadata = try readZIP64Metadata(
+                        from: handle,
+                        archiveSize: archiveSize,
+                        eocdOffset: eocdOffset
+                    )
+                } else {
+                    let entryCount = UInt64(totalEntries)
+                    guard entryCount <= UInt64(archiveLimits.maxFileCount) else {
+                        throw AppUpdateError.archiveTooManyFiles(limit: archiveLimits.maxFileCount)
+                    }
+
+                    let uncompressedBytes = try inspectCentralDirectory(
+                        from: handle,
+                        archiveSize: archiveSize,
+                        entryCount: entryCount,
+                        centralDirectoryOffset: UInt64(centralDirectoryOffset),
+                        centralDirectorySize: UInt64(centralDirectorySize)
+                    )
+                    metadata = ArchiveMetadata(entryCount: entryCount, uncompressedBytes: uncompressedBytes)
+                }
+
+                if metadata.entryCount > UInt64(archiveLimits.maxFileCount) {
                     throw AppUpdateError.archiveTooManyFiles(limit: archiveLimits.maxFileCount)
                 }
 
-                let uncompressedBytes = try inspectCentralDirectory(
-                    from: handle,
-                    archiveSize: archiveSize,
-                    entryCount: entryCount,
-                    centralDirectoryOffset: UInt64(centralDirectoryOffset),
-                    centralDirectorySize: UInt64(centralDirectorySize)
-                )
-                metadata = ArchiveMetadata(entryCount: entryCount, uncompressedBytes: uncompressedBytes)
+                if metadata.uncompressedBytes > archiveLimits.maxUncompressedBytes {
+                    throw AppUpdateError.archiveTooLarge(limit: archiveLimits.maxUncompressedBytes)
+                }
+            } catch let error as AppUpdateError {
+                throw error
+            } catch {
+                throw AppUpdateError.invalidArchive
             }
-
-            if metadata.entryCount > UInt64(archiveLimits.maxFileCount) {
-                throw AppUpdateError.archiveTooManyFiles(limit: archiveLimits.maxFileCount)
-            }
-
-            if metadata.uncompressedBytes > archiveLimits.maxUncompressedBytes {
-                throw AppUpdateError.archiveTooLarge(limit: archiveLimits.maxUncompressedBytes)
-            }
-        } catch let error as AppUpdateError {
-            throw error
-        } catch {
-            throw AppUpdateError.invalidArchive
         }
         #else
         throw AppUpdateError.invalidArchive
@@ -1239,29 +1296,31 @@ public final class AppUpdateInstaller: AppUpdateInstalling {
         }
     }
 
-    private func extract(_ archiveURL: URL, to destinationURL: URL) throws {
+    private func extract(_ archiveURL: URL, type: ArchiveType, to destinationURL: URL) throws {
         #if os(macOS)
-        if archiveURL.pathExtension.lowercased() == "dmg" {
+        switch type {
+        case .dmg:
             try extractDMG(archiveURL, to: destinationURL)
             return
-        }
 
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/ditto")
-        process.arguments = ["-x", "-k", archiveURL.path, destinationURL.path]
-        let errorPipe = Pipe()
-        process.standardError = errorPipe
+        case .zip:
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: "/usr/bin/ditto")
+            process.arguments = ["-x", "-k", archiveURL.path, destinationURL.path]
+            let errorPipe = Pipe()
+            process.standardError = errorPipe
 
-        do {
-            try process.run()
-        } catch {
-            throw AppUpdateError.processFailed(error.localizedDescription)
-        }
-        process.waitUntilExit()
+            do {
+                try process.run()
+            } catch {
+                throw AppUpdateError.processFailed(error.localizedDescription)
+            }
+            process.waitUntilExit()
 
-        guard process.terminationStatus == 0 else {
-            _ = errorPipe.fileHandleForReading.readDataToEndOfFile()
-            throw AppUpdateError.invalidArchive
+            guard process.terminationStatus == 0 else {
+                _ = errorPipe.fileHandleForReading.readDataToEndOfFile()
+                throw AppUpdateError.invalidArchive
+            }
         }
         #else
         throw AppUpdateError.invalidArchive
@@ -1321,6 +1380,16 @@ public final class AppUpdateInstaller: AppUpdateInstalling {
     }
 
     private func findApplication(in directoryURL: URL) -> URL? {
+        if let contents = try? fileManager.contentsOfDirectory(
+            at: directoryURL,
+            includingPropertiesForKeys: [.isDirectoryKey],
+            options: [.skipsHiddenFiles]
+        ) {
+            for url in contents where url.pathExtension.lowercased() == "app" {
+                return url
+            }
+        }
+
         guard let enumerator = fileManager.enumerator(
             at: directoryURL,
             includingPropertiesForKeys: [.isDirectoryKey],
