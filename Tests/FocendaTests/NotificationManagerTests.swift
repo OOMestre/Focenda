@@ -246,6 +246,23 @@ final class NotificationManagerTests: XCTestCase {
         UserDefaults.standard.removeObject(forKey: "reminderSoundRepeatCount")
     }
 
+    func testPlayUserReminderSoundUsesFiniteRepetitionsEvenWhenRepeatUntilDoneIsEnabled() {
+        let manager = NotificationManager()
+        SecureStore.shared.set(true, forKey: "reminderSoundEnabled")
+        SecureStore.shared.set(true, forKey: AppState.reminderSoundRepeatUntilDoneKey)
+        SecureStore.shared.set(ReminderSoundType.hero.rawValue, forKey: "reminderSoundType")
+
+        // Should trigger finite repetitions (3 by default) rather than infinite loop
+        manager.playUserReminderSound()
+        manager.stopActiveSound()
+        XCTAssertFalse(manager.isPlayingSound)
+
+        // Reset
+        UserDefaults.standard.removeObject(forKey: "reminderSoundEnabled")
+        UserDefaults.standard.removeObject(forKey: AppState.reminderSoundRepeatUntilDoneKey)
+        UserDefaults.standard.removeObject(forKey: "reminderSoundType")
+    }
+
     func testReminderSoundOptionProperties() {
         XCTAssertEqual(ReminderSoundType.hero.displayName, "Hero (Default)")
         XCTAssertEqual(ReminderSoundType.custom.displayName, "Custom Audio File...")

@@ -118,6 +118,9 @@ public struct RemindersView: View {
                 }
             }
         }
+        .onDisappear {
+            NotificationManager.shared.stopActiveSound()
+        }
     }
 
     // MARK: - Header Bar

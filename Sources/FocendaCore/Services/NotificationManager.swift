@@ -372,12 +372,16 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
         )
     }
 
-    /// Plays the user-configured reminder sound when audible reminders are enabled.
-    public func playUserReminderSound() {
+    /// Plays the user-configured reminder sound chime preview (defaults to 3 repetitions, non-infinite for preview and tests).
+    public func playUserReminderSound(repeatCount: Int = 3) {
         let settings = userReminderSoundSettings()
         guard settings.isEnabled else { return }
 
-        playConfiguredAlertSound(settings.configuration)
+        playReminderAlertChime(
+            soundName: settings.configuration.soundName,
+            customFilePath: settings.configuration.customFilePath,
+            repeatCount: repeatCount
+        )
     }
 
     private func playSoundOnce(soundName: String, customFilePath: String?) {
@@ -1010,7 +1014,7 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
         )
     }
 
-    /// Triggers an immediate screen HUD alert and chime sequence for testing
+    /// Triggers an immediate screen HUD alert and chime sequence for testing (plays 3 repetitions by default and auto-dismisses).
     public func testReminderAlertHUD(
         title: String = "Daily Standup",
         subtitle: String = "Daily Reminder • 6:00 PM",
@@ -1018,7 +1022,11 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
     ) {
         let soundSettings = userReminderSoundSettings()
         if soundSettings.isEnabled {
-            playConfiguredAlertSound(soundSettings.configuration)
+            playReminderAlertChime(
+                soundName: soundSettings.configuration.soundName,
+                customFilePath: soundSettings.configuration.customFilePath,
+                repeatCount: 3
+            )
         }
 
         NotificationCenter.default.post(
@@ -1039,7 +1047,7 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
                 subtitle: subtitle,
                 notes: notes,
                 type: "test",
-                timeoutSeconds: Self.alertHUDTimeoutSeconds(for: soundSettings.configuration, soundEnabled: soundSettings.isEnabled),
+                timeoutSeconds: 25.0,
                 onSnooze: {
                     self?.snoozeReminder(title: title, subtitle: subtitle, notes: notes, minutes: 5)
                 },
