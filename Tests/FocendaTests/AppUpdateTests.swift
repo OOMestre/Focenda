@@ -618,6 +618,88 @@ final class AppUpdateTests: XCTestCase {
 
         XCTAssertEqual(update.asset.name, "Focenda-macOS.dmg")
     }
+
+    func testUserDataPersistsAcrossAppUpdateCycle() throws {
+        let suiteName = "Focenda.UpdatePersistenceSuite.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        let keyDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let keyFileURL = keyDir.appendingPathComponent(".vault_key")
+        defer {
+            defaults.removePersistentDomain(forName: suiteName)
+            try? FileManager.default.removeItem(at: keyDir)
+        }
+
+        // --- Step 1: User creates data in app version 1.0.0 ---
+        let initialStore = SecureStore(defaults: defaults, keyFileURL: keyFileURL)
+
+        // 1. Task
+        let taskVM = TaskListViewModel(secureStore: initialStore)
+        taskVM.addTask(title: "Launch Production Release", notes: "Review checklist", priority: .high)
+        XCTAssertEqual(taskVM.tasks.count, 1)
+
+        // 2. Scratchpad note and folder
+        let scratchpadVM = ScratchpadViewModel(userDefaults: defaults, secureStore: initialStore, debounceInterval: 0.01)
+        XCTAssertTrue(scratchpadVM.createFolder("Architecture"))
+        scratchpadVM.selectedFolder = "Architecture"
+        scratchpadVM.updateTitle("V2 Roadmap", debounce: false)
+        scratchpadVM.updateContent("Zero mock, local encryption", debounce: false)
+        XCTAssertEqual(scratchpadVM.notes.count, 1)
+
+        // 3. Bookmark
+        let bookmarkVM = BookmarkViewModel(userDefaults: defaults, secureStore: initialStore)
+        bookmarkVM.addBookmark(title: "Swift Docs", url: "https://swift.org", category: "Development")
+        XCTAssertEqual(bookmarkVM.bookmarks.count, 1)
+
+        // 4. Recurring Reminder
+        let reminderVM = RecurringReminderViewModel(secureStore: initialStore)
+        reminderVM.addReminder(title: "Team Standup", time: Date(), repeatFrequency: .weekdays)
+        XCTAssertEqual(reminderVM.reminders.count, 1)
+
+        // 5. Focus Timer Session
+        let timerVM = FocusTimerViewModel(userDefaults: defaults, secureStore: initialStore)
+        let session = FocusSession(mode: .work, durationSeconds: 25 * 60, completedAt: Date())
+        timerVM.completedSessions = [session]
+        XCTAssertEqual(timerVM.completedSessionsCount, 1)
+
+        // 6. AppState Preferences
+        let appState = AppState(secureStore: initialStore)
+        appState.selectedTheme = .nordicFrost
+        appState.dailyFocusGoalMinutes = 180
+        appState.completeOnboarding()
+
+        // --- Step 2: Simulate App Update / Upgrade (New instances launched with updated version) ---
+        let upgradedStore = SecureStore(defaults: defaults, keyFileURL: keyFileURL)
+
+        let upgradedTaskVM = TaskListViewModel(secureStore: upgradedStore)
+        XCTAssertEqual(upgradedTaskVM.tasks.count, 1)
+        XCTAssertEqual(upgradedTaskVM.tasks.first?.title, "Launch Production Release")
+        XCTAssertEqual(upgradedTaskVM.tasks.first?.priority, .high)
+
+        let upgradedScratchpadVM = ScratchpadViewModel(userDefaults: defaults, secureStore: upgradedStore, debounceInterval: 0.01)
+        XCTAssertEqual(upgradedScratchpadVM.notes.count, 1)
+        XCTAssertEqual(upgradedScratchpadVM.notes.first?.title, "V2 Roadmap")
+        XCTAssertEqual(upgradedScratchpadVM.notes.first?.content, "Zero mock, local encryption")
+        XCTAssertTrue(upgradedScratchpadVM.folders.contains("Architecture"))
+
+        let upgradedBookmarkVM = BookmarkViewModel(userDefaults: defaults, secureStore: upgradedStore)
+        XCTAssertEqual(upgradedBookmarkVM.bookmarks.count, 1)
+        XCTAssertEqual(upgradedBookmarkVM.bookmarks.first?.title, "Swift Docs")
+        XCTAssertEqual(upgradedBookmarkVM.bookmarks.first?.url, "https://swift.org")
+
+        let upgradedReminderVM = RecurringReminderViewModel(secureStore: upgradedStore)
+        XCTAssertEqual(upgradedReminderVM.reminders.count, 1)
+        XCTAssertEqual(upgradedReminderVM.reminders.first?.title, "Team Standup")
+        XCTAssertEqual(upgradedReminderVM.reminders.first?.repeatFrequency, .weekdays)
+
+        let upgradedTimerVM = FocusTimerViewModel(userDefaults: defaults, secureStore: upgradedStore)
+        XCTAssertEqual(upgradedTimerVM.completedSessionsCount, 1)
+        XCTAssertEqual(upgradedTimerVM.completedSessions.first?.durationSeconds, 25 * 60)
+
+        let upgradedAppState = AppState(secureStore: upgradedStore)
+        XCTAssertEqual(upgradedAppState.selectedTheme, AppThemeOption.nordicFrost)
+        XCTAssertEqual(upgradedAppState.dailyFocusGoalMinutes, 180)
+        XCTAssertTrue(upgradedAppState.hasCompletedOnboarding)
+    }
 }
 
 private final class StubUpdateClient: AppUpdateClient {

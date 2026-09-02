@@ -65,8 +65,16 @@ public final class AppState {
         }
     }
     public private(set) var hasCompletedOnboarding: Bool
-    public var dailyFocusGoalMinutes: Int = 120
-    public var soundEnabled: Bool = true
+    public var dailyFocusGoalMinutes: Int = 120 {
+        didSet {
+            savePreferences()
+        }
+    }
+    public var soundEnabled: Bool = true {
+        didSet {
+            savePreferences()
+        }
+    }
     public var reminderSoundEnabled: Bool = true {
         didSet {
             savePreferences()
