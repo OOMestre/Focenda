@@ -1,5 +1,6 @@
 import XCTest
 import SwiftUI
+import AppKit
 @testable import FocendaCore
 
 final class MenuBarCardViewTests: XCTestCase {
@@ -23,6 +24,33 @@ final class MenuBarCardViewTests: XCTestCase {
         XCTAssertEqual(cardView.timerVM.currentMode, .work)
         XCTAssertNotNil(cardView.appState)
         XCTAssertEqual(cardView.selectedSection, .focus)
+    }
+
+    func testMenuBarPopoverKeepsStableGeometryAcrossSections() {
+        XCTAssertEqual(MenuBarCardView.popoverWidth, 360)
+        XCTAssertEqual(MenuBarCardView.popoverHeight, 424)
+
+        for section in MenuBarSection.allCases {
+            let cardView = MenuBarCardView(
+                timerVM: FocusTimerViewModel(),
+                initialSection: section
+            )
+            let hostingView = NSHostingView(rootView: cardView)
+            hostingView.layoutSubtreeIfNeeded()
+
+            XCTAssertEqual(
+                hostingView.fittingSize.width,
+                MenuBarCardView.popoverWidth,
+                accuracy: 0.5,
+                "Unexpected popover width for \(section.rawValue)"
+            )
+            XCTAssertEqual(
+                hostingView.fittingSize.height,
+                MenuBarCardView.popoverHeight,
+                accuracy: 0.5,
+                "Unexpected popover height for \(section.rawValue)"
+            )
+        }
     }
 
     func testMenuBarCardViewFullInitialization() {
