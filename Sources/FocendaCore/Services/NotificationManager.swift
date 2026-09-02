@@ -129,19 +129,23 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
         #endif
     }
 
-    /// The active app owns the richer HUD; otherwise the native channel owns
-    /// delivery whenever it is available.
+    /// The active app owns the richer HUD; continuous alert mode also uses the
+    /// HUD so its sound can remain active until the user presses Done.
     static func shouldDeliverInAppReminder(
         applicationIsActive: Bool,
-        hasNativeNotificationChannel: Bool
+        hasNativeNotificationChannel: Bool,
+        repeatUntilDone: Bool = false
     ) -> Bool {
-        applicationIsActive || !hasNativeNotificationChannel
+        applicationIsActive || !hasNativeNotificationChannel || repeatUntilDone
     }
 
     private var shouldDeliverInAppReminder: Bool {
-        Self.shouldDeliverInAppReminder(
+        let configuration = Self.configuredAlertSound()
+        let soundEnabled = SecureStore.shared.bool(forKey: "reminderSoundEnabled") ?? true
+        return Self.shouldDeliverInAppReminder(
             applicationIsActive: applicationIsActive(),
-            hasNativeNotificationChannel: center != nil
+            hasNativeNotificationChannel: center != nil,
+            repeatUntilDone: soundEnabled && configuration.repeatUntilDone
         )
     }
 
@@ -1063,8 +1067,10 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
         willPresent notification: UNNotification,
         withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
     ) {
+        let continuousReminderEnabled = Self.configuredAlertSound().repeatUntilDone &&
+            (SecureStore.shared.bool(forKey: "reminderSoundEnabled") ?? true)
         if Self.isReminderNotificationIdentifier(notification.request.identifier),
-           applicationIsActive(),
+           (applicationIsActive() || continuousReminderEnabled),
            shouldSuppressNativeReminder(for: notification.request.identifier) {
             completionHandler([])
             return

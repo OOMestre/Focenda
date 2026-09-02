@@ -121,6 +121,13 @@ final class NotificationManagerTests: XCTestCase {
                 hasNativeNotificationChannel: false
             )
         )
+        XCTAssertTrue(
+            NotificationManager.shouldDeliverInAppReminder(
+                applicationIsActive: false,
+                hasNativeNotificationChannel: true,
+                repeatUntilDone: true
+            )
+        )
     }
 
     func testForegroundPresentationIsSuppressedOnlyForScheduledReminders() {
