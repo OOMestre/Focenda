@@ -400,7 +400,10 @@ public struct MenuBarCardView: View {
 
     // MARK: - Focus Section
     private var focusSection: some View {
-        VStack(spacing: 12) {
+        // The popover has a fixed height so the menu bar anchor stays stable
+        // while switching sections. Keep the Focus controls compact enough
+        // to leave the shared footer inside that frame.
+        VStack(spacing: 8) {
             modeSelectorSection
             miniProgressRingSection
             quickPresetSection
