@@ -128,7 +128,7 @@ public final class AppModuleManager {
     /// Checks if a navigation tab should appear based on module installation and feature flags.
     public func isTabAvailable(_ tab: AppTab) -> Bool {
         switch tab {
-        case .dashboard, .timer, .settings, .support:
+        case .dashboard, .timer, .settings, .about, .support:
             return true
         case .profiles:
             return ProductivityProfilesFeature.isEnabled
