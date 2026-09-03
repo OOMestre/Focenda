@@ -13,6 +13,7 @@ public struct SettingsView: View {
     @State private var testingTask: Task<Void, Never>?
     @State private var isShowingOnboarding: Bool = false
     @State private var isShowingUpdateGuide: Bool = false
+    @State private var updatePendingConfirmation: AppUpdate?
 
     public init(
         appState: AppState,
@@ -167,6 +168,16 @@ public struct SettingsView: View {
                 EmptyView()
             }
         }
+        .alert(item: $updatePendingConfirmation) { update in
+            Alert(
+                title: Text(AppUpdateConfirmation.title),
+                message: Text(AppUpdateConfirmation.message(for: update)),
+                primaryButton: .default(Text(AppUpdateConfirmation.actionTitle)) {
+                    updateManager.installAvailableUpdate()
+                },
+                secondaryButton: .cancel()
+            )
+        }
     }
 
     // MARK: - Getting Started Section
@@ -276,12 +287,13 @@ public struct SettingsView: View {
 
                         HStack {
                             Button("Update Now") {
-                                updateManager.installAvailableUpdate()
+                                updatePendingConfirmation = update
                             }
                             .buttonStyle(.borderedProminent)
                             .tint(AppTheme.accent)
                             .controlSize(.small)
                             .disabled(updateManager.status.isBusy)
+                            .accessibilityIdentifier("settingsUpdateNowButton")
 
                             Button("Later") {
                                 updateManager.dismissAvailableUpdate()

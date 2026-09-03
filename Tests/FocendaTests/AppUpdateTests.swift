@@ -165,6 +165,23 @@ final class AppUpdateTests: XCTestCase {
         XCTAssertNil(update)
     }
 
+    func testUpdateConfirmationExplainsAutomaticRelaunch() throws {
+        let asset = AppUpdateAsset(
+            name: "Focenda-macOS.zip",
+            downloadURL: try XCTUnwrap(URL(string: "https://github.com/OOMestre/Focenda/releases/download/v1.2.0/Focenda-macOS.zip"))
+        )
+        let release = AppUpdateRelease(tagName: "v1.2.0", assets: [asset])
+        let update = try XCTUnwrap(AppUpdate(release: release, asset: asset))
+
+        let message = AppUpdateConfirmation.message(for: update)
+
+        XCTAssertEqual(AppUpdateConfirmation.title, "Ready to update Focenda?")
+        XCTAssertEqual(AppUpdateConfirmation.actionTitle, "Update & Relaunch")
+        XCTAssertTrue(message.contains("version 1.2.0"))
+        XCTAssertTrue(message.contains("close briefly and reopen automatically"))
+        XCTAssertTrue(message.contains("save any open work"))
+    }
+
     func testServiceDownloadsAndPassesArchiveToInstaller() async throws {
         let asset = AppUpdateAsset(
             name: "Focenda-macOS.zip",

@@ -24,6 +24,7 @@ public struct MainView: View {
     @State private var isShowingUpdateGuide = false
     @State private var isShowingOnboarding = false
     @State private var isPresentingInitialOnboarding = false
+    @State private var updatePendingConfirmation: AppUpdate?
 
     public init(
         appState: AppState = AppState(),
@@ -71,7 +72,7 @@ public struct MainView: View {
                         AppUpdateBanner(
                             update: update,
                             isInstalling: updateManager.status == .installing,
-                            onInstall: updateManager.installAvailableUpdate,
+                            onInstall: { updatePendingConfirmation = update },
                             onDismiss: updateManager.dismissAvailableUpdate
                         )
                         .frame(maxWidth: 760)
@@ -293,6 +294,16 @@ public struct MainView: View {
             } else {
                 EmptyView()
             }
+        }
+        .alert(item: $updatePendingConfirmation) { update in
+            Alert(
+                title: Text(AppUpdateConfirmation.title),
+                message: Text(AppUpdateConfirmation.message(for: update)),
+                primaryButton: .default(Text(AppUpdateConfirmation.actionTitle)) {
+                    updateManager.installAvailableUpdate()
+                },
+                secondaryButton: .cancel()
+            )
         }
         .onReceive(NotificationCenter.default.publisher(for: NotificationManager.reminderAlertBannerNotification)) { notif in
             let title = notif.userInfo?["title"] as? String ?? "Reminder"
