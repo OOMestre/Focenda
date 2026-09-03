@@ -7,10 +7,6 @@ struct FocendaApp: App {
     private let secureStore: SecureStore
     @State private var appState: AppState
     @State private var timerVM: FocusTimerViewModel
-    @State private var taskVM: TaskListViewModel
-    @State private var scratchpadVM: ScratchpadViewModel
-    @State private var bookmarkVM: BookmarkViewModel
-    @State private var recurringReminderVM: RecurringReminderViewModel
     @State private var productivityProfileVM: ProductivityProfileViewModel
     @State private var updateManager: AppUpdateManager
     @State private var isReminderAlertActive: Bool = false
@@ -20,10 +16,6 @@ struct FocendaApp: App {
         self.secureStore = secureStore
         _appState = State(initialValue: AppState(secureStore: secureStore))
         _timerVM = State(initialValue: FocusTimerViewModel(secureStore: secureStore))
-        _taskVM = State(initialValue: TaskListViewModel(secureStore: secureStore))
-        _scratchpadVM = State(initialValue: ScratchpadViewModel(secureStore: secureStore))
-        _bookmarkVM = State(initialValue: BookmarkViewModel(secureStore: secureStore))
-        _recurringReminderVM = State(initialValue: RecurringReminderViewModel(secureStore: secureStore))
         _productivityProfileVM = State(initialValue: ProductivityProfileViewModel(secureStore: secureStore))
         _updateManager = State(initialValue: AppUpdateManager(secureStore: secureStore))
 
@@ -36,10 +28,6 @@ struct FocendaApp: App {
             MainView(
                 appState: appState,
                 timerVM: timerVM,
-                taskVM: taskVM,
-                scratchpadVM: scratchpadVM,
-                bookmarkVM: bookmarkVM,
-                recurringReminderVM: recurringReminderVM,
                 productivityProfileVM: productivityProfileVM,
                 updateManager: updateManager
             )
@@ -155,11 +143,11 @@ struct FocendaApp: App {
         MenuBarExtra(isInserted: .constant(true)) {
             MenuBarCardView(
                 timerVM: timerVM,
-                taskVM: taskVM,
-                scratchpadVM: scratchpadVM,
-                recurringReminderVM: recurringReminderVM,
+                taskVM: appState.moduleManager.taskVM,
+                scratchpadVM: appState.moduleManager.scratchpadVM,
+                recurringReminderVM: appState.moduleManager.recurringReminderVM,
                 appState: appState,
-                bookmarkVM: bookmarkVM
+                bookmarkVM: appState.moduleManager.bookmarkVM
             )
         } label: {
             HStack(spacing: 4) {

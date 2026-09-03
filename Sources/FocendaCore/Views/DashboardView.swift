@@ -3,12 +3,12 @@ import SwiftUI
 public struct DashboardView: View {
     @Bindable var appState: AppState
     var timerVM: FocusTimerViewModel
-    var taskVM: TaskListViewModel
+    var taskVM: TaskListViewModel?
 
     public init(
         appState: AppState,
         timerVM: FocusTimerViewModel,
-        taskVM: TaskListViewModel
+        taskVM: TaskListViewModel? = nil
     ) {
         self.appState = appState
         self.timerVM = timerVM
@@ -141,21 +141,23 @@ public struct DashboardView: View {
                 color: AppTheme.shortBreak
             )
 
-            StatCard(
-                title: "Pending Tasks",
-                value: "\(taskVM.pendingTasksCount)",
-                subtitle: "\(taskVM.highPriorityPendingCount) high priority",
-                icon: "checklist",
-                color: AppTheme.sandstone
-            )
+            if let taskVM {
+                StatCard(
+                    title: "Pending Tasks",
+                    value: "\(taskVM.pendingTasksCount)",
+                    subtitle: "\(taskVM.highPriorityPendingCount) high priority",
+                    icon: "checklist",
+                    color: AppTheme.sandstone
+                )
 
-            StatCard(
-                title: "Completed Tasks",
-                value: "\(taskVM.completedTasksCount)",
-                subtitle: "Keep up the momentum!",
-                icon: "checkmark.seal.fill",
-                color: AppTheme.success
-            )
+                StatCard(
+                    title: "Completed Tasks",
+                    value: "\(taskVM.completedTasksCount)",
+                    subtitle: "Keep up the momentum!",
+                    icon: "checkmark.seal.fill",
+                    color: AppTheme.success
+                )
+            }
         }
     }
 
@@ -224,6 +226,7 @@ public struct DashboardView: View {
 
     // MARK: - Focus Summary / Upcoming Due Tasks Widget
     private var upcomingDueTasks: [TaskItem] {
+        guard let taskVM else { return [] }
         let pending = taskVM.tasks.filter { !$0.isCompleted }
 
         // Filter tasks that have a dueDate or are high priority
@@ -268,14 +271,16 @@ public struct DashboardView: View {
 
                 Spacer()
 
-                Button("View all tasks") {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
-                        appState.selectedTab = .kanban
+                if taskVM != nil {
+                    Button("View all tasks") {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+                            appState.selectedTab = .kanban
+                        }
                     }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(AppTheme.accent)
+                    .font(.subheadline.weight(.medium))
                 }
-                .buttonStyle(.plain)
-                .foregroundStyle(AppTheme.accent)
-                .font(.subheadline.weight(.medium))
             }
 
             if upcomingDueTasks.isEmpty {
@@ -285,7 +290,7 @@ public struct DashboardView: View {
                     ForEach(upcomingDueTasks.prefix(3)) { task in
                         DashboardUpcomingTaskCard(task: task) {
                             withAnimation(.spring(response: 0.35, dampingFraction: 0.6)) {
-                                taskVM.toggleTaskCompletion(task)
+                                taskVM?.toggleTaskCompletion(task)
                             }
                         }
                     }
@@ -363,42 +368,46 @@ public struct DashboardView: View {
 
     // MARK: - Featured Tasks
     private var featuredTasks: [TaskItem] {
+        guard let taskVM else { return [] }
         let pending = taskVM.tasks.filter { !$0.isCompleted }
         return Array(pending.prefix(4))
     }
 
+    @ViewBuilder
     private var featuredTasksSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("Featured Tasks")
-                    .font(.title2.bold())
-                    .foregroundStyle(AppTheme.textPrimary)
+        if taskVM != nil {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Text("Featured Tasks")
+                        .font(.title2.bold())
+                        .foregroundStyle(AppTheme.textPrimary)
 
-                Spacer()
+                    Spacer()
 
-                Button("View all") {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
-                        appState.selectedTab = .kanban
+                    Button("View all") {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+                            appState.selectedTab = .kanban
+                        }
                     }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(AppTheme.accent)
+                    .font(.subheadline.weight(.medium))
                 }
-                .buttonStyle(.plain)
-                .foregroundStyle(AppTheme.accent)
-                .font(.subheadline.weight(.medium))
-            }
 
-            if featuredTasks.isEmpty {
-                emptyTasksView
-            } else {
-                VStack(spacing: 8) {
-                    ForEach(featuredTasks) { task in
-                        FeaturedTaskRowView(task: task) {
-                            withAnimation(.spring(response: 0.35, dampingFraction: 0.6)) {
-                                taskVM.toggleTaskCompletion(task)
+                if featuredTasks.isEmpty {
+                    emptyTasksView
+                } else {
+                    VStack(spacing: 8) {
+                        ForEach(featuredTasks) { task in
+                            FeaturedTaskRowView(task: task) {
+                                withAnimation(.spring(response: 0.35, dampingFraction: 0.6)) {
+                                    taskVM?.toggleTaskCompletion(task)
+                                }
                             }
                         }
                     }
+                    .animation(.default, value: featuredTasks)
                 }
-                .animation(.default, value: featuredTasks)
             }
         }
     }

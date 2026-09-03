@@ -3,18 +3,18 @@ import SwiftUI
 public struct SidebarView: View {
     @Bindable var appState: AppState
     var timerVM: FocusTimerViewModel
-    var taskVM: TaskListViewModel
-    var bookmarkVM: BookmarkViewModel
-    var recurringReminderVM: RecurringReminderViewModel
+    var taskVM: TaskListViewModel?
+    var bookmarkVM: BookmarkViewModel?
+    var recurringReminderVM: RecurringReminderViewModel?
 
     @State private var isPulsingDot = false
 
     public init(
         appState: AppState,
         timerVM: FocusTimerViewModel,
-        taskVM: TaskListViewModel,
-        bookmarkVM: BookmarkViewModel = BookmarkViewModel(),
-        recurringReminderVM: RecurringReminderViewModel = RecurringReminderViewModel()
+        taskVM: TaskListViewModel? = nil,
+        bookmarkVM: BookmarkViewModel? = nil,
+        recurringReminderVM: RecurringReminderViewModel? = nil
     ) {
         self.appState = appState
         self.timerVM = timerVM
@@ -24,16 +24,16 @@ public struct SidebarView: View {
     }
 
     public var body: some View {
-        List(AppTab.availableCases, id: \.self, selection: $appState.selectedTab) { tab in
+        List(appState.availableTabs, id: \.self, selection: $appState.selectedTab) { tab in
             NavigationLink(value: tab) {
                 SidebarRowItem(
                     tab: tab,
                     isSelected: appState.selectedTab == tab,
                     timerIsRunning: timerVM.status == .running,
-                    pendingTasksCount: taskVM.pendingTasksCount,
-                    inProgressTasksCount: taskVM.inProgressTasksCount,
-                    totalBookmarksCount: bookmarkVM.bookmarks.count,
-                    activeRemindersCount: recurringReminderVM.activeReminders.count,
+                    pendingTasksCount: taskVM?.pendingTasksCount ?? 0,
+                    inProgressTasksCount: taskVM?.inProgressTasksCount ?? 0,
+                    totalBookmarksCount: bookmarkVM?.bookmarks.count ?? 0,
+                    activeRemindersCount: recurringReminderVM?.activeReminders.count ?? 0,
                     isPulsingDot: isPulsingDot
                 )
             }
