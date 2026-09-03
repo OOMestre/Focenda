@@ -27,7 +27,7 @@ public enum ReminderFilter: String, CaseIterable, Identifiable {
 /// Dedicated, clean and user-friendly Reminders & Alerts center for Focenda
 public struct RemindersView: View {
     @Bindable public var recurringReminderVM: RecurringReminderViewModel
-    @Bindable public var taskVM: TaskListViewModel
+    public var taskVM: TaskListViewModel?
 
     @State public var selectedFilter: ReminderFilter = .all
     @State public var searchQuery: String = ""
@@ -49,7 +49,7 @@ public struct RemindersView: View {
 
     public init(
         recurringReminderVM: RecurringReminderViewModel,
-        taskVM: TaskListViewModel,
+        taskVM: TaskListViewModel? = nil,
         initialFilter: ReminderFilter = .all,
         initialSearchQuery: String = ""
     ) {
@@ -578,7 +578,7 @@ public struct RemindersView: View {
             // Task Completion Checkbox
             Button {
                 withAnimation(.spring(response: 0.25)) {
-                    taskVM.toggleTaskCompletion(task)
+                    taskVM?.toggleTaskCompletion(task)
                 }
             } label: {
                 Image(systemName: task.isCompleted ? "checkmark.circle.fill" : "circle")
@@ -630,7 +630,7 @@ public struct RemindersView: View {
             // Clear Reminder Button
             Button {
                 withAnimation(.spring(response: 0.25)) {
-                    taskVM.removeReminder(for: task.id)
+                    taskVM?.removeReminder(for: task.id)
                 }
             } label: {
                 Image(systemName: "bell.slash")
@@ -905,7 +905,7 @@ public struct RemindersView: View {
 
     public func filteredTaskReminders(query: String) -> [TaskItem] {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        return taskVM.tasks.filter { task in
+        return (taskVM?.tasks ?? []).filter { task in
             guard task.reminderDate != nil else { return false }
             if trimmed.isEmpty {
                 return true
@@ -919,7 +919,7 @@ public struct RemindersView: View {
     public func countForFilter(_ filter: ReminderFilter) -> Int {
         switch filter {
         case .all:
-            return recurringReminderVM.reminders.count + taskVM.tasks.filter { $0.reminderDate != nil }.count
+            return recurringReminderVM.reminders.count + (taskVM?.tasks ?? []).filter { $0.reminderDate != nil }.count
         case .daily:
             return recurringReminderVM.reminders.filter { $0.repeatFrequency == .daily }.count
         case .weekdays:
@@ -929,14 +929,14 @@ public struct RemindersView: View {
         case .monthly:
             return recurringReminderVM.reminders.filter { $0.repeatFrequency == .monthly }.count
         case .taskReminders:
-            return taskVM.tasks.filter { $0.reminderDate != nil }.count
+            return (taskVM?.tasks ?? []).filter { $0.reminderDate != nil }.count
         }
     }
 
     public func calculateActiveTodayCount() -> Int {
         let today = Date()
         let todayRecurring = recurringReminderVM.reminders(for: today, calendar: calendar).count
-        let todayTasks = taskVM.tasks.filter { task in
+        let todayTasks = (taskVM?.tasks ?? []).filter { task in
             guard let rDate = task.reminderDate, !task.isCompleted else { return false }
             return calendar.isDate(rDate, inSameDayAs: today)
         }.count
@@ -953,7 +953,7 @@ public struct RemindersView: View {
             }
         }
 
-        for task in taskVM.tasks where !task.isCompleted {
+        for task in (taskVM?.tasks ?? []) where !task.isCompleted {
             if let reminderDate = task.reminderDate, reminderDate > now {
                 upcomingEvents.append((date: reminderDate, title: task.title))
             }

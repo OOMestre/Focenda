@@ -37,6 +37,9 @@ public struct SettingsView: View {
                 // Appearance & Theme Picker
                 themePickerSection
 
+                // Feature Modules Management
+                modulesSection
+
                 // Guided onboarding tour
                 onboardingSection
 
@@ -642,6 +645,124 @@ public struct SettingsView: View {
         testingTask?.cancel()
         testingTask = nil
         isTestingSound = false
+    }
+
+    // MARK: - Modules & Feature Management Section
+    private var modulesSection: some View {
+        GroupBox(label: Label("Modules", systemImage: "square.grid.2x2").foregroundStyle(AppTheme.textPrimary)) {
+            VStack(alignment: .leading, spacing: 14) {
+                Text("Install or uninstall individual productivity features to keep Focenda lightweight and customized to your workflow. Uninstalled modules disappear from the Sidebar and Menu Bar, and their memory (RAM) is freed. Your saved data is safely preserved and restored if you reinstall.")
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Divider()
+
+                VStack(spacing: 10) {
+                    ForEach(AppModule.allCases) { module in
+                        let isInstalled = appState.isModuleInstalled(module)
+
+                        HStack(alignment: .center, spacing: 12) {
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                    .fill(isInstalled ? AppTheme.accent.opacity(0.12) : AppTheme.cardBackgroundSubtle)
+                                    .frame(width: 36, height: 36)
+
+                                Image(systemName: module.iconName)
+                                    .font(.system(size: 16))
+                                    .foregroundStyle(isInstalled ? AppTheme.accent : AppTheme.textTertiary)
+                            }
+
+                            VStack(alignment: .leading, spacing: 3) {
+                                HStack(spacing: 6) {
+                                    Text(module.displayName)
+                                        .font(.subheadline.weight(.semibold))
+                                        .foregroundStyle(AppTheme.textPrimary)
+
+                                    Text(isInstalled ? "Installed" : "Uninstalled")
+                                        .font(.system(size: 10, weight: .bold))
+                                        .foregroundStyle(isInstalled ? AppTheme.success : AppTheme.textTertiary)
+                                        .padding(.horizontal, 6)
+                                        .padding(.vertical, 2)
+                                        .background(
+                                            Capsule()
+                                                .fill(isInstalled ? AppTheme.success.opacity(0.12) : AppTheme.cardBackgroundSubtle)
+                                        )
+                                }
+
+                                Text(module.description)
+                                    .font(.caption)
+                                    .foregroundStyle(AppTheme.textSecondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+
+                            Spacer(minLength: 12)
+
+                            Toggle("", isOn: Binding(
+                                get: { appState.isModuleInstalled(module) },
+                                set: { shouldInstall in
+                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+                                        if shouldInstall {
+                                            appState.installModule(module)
+                                        } else {
+                                            appState.uninstallModule(module)
+                                        }
+                                    }
+                                }
+                            ))
+                            .toggleStyle(.switch)
+                            .tint(AppTheme.accent)
+                            .labelsHidden()
+                            .accessibilityIdentifier("toggleModule_\(module.rawValue)")
+                        }
+                        .padding(10)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .fill(AppTheme.cardBackgroundSubtle.opacity(0.4))
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .stroke(AppTheme.subtleBorder, lineWidth: 1)
+                        )
+                    }
+                }
+
+                Divider()
+
+                // Essential features notice
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "lock.shield.fill")
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.accent)
+                        Text("Essential Features (Fixed & Permanently Active)")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(AppTheme.textSecondary)
+                    }
+
+                    HStack(spacing: 8) {
+                        ForEach(EssentialModule.allCases) { essential in
+                            HStack(spacing: 5) {
+                                Image(systemName: essential.iconName)
+                                    .font(.caption2)
+                                    .foregroundStyle(AppTheme.accent)
+                                Text(essential.displayName)
+                                    .font(.caption2.weight(.medium))
+                                    .foregroundStyle(AppTheme.textPrimary)
+                                Image(systemName: "lock.fill")
+                                    .font(.system(size: 8))
+                                    .foregroundStyle(AppTheme.textTertiary)
+                            }
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(AppTheme.cardBackgroundSubtle)
+                            .clipShape(Capsule())
+                        }
+                    }
+                }
+            }
+            .padding(12)
+        }
     }
 
     // MARK: - Theme Picker Section
