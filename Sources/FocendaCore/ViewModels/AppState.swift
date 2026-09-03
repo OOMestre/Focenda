@@ -16,6 +16,7 @@ public enum AppTab: String, CaseIterable, Identifiable {
     case bookmarks = "Bookmarks"
     case profiles = "Profiles"
     case settings = "Settings"
+    case about = "About"
     case support = "Support"
 
     public var id: String { rawValue }
@@ -46,6 +47,7 @@ public enum AppTab: String, CaseIterable, Identifiable {
         case .bookmarks: return "bookmark.fill"
         case .profiles: return "rectangle.3.group"
         case .settings: return "gearshape"
+        case .about: return "info.circle"
         case .support: return "heart.fill"
         }
     }

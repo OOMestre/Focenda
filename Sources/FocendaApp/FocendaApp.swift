@@ -81,9 +81,9 @@ struct FocendaApp: App {
             .onReceive(NotificationCenter.default.publisher(for: NotificationManager.reminderAlertDismissedNotification)) { _ in
                 isReminderAlertActive = false
             }
-            .onReceive(NotificationCenter.default.publisher(for: NotificationManager.openSettingsNotification)) { _ in
+            .onReceive(NotificationCenter.default.publisher(for: NotificationManager.openAboutNotification)) { _ in
                 updateManager.checkForUpdates()
-                appState.selectedTab = .settings
+                appState.selectedTab = .about
                 NSApp.activate(ignoringOtherApps: true)
                 if let window = NSApp.windows.first(where: { $0.canBecomeKey && $0.isVisible }) ?? NSApp.windows.first {
                     window.makeKeyAndOrderFront(nil)

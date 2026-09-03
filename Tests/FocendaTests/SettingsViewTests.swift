@@ -102,8 +102,7 @@ final class SettingsViewTests: XCTestCase {
         )
         let settingsView = SettingsView(
             appState: appState,
-            timerVM: FocusTimerViewModel(),
-            updateManager: updateManager
+            timerVM: FocusTimerViewModel()
         )
 
         XCTAssertEqual(updateManager.lastUpdateGuide, guide)

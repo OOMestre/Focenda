@@ -183,7 +183,11 @@ public struct MainView: View {
                         case .settings:
                             SettingsView(
                                 appState: appState,
-                                timerVM: timerVM,
+                                timerVM: timerVM
+                            )
+                        case .about:
+                            AboutView(
+                                appState: appState,
                                 updateManager: updateManager
                             )
                         case .support:

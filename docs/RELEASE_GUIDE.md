@@ -237,10 +237,10 @@ Focenda's release workflows are automated via GitHub Actions:
 ### 3. In-App Update Client
 Focenda checks the public GitHub Releases API from the Mac. The client sends no tasks, notes, preferences, identifiers, or telemetry; the only downloaded content is the public release metadata and the selected `Focenda-macOS.dmg` installer.
 
-- The Settings page provides **Check Now** and an enabled-by-default **Check for updates automatically** preference. Automatic checks run at most once every 24 hours while the app is open.
+- The About page provides **Check for Updates** and an enabled-by-default **Check for updates automatically** preference. Automatic checks run at most once every 24 hours while the app is open.
 - The distributed Focenda app checks official stable releases only. Releases marked as prerelease or carrying a prerelease tag are ignored, even if their GitHub metadata is inconsistent.
 - Before installation, Focenda requires HTTPS GitHub download URLs, a compatible Focenda bundle identifier, and a matching release version. Production and staging identifiers are treated as compatible so an update can move between beta and production without splitting the user's data. It automatically replaces only the running `.app` bundle and relaunches it; local user data remains in Focenda's stable encrypted preference store.
-- If the app is running from a development executable or the installed app directory is not writable, the update remains available and Settings shows the reason so the user can install manually from GitHub Releases.
+- If the app is running from a development executable or the installed app directory is not writable, the update remains available and About shows the reason so the user can install manually from GitHub Releases.
 
 ---
 
