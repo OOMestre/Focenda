@@ -43,6 +43,14 @@ final class ScratchpadViewTests: XCTestCase {
         XCTAssertEqual(viewModel.currentContent, "Important project notes with deep detail")
     }
 
+    func testScratchpadViewCanShareTheKanbanTaskViewModel() {
+        let scratchpadVM = ScratchpadViewModel(userDefaults: testDefaults)
+        let taskVM = TaskListViewModel(secureStore: SecureStore(defaults: testDefaults))
+        let view = ScratchpadView(viewModel: scratchpadVM, taskVM: taskVM)
+
+        XCTAssertNotNil(view.body)
+    }
+
     func testScratchpadViewFolderFilterAndNotesCount() {
         let viewModel = ScratchpadViewModel(userDefaults: testDefaults)
         viewModel.createFolder("Personal")

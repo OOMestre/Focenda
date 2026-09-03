@@ -5,18 +5,22 @@ public struct ScratchpadView: View {
     private static let compactWorkspaceThreshold: CGFloat = 720
 
     @Bindable var viewModel: ScratchpadViewModel
+    private let taskVM: TaskListViewModel?
     @State private var showingDeleteConfirmation = false
     @State private var copiedFeedback = false
+    @State private var taskCreatedFeedback = false
+    @State private var selectedLine: String?
     @State private var showingNewFolderSheet = false
     @State private var showingCompactFolderPicker = false
     @State private var showingSidebarFolderPicker = false
     @State private var isCompactWorkspace = false
     @State private var newFolderName = ""
-    @FocusState private var isEditorFocused: Bool
+    @State private var isEditorFocused = false
     @FocusState private var isTitleFocused: Bool
 
-    public init(viewModel: ScratchpadViewModel) {
+    public init(viewModel: ScratchpadViewModel, taskVM: TaskListViewModel? = nil) {
         self.viewModel = viewModel
+        self.taskVM = taskVM
     }
 
     public var body: some View {
@@ -89,6 +93,10 @@ public struct ScratchpadView: View {
         }
         .sheet(isPresented: $showingNewFolderSheet) {
             newFolderSheet
+        }
+        .onChange(of: viewModel.selectedNoteId) { _, _ in
+            selectedLine = nil
+            taskCreatedFeedback = false
         }
         .onDisappear {
             viewModel.flushPendingSaves()
@@ -693,6 +701,9 @@ public struct ScratchpadView: View {
                     noteTitleField
                     Spacer(minLength: 4)
                     notePinButton
+                    if taskVM != nil {
+                        noteCreateTaskButton
+                    }
                     noteCopyButton
                     noteDeleteButton
                 }
@@ -703,6 +714,9 @@ public struct ScratchpadView: View {
                         noteFolderMenu
                         Spacer(minLength: 4)
                         notePinButton
+                        if taskVM != nil {
+                            noteCreateTaskButton
+                        }
                         noteCopyButton
                         noteDeleteButton
                     }
@@ -716,6 +730,9 @@ public struct ScratchpadView: View {
                         noteFolderIconMenu
                         Spacer(minLength: 4)
                         notePinButton
+                        if taskVM != nil {
+                            noteCreateTaskIconButton
+                        }
                         noteCopyIconButton
                         noteDeleteButton
                     }
@@ -739,14 +756,11 @@ public struct ScratchpadView: View {
                         .allowsHitTesting(false)
                 }
 
-                TextEditor(text: $viewModel.currentContent)
-                    .font(.system(size: 15, weight: .regular))
-                    .lineSpacing(6)
-                    .focused($isEditorFocused)
-                    .scrollContentBackground(.hidden)
-                    .background(Color.clear)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 14)
+                ScratchpadTextEditor(
+                    text: $viewModel.currentContent,
+                    selectedLine: $selectedLine,
+                    isFocused: $isEditorFocused
+                )
             }
             .frame(minWidth: 0, maxWidth: .infinity, maxHeight: .infinity)
             .background(AppTheme.background)
@@ -854,6 +868,83 @@ public struct ScratchpadView: View {
         .fixedSize(horizontal: true, vertical: false)
         .disabled(viewModel.selectedNoteId == nil)
         .help(viewModel.currentNote.isPinned ? "Unpin Note" : "Pin Note")
+    }
+
+    private var noteCreateTaskButton: some View {
+        Button {
+            createTaskFromSelectedLine()
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: taskCreatedFeedback ? "checkmark" : "checklist")
+                Text(taskCreatedFeedback ? "Added" : "Task")
+                    .lineLimit(1)
+            }
+            .font(.system(size: 12, weight: .medium))
+            .foregroundStyle(taskCreatedFeedback ? AppTheme.success : taskActionColor)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 5)
+            .background(AppTheme.cardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: 6))
+            .overlay(
+                RoundedRectangle(cornerRadius: 6)
+                    .stroke(taskCreatedFeedback ? AppTheme.success.opacity(0.3) : AppTheme.border, lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+        .fixedSize(horizontal: true, vertical: false)
+        .disabled(!canCreateTaskFromSelectedLine)
+        .help("Create a task from the line containing the cursor or selection")
+    }
+
+    private var noteCreateTaskIconButton: some View {
+        Button {
+            createTaskFromSelectedLine()
+        } label: {
+            Image(systemName: taskCreatedFeedback ? "checkmark" : "checklist")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(taskCreatedFeedback ? AppTheme.success : taskActionColor)
+                .frame(width: 28, height: 28)
+                .background(AppTheme.cardBackground)
+                .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .stroke(taskCreatedFeedback ? AppTheme.success.opacity(0.3) : AppTheme.border, lineWidth: 1)
+                )
+        }
+        .buttonStyle(.plain)
+        .disabled(!canCreateTaskFromSelectedLine)
+        .help("Create a task from the line containing the cursor or selection")
+    }
+
+    private var canCreateTaskFromSelectedLine: Bool {
+        taskVM != nil &&
+            viewModel.selectedNoteId != nil &&
+            !(selectedLine?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
+    }
+
+    private var taskActionColor: Color {
+        canCreateTaskFromSelectedLine ? AppTheme.accent : AppTheme.textTertiary
+    }
+
+    private func createTaskFromSelectedLine() {
+        guard canCreateTaskFromSelectedLine,
+              let taskVM,
+              let selectedLine else {
+            return
+        }
+
+        viewModel.flushPendingSaves()
+        guard taskVM.addTask(title: selectedLine) != nil else { return }
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+            taskCreatedFeedback = true
+        }
+        isEditorFocused = true
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) {
+            withAnimation {
+                taskCreatedFeedback = false
+            }
+        }
     }
 
     private var noteCopyButton: some View {

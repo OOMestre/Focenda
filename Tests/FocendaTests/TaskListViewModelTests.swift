@@ -47,6 +47,18 @@ final class TaskListViewModelTests: XCTestCase {
         XCTAssertEqual(added?.estimatedPomodoros, 3)
     }
 
+    func testAddTaskReturnsCreatedTaskAndRejectsBlankTitles() {
+        let created = viewModel.addTask(title: "  Capture this line  ")
+
+        XCTAssertEqual(created?.title, "Capture this line")
+        XCTAssertEqual(created?.status, .todo)
+        XCTAssertEqual(viewModel.tasks.first?.id, created?.id)
+
+        let blank = viewModel.addTask(title: " \n ")
+        XCTAssertNil(blank)
+        XCTAssertEqual(viewModel.tasks.count, 1)
+    }
+
     func testMoveTask() {
         viewModel.addTask(title: "Task to Move")
         guard let task = viewModel.tasks.first else {

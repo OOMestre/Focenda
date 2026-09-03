@@ -109,7 +109,7 @@ public struct MainView: View {
                                 taskVM: taskVM
                             )
                         case .scratchpad:
-                            ScratchpadView(viewModel: scratchpadVM)
+                            ScratchpadView(viewModel: scratchpadVM, taskVM: taskVM)
                         case .bookmarks:
                             BookmarksView(viewModel: bookmarkVM)
                         case .profiles:
