@@ -4,6 +4,23 @@ All notable changes, new features, and bug fixes for **Focenda** are documented 
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-09-03
+
+### Summary
+Focenda v1.1.0 introduces a modular workspace management system for installing or uninstalling optional features, direct task creation from scratchpad lines, a dedicated About and release inspection view, an update relaunch confirmation dialog, and optimized menu bar layout spacing.
+
+### Added
+- **Modular Workspace Management:** Users can now install or uninstall individual feature modules (Kanban, Calendar, Reminders, Scratchpad, and Bookmarks) in Settings to eliminate clutter and release memory. All user data is preserved safely in local storage when a module is uninstalled.
+- **Scratchpad to Kanban Tasks:** Quickly convert the current line or selection in the Scratchpad into a To Do task with a single click, accompanied by visual confirmation.
+- **Dedicated About View:** Added an About section in the navigation sidebar displaying application details, release version, mascot, and direct update controls.
+- **Update Relaunch Confirmation:** Added an explicit confirmation prompt prior to applying updates to ensure all open work is saved before the application relaunches.
+
+### Fixed & Changed
+- **Menu Bar Focus Spacing:** Adjusted vertical spacing within the Focus popover section to prevent footer controls from being pushed outside the fixed frame on smaller displays.
+- **Settings Reorganization:** Streamlined the Settings interface by delegating release checks and project metadata to the dedicated About view.
+
+---
+
 ## [1.0.1] - 2026-09-02
 
 ### Summary

@@ -60,11 +60,11 @@ public struct AppUpdateGuide: Codable, Equatable, Identifiable, Sendable {
                 AppUpdateGuideSection(
                     title: "What's New in Focenda",
                     items: [
-                        "Repeat Until Done alert mode for persistent audio chimes until acknowledged.",
-                        "Menu Bar Links synchronization with Focus Hub Bookmarks.",
-                        "Menu Bar popover geometry stabilization without layout jumping.",
-                        "Intuitive 12-hour AM/PM time selector in Reminders.",
-                        "Encrypted on-device storage with verified zero data loss across updates."
+                        "Modular workspace management to install or uninstall individual feature modules and eliminate clutter.",
+                        "Direct task creation from scratchpad lines into the Kanban board with instant feedback.",
+                        "Dedicated About view featuring application details and direct update controls.",
+                        "Update relaunch confirmation prompt to ensure all unsaved work is preserved.",
+                        "Menu bar layout spacing polish to ensure all controls remain fully visible."
                     ]
                 )
             ]
