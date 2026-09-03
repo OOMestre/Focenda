@@ -523,7 +523,7 @@ public final class AppUpdateManager {
         }
     }
 
-    /// Starts a manual check without blocking the Settings view.
+    /// Starts a manual check without blocking the About view.
     public func checkForUpdates() {
         checkTask?.cancel()
         checkTask = Task { @MainActor [weak self] in
@@ -601,7 +601,7 @@ public final class AppUpdateManager {
         }
     }
 
-    /// Closes the post-update guide while keeping it available for replay in Settings.
+    /// Closes the post-update guide while keeping it available for replay in About.
     public func dismissCompletedUpdateGuide() {
         completedUpdateGuide = nil
         secureStore.removeObject(forKey: AppUpdatePreferences.pendingUpdateGuideKey)

@@ -123,7 +123,10 @@ A complete tour of every workspace section and the menu bar control center, repl
 Five refined aesthetic themes selectable in Settings (Zen Calm Light, Obsidian Minimal Dark, Warm Sandstone, Nordic Frost, Forest Matcha) without disruptive automatic color shifts.
 
 ### Private In-App Updates
-Settings can check GitHub Releases manually or once a day, show native macOS update notifications, and install validated Focenda archives locally without sending personal data or app content anywhere.
+The dedicated About area shows the app identity and version, checks GitHub Releases manually or once a day, shows native macOS update notifications, and installs validated Focenda archives locally without sending personal data or app content anywhere.
+
+### About Focenda
+The About area keeps Focenda's logo, version, open-source project link, license, privacy details, and update controls together in one easy-to-find place.
 
 ### Native Support & Diagnostic Hub
 Dedicated in-app support space featuring system diagnostics information, one-click diagnostic report copying, and direct links to community feedback and project support.
@@ -135,7 +138,7 @@ Tasks, notes, reminders, bookmarks, and preferences stay on device in authentica
 
 ## Quick Start
 
-On the first launch, Focenda opens a guided tour covering the Dashboard, Focus Timer, Tasks, Calendar, Reminders, Scratchpad, Bookmarks, Settings, Support and the menu bar control center. You can replay it at any time from Settings → Getting Started.
+On the first launch, Focenda opens a guided tour covering the Dashboard, Focus Timer, Tasks, Calendar, Reminders, Scratchpad, Bookmarks, Settings, About, Support and the menu bar control center. You can replay it at any time from Settings → Getting Started.
 
 1. **Start a Focus Session:** Open the Focus Timer and start your target interval with one click or spacebar.
 2. **Manage Tasks in Kanban:** Navigate to Tasks & Kanban to organize items across columns, set priority levels (High, Medium, Low), or switch to the linear list view.

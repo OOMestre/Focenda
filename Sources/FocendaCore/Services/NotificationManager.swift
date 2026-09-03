@@ -42,7 +42,9 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
     public static let openRemindersTabNotification = Notification.Name("FocendaOpenRemindersTab")
     public static let reminderSnoozedNotification = Notification.Name("FocendaReminderSnoozed")
     public static let reminderAlertDismissedNotification = Notification.Name("FocendaReminderAlertDismissed")
-    public static let openSettingsNotification = Notification.Name("FocendaOpenSettings")
+    public static let openAboutNotification = Notification.Name("FocendaOpenAbout")
+    /// Compatibility alias for integrations that used the old update destination name.
+    public static let openSettingsNotification = openAboutNotification
     public static let openFocusTabNotification = Notification.Name("FocendaOpenFocusTab")
     public static let standardNotificationSoundName = ReminderSoundType.defaultSound.rawValue
 
@@ -598,10 +600,10 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
 
         let content = UNMutableNotificationContent()
         content.title = "Focenda Update Available"
-        content.body = "Version \(version) is ready. Open Settings to install it."
+        content.body = "Version \(version) is ready. Open About to install it."
         content.sound = .default
         content.threadIdentifier = "focenda-updates"
-        content.userInfo = ["action": "openSettings", "version": version]
+        content.userInfo = ["action": "openAbout", "version": version]
 
         let request = UNNotificationRequest(
             identifier: "focenda-update-\(version.replacingOccurrences(of: ".", with: "-"))",
@@ -1087,16 +1089,16 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
         completionHandler([.banner, .sound, .badge, .list])
     }
 
-    /// Takes the user to Settings when they click the update notification.
+    /// Takes the user to About when they click the update notification.
     public func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         didReceive response: UNNotificationResponse,
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
         if let action = response.notification.request.content.userInfo["action"] as? String,
-           action == "openSettings" {
+           action == "openAbout" || action == "openSettings" {
             DispatchQueue.main.async {
-                NotificationCenter.default.post(name: Self.openSettingsNotification, object: nil)
+                NotificationCenter.default.post(name: Self.openAboutNotification, object: nil)
             }
         }
         completionHandler()
