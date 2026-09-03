@@ -110,6 +110,7 @@ public final class TaskListViewModel {
         tasks.filter { $0.status == .done }.count
     }
 
+    @discardableResult
     public func addTask(
         title: String,
         notes: String = "",
@@ -119,9 +120,9 @@ public final class TaskListViewModel {
         dueDate: Date? = nil,
         tags: [String] = [],
         estimatedPomodoros: Int = 1
-    ) {
+    ) -> TaskItem? {
         let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedTitle.isEmpty else { return }
+        guard !trimmedTitle.isEmpty else { return nil }
 
         let newTask = TaskItem(
             title: trimmedTitle,
@@ -140,6 +141,7 @@ public final class TaskListViewModel {
         }
 
         saveTasks()
+        return newTask
     }
 
     /// Moves a task to a different Kanban status column

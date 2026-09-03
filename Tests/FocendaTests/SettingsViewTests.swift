@@ -31,7 +31,8 @@ final class SettingsViewTests: XCTestCase {
             "shortcutPreset",
             "showShortcutFeedback",
             AppUpdatePreferences.automaticChecksEnabledKey,
-            AppState.onboardingCompletionKey
+            AppState.onboardingCompletionKey,
+            AppModuleManager.storageKey
         ]
         for key in keys {
             UserDefaults.standard.removeObject(forKey: key)
@@ -101,8 +102,7 @@ final class SettingsViewTests: XCTestCase {
         )
         let settingsView = SettingsView(
             appState: appState,
-            timerVM: FocusTimerViewModel(),
-            updateManager: updateManager
+            timerVM: FocusTimerViewModel()
         )
 
         XCTAssertEqual(updateManager.lastUpdateGuide, guide)
@@ -260,5 +260,26 @@ final class SettingsViewTests: XCTestCase {
         XCTAssertNotNil(manager.lastUpdateGuide)
         XCTAssertEqual(manager.lastUpdateGuide?.version, "1.0.0")
         XCTAssertFalse(manager.lastUpdateGuide?.sections.isEmpty ?? true)
+    }
+
+    func testModulesManagementInSettingsView() {
+        let appState = AppState()
+        let timerVM = FocusTimerViewModel()
+        let settingsView = SettingsView(appState: appState, timerVM: timerVM)
+
+        // SettingsView renders modules section
+        XCTAssertNotNil(settingsView.body)
+
+        // Verify initial state
+        XCTAssertTrue(appState.isModuleInstalled(.kanban))
+        XCTAssertTrue(appState.isModuleInstalled(.scratchpad))
+
+        // Uninstall Kanban
+        appState.uninstallModule(.kanban)
+        XCTAssertFalse(appState.isModuleInstalled(.kanban))
+
+        // Reinstall Kanban
+        appState.installModule(.kanban)
+        XCTAssertTrue(appState.isModuleInstalled(.kanban))
     }
 }

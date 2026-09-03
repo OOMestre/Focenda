@@ -68,7 +68,7 @@ final class MenuBarCardViewTests: XCTestCase {
 
         XCTAssertNotNil(cardView)
         XCTAssertEqual(cardView.selectedSection, .focus)
-        XCTAssertEqual(cardView.taskVM.tasks.count, taskVM.tasks.count)
+        XCTAssertEqual(cardView.taskVM?.tasks.count, taskVM.tasks.count)
     }
 
     func testMenuBarCardViewDefaultInitialization() {
@@ -194,8 +194,8 @@ final class MenuBarCardViewTests: XCTestCase {
         )
 
         XCTAssertNotNil(cardView.body)
-        XCTAssertEqual(cardView.recurringReminderVM.reminders.count, 1)
-        XCTAssertEqual(cardView.recurringReminderVM.reminders.first?.title, "MenuBar Standup")
+        XCTAssertEqual(cardView.recurringReminderVM?.reminders.count, 1)
+        XCTAssertEqual(cardView.recurringReminderVM?.reminders.first?.title, "MenuBar Standup")
     }
 
     func testQuickLinksModel() {
@@ -414,7 +414,7 @@ final class MenuBarCardViewTests: XCTestCase {
         )
 
         XCTAssertTrue(cardView.bookmarkVM === bookmarkVM)
-        XCTAssertEqual(cardView.bookmarkVM.sortedBookmarks, [bookmark])
+        XCTAssertEqual(cardView.bookmarkVM?.sortedBookmarks, [bookmark])
     }
 
     func testMenuBarCardViewFormInputsWithLightThemes() {

@@ -1,5 +1,14 @@
 import SwiftUI
 
+public enum AppUpdateConfirmation {
+    public static let title = "Ready to update Focenda?"
+    public static let actionTitle = "Update & Relaunch"
+
+    public static func message(for update: AppUpdate) -> String {
+        "Focenda will download and install version \(update.version.description). After the installation finishes, the app will close briefly and reopen automatically. Please save any open work before continuing."
+    }
+}
+
 public struct AppUpdateBanner: View {
     public let update: AppUpdate
     public let isInstalling: Bool
@@ -62,6 +71,7 @@ public struct AppUpdateBanner: View {
             }
             .buttonStyle(.plain)
             .disabled(isInstalling)
+            .accessibilityIdentifier("appUpdateBannerUpdateButton")
 
             Button {
                 onDismiss()

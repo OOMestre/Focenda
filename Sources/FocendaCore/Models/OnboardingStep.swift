@@ -16,6 +16,7 @@ public enum OnboardingStep: Int, CaseIterable, Identifiable, Hashable {
     case profiles
     case menuBar
     case settings
+    case about
     case support
 
     public var id: Int { rawValue }
@@ -43,6 +44,8 @@ public enum OnboardingStep: Int, CaseIterable, Identifiable, Hashable {
             return .profiles
         case .settings:
             return .settings
+        case .about:
+            return .about
         case .support:
             return .support
         }
@@ -95,6 +98,8 @@ public enum OnboardingStep: Int, CaseIterable, Identifiable, Hashable {
             return "Quick actions, always nearby"
         case .settings:
             return "Make Focenda yours"
+        case .about:
+            return "Get to know Focenda"
         case .support:
             return "Built independently"
         }
@@ -124,6 +129,8 @@ public enum OnboardingStep: Int, CaseIterable, Identifiable, Hashable {
             return "The Menu Bar Control Center"
         case .settings:
             return "Settings"
+        case .about:
+            return "About Focenda"
         case .support:
             return "Keep Focenda growing"
         }
@@ -153,6 +160,8 @@ public enum OnboardingStep: Int, CaseIterable, Identifiable, Hashable {
             return "menubar.arrow.up.rectangle"
         case .settings:
             return AppTab.settings.iconName
+        case .about:
+            return AppTab.about.iconName
         case .support:
             return AppTab.support.iconName
         }
@@ -181,7 +190,9 @@ public enum OnboardingStep: Int, CaseIterable, Identifiable, Hashable {
         case .menuBar:
             return "Start focus, add a task, capture a note, manage alerts and open links without leaving your current app."
         case .settings:
-            return "Tune the visual style, intervals, sounds, daily goal, shortcuts and update behavior."
+            return "Tune the visual style, intervals, sounds, daily goal and shortcuts to fit your workday."
+        case .about:
+            return "See Focenda's identity and version, check for updates, and find the open-source project."
         case .support:
             return "Focenda is free and open source. A star, contribution or thoughtful feedback helps it stay that way."
         }
@@ -253,7 +264,13 @@ public enum OnboardingStep: Int, CaseIterable, Identifiable, Hashable {
             return [
                 "Choose from five themes and customize focus intervals, break behavior and your daily goal.",
                 "Configure reminder and completion sounds, global shortcut presets and shortcut feedback.",
-                "Replay this guided tour from Getting Started, and review privacy details in the app."
+                "Replay this guided tour from Getting Started whenever you want a quick refresher."
+            ]
+        case .about:
+            return [
+                "See the Focenda logo, app name and the version currently installed on your Mac.",
+                "Check GitHub Releases manually or keep automatic update checks enabled.",
+                "Read about Focenda's privacy and open-source project from one dedicated place."
             ]
         case .support:
             return [

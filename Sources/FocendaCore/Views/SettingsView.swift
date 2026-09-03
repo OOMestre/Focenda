@@ -7,21 +7,17 @@ import AppKit
 public struct SettingsView: View {
     @Bindable var appState: AppState
     var timerVM: FocusTimerViewModel
-    var updateManager: AppUpdateManager
 
     @State private var isTestingSound: Bool = false
     @State private var testingTask: Task<Void, Never>?
     @State private var isShowingOnboarding: Bool = false
-    @State private var isShowingUpdateGuide: Bool = false
 
     public init(
         appState: AppState,
-        timerVM: FocusTimerViewModel,
-        updateManager: AppUpdateManager = AppUpdateManager()
+        timerVM: FocusTimerViewModel
     ) {
         self.appState = appState
         self.timerVM = timerVM
-        self.updateManager = updateManager
     }
 
     public var body: some View {
@@ -37,11 +33,11 @@ public struct SettingsView: View {
                 // Appearance & Theme Picker
                 themePickerSection
 
+                // Feature Modules Management
+                modulesSection
+
                 // Guided onboarding tour
                 onboardingSection
-
-                // App Updates
-                appUpdateSection
 
                 // Reminder Sounds & Chimes
                 reminderSoundSection
@@ -107,46 +103,6 @@ public struct SettingsView: View {
                     }
                     .padding(12)
                 }
-
-                // About Focenda
-                GroupBox(label: Label("About Focenda", systemImage: "info.circle").foregroundStyle(AppTheme.textPrimary)) {
-                    VStack(alignment: .leading, spacing: 12) {
-                        HStack(spacing: 14) {
-                            OwlMascotView(size: 48)
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("Focenda for Mac")
-                                    .font(.headline)
-                                    .foregroundStyle(AppTheme.textPrimary)
-                                Text("Version \(AppRuntime.currentReleaseIdentifier) • 100% Free & Open Source")
-                                    .font(.caption)
-                                    .foregroundStyle(AppTheme.textSecondary)
-                            }
-                            Spacer()
-                        }
-
-                        Text("Built natively with Swift and SwiftUI for a lightweight, distraction-free productivity experience.")
-                            .font(.subheadline)
-                            .foregroundStyle(AppTheme.textSecondary)
-
-                        Divider()
-
-                        HStack(spacing: 12) {
-                            if let url = URL(string: "https://github.com/OOMestre/Focenda") {
-                                Link(destination: url) {
-                                    Label("GitHub Repository", systemImage: "link")
-                                }
-                                .foregroundStyle(AppTheme.accent)
-                            }
-
-                            Spacer()
-
-                            Text("GPL-3.0 License")
-                                .font(.caption)
-                                .foregroundStyle(AppTheme.textTertiary)
-                        }
-                    }
-                    .padding(12)
-                }
             }
             .padding(20)
         }
@@ -157,15 +113,6 @@ public struct SettingsView: View {
         }
         .sheet(isPresented: $isShowingOnboarding) {
             OnboardingView(appState: appState)
-        }
-        .sheet(isPresented: $isShowingUpdateGuide) {
-            if AppUpdateGuide.isEnabled, let guide = updateManager.lastUpdateGuide {
-                AppUpdateGuideView(guide: guide) {
-                    isShowingUpdateGuide = false
-                }
-            } else {
-                EmptyView()
-            }
         }
     }
 
@@ -198,210 +145,6 @@ public struct SettingsView: View {
                 .accessibilityIdentifier("settingsReplayOnboardingButton")
             }
             .padding(12)
-        }
-    }
-
-    // MARK: - App Updates Section
-    private var appUpdateSection: some View {
-        GroupBox(label: Label("App Updates", systemImage: "arrow.down.circle").foregroundStyle(AppTheme.textPrimary)) {
-            VStack(alignment: .leading, spacing: 14) {
-                Toggle(isOn: $appState.automaticUpdateChecksEnabled) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Check for updates automatically")
-                            .font(.subheadline.weight(.medium))
-                            .foregroundStyle(AppTheme.textPrimary)
-                        Text("Check GitHub Releases once a day while Focenda is open and notify you when a new version is ready.")
-                            .font(.caption)
-                            .foregroundStyle(AppTheme.textSecondary)
-                    }
-                }
-                .toggleStyle(.switch)
-                .tint(AppTheme.accent)
-                .onChange(of: appState.automaticUpdateChecksEnabled) { _, isEnabled in
-                    updateManager.setAutomaticChecksEnabled(isEnabled)
-                }
-
-                Divider()
-
-                HStack(alignment: .center, spacing: 10) {
-                    Image(systemName: updateStatusIcon)
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(updateStatusColor)
-                        .frame(width: 22)
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(updateStatusTitle)
-                            .font(.subheadline.weight(.medium))
-                            .foregroundStyle(AppTheme.textPrimary)
-                        if let lastCheckedAt = updateManager.lastCheckedAt {
-                            Text("Last checked \(lastCheckedAt.formatted(date: .abbreviated, time: .shortened))")
-                                .font(.caption)
-                                .foregroundStyle(AppTheme.textTertiary)
-                        }
-                    }
-
-                    Spacer()
-
-                    Button {
-                        updateManager.checkForUpdates()
-                    } label: {
-                        Label(updateManager.status == .checking ? "Checking..." : "Check Now", systemImage: "arrow.clockwise")
-                            .font(.caption.weight(.semibold))
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
-                    .disabled(updateManager.status.isBusy)
-                }
-
-                lastUpdateGuideSection
-
-                if let update = updateManager.availableUpdate {
-                    VStack(alignment: .leading, spacing: 10) {
-                        HStack(alignment: .top, spacing: 10) {
-                            Image(systemName: "sparkles")
-                                .foregroundStyle(AppTheme.accent)
-
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text("Version \(update.version.description) is available")
-                                    .font(.subheadline.weight(.semibold))
-                                    .foregroundStyle(AppTheme.textPrimary)
-                                Text(update.displayName)
-                                    .font(.caption)
-                                    .foregroundStyle(AppTheme.textSecondary)
-                                    .lineLimit(1)
-                            }
-
-                            Spacer()
-                        }
-
-                        HStack {
-                            Button("Update Now") {
-                                updateManager.installAvailableUpdate()
-                            }
-                            .buttonStyle(.borderedProminent)
-                            .tint(AppTheme.accent)
-                            .controlSize(.small)
-                            .disabled(updateManager.status.isBusy)
-
-                            Button("Later") {
-                                updateManager.dismissAvailableUpdate()
-                            }
-                            .buttonStyle(.bordered)
-                            .controlSize(.small)
-                            .disabled(updateManager.status.isBusy)
-
-                            Spacer()
-                        }
-                    }
-                    .padding(10)
-                    .background(
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .fill(AppTheme.accent.opacity(0.08))
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .stroke(AppTheme.accent.opacity(0.25), lineWidth: 1)
-                    )
-                }
-
-                if case .failed(let message) = updateManager.status {
-                    Text(message)
-                        .font(.caption)
-                        .foregroundStyle(.orange)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-
-                Text("Privacy: Tasks, notes, reminders, bookmarks, productivity profiles, and preferences stay on this Mac in encrypted local storage. Focenda contacts only GitHub's public release service for update metadata and the selected app archive. macOS may display reminder content in its notification system. See docs/PRIVACY.md for details.")
-                    .font(.system(size: 10))
-                    .foregroundStyle(AppTheme.textTertiary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .padding(12)
-        }
-    }
-
-    private var lastUpdateGuideSection: some View {
-        Group {
-            if AppUpdateGuide.isEnabled, let guide = updateManager.lastUpdateGuide {
-                Divider()
-
-                HStack(alignment: .center, spacing: 10) {
-                    Image(systemName: "sparkles")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(AppTheme.accent)
-                        .frame(width: 22)
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Review the latest update")
-                            .font(.subheadline.weight(.medium))
-                            .foregroundStyle(AppTheme.textPrimary)
-
-                        Text("See what changed in Focenda \(guide.version) • \(guide.title)")
-                            .font(.caption)
-                            .foregroundStyle(AppTheme.textSecondary)
-                            .lineLimit(2)
-                    }
-
-                    Spacer(minLength: 12)
-
-                    Button {
-                        isShowingUpdateGuide = true
-                    } label: {
-                        Label("Replay Last Update", systemImage: "arrow.counterclockwise")
-                            .font(.caption.weight(.semibold))
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
-                    .accessibilityIdentifier("settingsReplayUpdateButton")
-                }
-            }
-        }
-    }
-
-    private var updateStatusTitle: String {
-        switch updateManager.status {
-        case .idle:
-            return "Updates are ready to check"
-        case .checking:
-            return "Checking GitHub Releases..."
-        case .available:
-            return "A new version is ready"
-        case .upToDate:
-            return "Focenda is up to date"
-        case .installing:
-            return "Installing update..."
-        case .failed:
-            return updateManager.availableUpdate != nil ? "Update could not be installed" : "Update check could not be completed"
-        }
-    }
-
-    private var updateStatusIcon: String {
-        switch updateManager.status {
-        case .idle:
-            return "arrow.down.circle"
-        case .checking:
-            return "arrow.triangle.2.circlepath"
-        case .available:
-            return "checkmark.seal.fill"
-        case .upToDate:
-            return "checkmark.circle.fill"
-        case .installing:
-            return "shippingbox.fill"
-        case .failed:
-            return "exclamationmark.triangle.fill"
-        }
-    }
-
-    private var updateStatusColor: Color {
-        switch updateManager.status {
-        case .failed:
-            return .orange
-        case .available, .installing:
-            return AppTheme.accent
-        case .upToDate:
-            return AppTheme.success
-        case .idle, .checking:
-            return AppTheme.textTertiary
         }
     }
 
@@ -642,6 +385,124 @@ public struct SettingsView: View {
         testingTask?.cancel()
         testingTask = nil
         isTestingSound = false
+    }
+
+    // MARK: - Modules & Feature Management Section
+    private var modulesSection: some View {
+        GroupBox(label: Label("Modules", systemImage: "square.grid.2x2").foregroundStyle(AppTheme.textPrimary)) {
+            VStack(alignment: .leading, spacing: 14) {
+                Text("Install or uninstall individual productivity features to keep Focenda lightweight and customized to your workflow. Uninstalled modules disappear from the Sidebar and Menu Bar, and their memory (RAM) is freed. Your saved data is safely preserved and restored if you reinstall.")
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Divider()
+
+                VStack(spacing: 10) {
+                    ForEach(AppModule.allCases) { module in
+                        let isInstalled = appState.isModuleInstalled(module)
+
+                        HStack(alignment: .center, spacing: 12) {
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                    .fill(isInstalled ? AppTheme.accent.opacity(0.12) : AppTheme.cardBackgroundSubtle)
+                                    .frame(width: 36, height: 36)
+
+                                Image(systemName: module.iconName)
+                                    .font(.system(size: 16))
+                                    .foregroundStyle(isInstalled ? AppTheme.accent : AppTheme.textTertiary)
+                            }
+
+                            VStack(alignment: .leading, spacing: 3) {
+                                HStack(spacing: 6) {
+                                    Text(module.displayName)
+                                        .font(.subheadline.weight(.semibold))
+                                        .foregroundStyle(AppTheme.textPrimary)
+
+                                    Text(isInstalled ? "Installed" : "Uninstalled")
+                                        .font(.system(size: 10, weight: .bold))
+                                        .foregroundStyle(isInstalled ? AppTheme.success : AppTheme.textTertiary)
+                                        .padding(.horizontal, 6)
+                                        .padding(.vertical, 2)
+                                        .background(
+                                            Capsule()
+                                                .fill(isInstalled ? AppTheme.success.opacity(0.12) : AppTheme.cardBackgroundSubtle)
+                                        )
+                                }
+
+                                Text(module.description)
+                                    .font(.caption)
+                                    .foregroundStyle(AppTheme.textSecondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+
+                            Spacer(minLength: 12)
+
+                            Toggle("", isOn: Binding(
+                                get: { appState.isModuleInstalled(module) },
+                                set: { shouldInstall in
+                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+                                        if shouldInstall {
+                                            appState.installModule(module)
+                                        } else {
+                                            appState.uninstallModule(module)
+                                        }
+                                    }
+                                }
+                            ))
+                            .toggleStyle(.switch)
+                            .tint(AppTheme.accent)
+                            .labelsHidden()
+                            .accessibilityIdentifier("toggleModule_\(module.rawValue)")
+                        }
+                        .padding(10)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .fill(AppTheme.cardBackgroundSubtle.opacity(0.4))
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .stroke(AppTheme.subtleBorder, lineWidth: 1)
+                        )
+                    }
+                }
+
+                Divider()
+
+                // Essential features notice
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "lock.shield.fill")
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.accent)
+                        Text("Essential Features (Fixed & Permanently Active)")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(AppTheme.textSecondary)
+                    }
+
+                    HStack(spacing: 8) {
+                        ForEach(EssentialModule.allCases) { essential in
+                            HStack(spacing: 5) {
+                                Image(systemName: essential.iconName)
+                                    .font(.caption2)
+                                    .foregroundStyle(AppTheme.accent)
+                                Text(essential.displayName)
+                                    .font(.caption2.weight(.medium))
+                                    .foregroundStyle(AppTheme.textPrimary)
+                                Image(systemName: "lock.fill")
+                                    .font(.system(size: 8))
+                                    .foregroundStyle(AppTheme.textTertiary)
+                            }
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(AppTheme.cardBackgroundSubtle)
+                            .clipShape(Capsule())
+                        }
+                    }
+                }
+            }
+            .padding(12)
+        }
     }
 
     // MARK: - Theme Picker Section

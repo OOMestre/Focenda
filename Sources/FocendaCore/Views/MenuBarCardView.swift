@@ -32,10 +32,10 @@ public struct MenuBarCardView: View {
     public static let popoverHeight: CGFloat = 424
 
     public var timerVM: FocusTimerViewModel
-    public var taskVM: TaskListViewModel
-    public var scratchpadVM: ScratchpadViewModel
-    public var recurringReminderVM: RecurringReminderViewModel
-    public var bookmarkVM: BookmarkViewModel
+    public var taskVM: TaskListViewModel?
+    public var scratchpadVM: ScratchpadViewModel?
+    public var recurringReminderVM: RecurringReminderViewModel?
+    public var bookmarkVM: BookmarkViewModel?
     public var appState: AppState?
 
     @State public var selectedSection: MenuBarSection = .focus
@@ -69,11 +69,23 @@ public struct MenuBarCardView: View {
     @State private var newLinkUrl: String = ""
     @State private var isAddingLink: Bool = false
 
+    public var availableSections: [MenuBarSection] {
+        if let appState {
+            return appState.moduleManager.availableMenuBarSections
+        }
+        var sections: [MenuBarSection] = [.focus]
+        if scratchpadVM != nil { sections.append(.quickNote) }
+        if taskVM != nil { sections.append(.quickTask) }
+        if recurringReminderVM != nil { sections.append(.reminders) }
+        if bookmarkVM != nil { sections.append(.quickLinks) }
+        return sections
+    }
+
     public init(
         timerVM: FocusTimerViewModel,
-        taskVM: TaskListViewModel = TaskListViewModel(),
-        scratchpadVM: ScratchpadViewModel = ScratchpadViewModel(),
-        recurringReminderVM: RecurringReminderViewModel = RecurringReminderViewModel(),
+        taskVM: TaskListViewModel? = nil,
+        scratchpadVM: ScratchpadViewModel? = nil,
+        recurringReminderVM: RecurringReminderViewModel? = nil,
         appState: AppState? = nil,
         secureStore: SecureStore = .shared,
         bookmarkVM: BookmarkViewModel? = nil,
@@ -84,7 +96,7 @@ public struct MenuBarCardView: View {
         self.scratchpadVM = scratchpadVM
         self.recurringReminderVM = recurringReminderVM
         self.appState = appState
-        self.bookmarkVM = bookmarkVM ?? BookmarkViewModel(secureStore: secureStore)
+        self.bookmarkVM = bookmarkVM
         self._selectedSection = State(initialValue: initialSection)
     }
 
@@ -116,6 +128,9 @@ public struct MenuBarCardView: View {
                 isHovered = hovering
             }
             .onAppear {
+                if !availableSections.contains(selectedSection) {
+                    selectedSection = .focus
+                }
                 synchronizeQuickNoteFolder()
                 resetQuickNoteDraft()
                 if selectedSection == .quickNote {
@@ -274,13 +289,29 @@ public struct MenuBarCardView: View {
                 case .focus:
                     focusSection
                 case .quickNote:
-                    quickNoteSection
+                    if scratchpadVM != nil {
+                        quickNoteSection
+                    } else {
+                        focusSection
+                    }
                 case .quickTask:
-                    quickTaskSection
+                    if taskVM != nil {
+                        quickTaskSection
+                    } else {
+                        focusSection
+                    }
                 case .reminders:
-                    recurringRemindersSection
+                    if recurringReminderVM != nil {
+                        recurringRemindersSection
+                    } else {
+                        focusSection
+                    }
                 case .quickLinks:
-                    quickLinksSection
+                    if bookmarkVM != nil {
+                        quickLinksSection
+                    } else {
+                        focusSection
+                    }
                 }
             }
             .transition(.opacity)
@@ -325,7 +356,7 @@ public struct MenuBarCardView: View {
     // MARK: - Segmented Control Bar
     private var segmentedControlSection: some View {
         HStack(spacing: 3) {
-            ForEach(MenuBarSection.allCases) { section in
+            ForEach(availableSections) { section in
                 Button {
                     withAnimation(.spring(response: 0.25, dampingFraction: 0.72)) {
                         selectedSection = section
@@ -369,7 +400,10 @@ public struct MenuBarCardView: View {
 
     // MARK: - Focus Section
     private var focusSection: some View {
-        VStack(spacing: 12) {
+        // The popover has a fixed height so the menu bar anchor stays stable
+        // while switching sections. Keep the Focus controls compact enough
+        // to leave the shared footer inside that frame.
+        VStack(spacing: 8) {
             modeSelectorSection
             miniProgressRingSection
             quickPresetSection
@@ -594,7 +628,7 @@ public struct MenuBarCardView: View {
     private var recurringRemindersSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text("Recurring Reminders (\(recurringReminderVM.activeReminders.count))")
+                Text("Recurring Reminders (\(recurringReminderVM?.activeReminders.count ?? 0))")
                     .font(.caption2.bold())
                     .foregroundStyle(AppTheme.textSecondary)
 
@@ -664,7 +698,8 @@ public struct MenuBarCardView: View {
                 )
             }
 
-            if recurringReminderVM.reminders.isEmpty {
+            let reminders = recurringReminderVM?.reminders ?? []
+            if reminders.isEmpty {
                 HStack {
                     Spacer()
                     VStack(spacing: 4) {
@@ -681,11 +716,11 @@ public struct MenuBarCardView: View {
             } else {
                 ScrollView {
                     VStack(spacing: 5) {
-                        ForEach(recurringReminderVM.reminders) { reminder in
+                        ForEach(reminders) { reminder in
                             HStack(spacing: 8) {
                                 Button {
                                     withAnimation(.spring(response: 0.28, dampingFraction: 0.7)) {
-                                        recurringReminderVM.toggleReminder(id: reminder.id)
+                                        recurringReminderVM?.toggleReminder(id: reminder.id)
                                     }
                                 } label: {
                                     Image(systemName: reminder.isEnabled ? "checkmark.circle.fill" : "circle")
@@ -731,7 +766,7 @@ public struct MenuBarCardView: View {
         let trimmed = newReminderTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
 
-        recurringReminderVM.addReminder(
+        recurringReminderVM?.addReminder(
             title: trimmed,
             time: newReminderTime,
             repeatFrequency: newReminderFrequency
@@ -749,11 +784,11 @@ public struct MenuBarCardView: View {
                 // Folder Dropdown Menu Picker
                 Menu {
                     Section("Select Folder") {
-                        ForEach(scratchpadVM.folders, id: \.self) { folder in
+                        ForEach(scratchpadVM?.folders ?? [], id: \.self) { folder in
                             Button {
                                 withAnimation(.spring(response: 0.25, dampingFraction: 0.72)) {
                                     selectedNoteFolder = folder
-                                    scratchpadVM.selectFolder(folder)
+                                    scratchpadVM?.selectFolder(folder)
                                     resetQuickNoteDraft()
                                 }
                             } label: {
@@ -1000,6 +1035,7 @@ public struct MenuBarCardView: View {
     }
 
     private func synchronizeQuickNoteFolder() {
+        guard let scratchpadVM else { return }
         let preferredFolder = scratchpadVM.selectedFolder == ScratchpadViewModel.allNotesFolder
             ? selectedNoteFolder
             : scratchpadVM.selectedFolder
@@ -1030,6 +1066,7 @@ public struct MenuBarCardView: View {
         let trimmed = nameToUse.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
 
+        guard let scratchpadVM else { return }
         let success = scratchpadVM.createFolder(trimmed)
         if success {
             selectedNoteFolder = trimmed
@@ -1048,7 +1085,7 @@ public struct MenuBarCardView: View {
         let folderToUse = folder ?? selectedNoteFolder
         let trimmed = textToUse.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
-        _ = scratchpadVM.createNote(
+        _ = scratchpadVM?.createNote(
             title: titleToUse,
             content: trimmed,
             folder: folderToUse
@@ -1137,11 +1174,11 @@ public struct MenuBarCardView: View {
             Divider()
 
             VStack(alignment: .leading, spacing: 6) {
-                Text("Pending Tasks (\(taskVM.pendingTasksCount))")
+                Text("Pending Tasks (\(taskVM?.pendingTasksCount ?? 0))")
                     .font(.caption2.bold())
                     .foregroundStyle(AppTheme.textSecondary)
 
-                let pending = taskVM.tasks.filter { !$0.isCompleted }.prefix(3)
+                let pending = (taskVM?.tasks ?? []).filter { !$0.isCompleted }.prefix(3)
                 if pending.isEmpty {
                     HStack {
                         Spacer()
@@ -1161,7 +1198,7 @@ public struct MenuBarCardView: View {
                         HStack(spacing: 8) {
                             Button {
                                 withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
-                                    taskVM.toggleTaskCompletion(task)
+                                    taskVM?.toggleTaskCompletion(task)
                                 }
                             } label: {
                                 Image(systemName: "circle")
@@ -1200,7 +1237,7 @@ public struct MenuBarCardView: View {
     private func submitQuickTask() {
         let trimmed = newTaskTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
-        taskVM.addTask(title: trimmed, priority: newTaskPriority)
+        taskVM?.addTask(title: trimmed, priority: newTaskPriority)
         newTaskTitle = ""
     }
 
@@ -1270,7 +1307,7 @@ public struct MenuBarCardView: View {
                 )
             }
 
-            let allLinks = bookmarkVM.sortedBookmarks
+            let allLinks = bookmarkVM?.sortedBookmarks ?? []
             if allLinks.isEmpty {
                 Text("No quick links yet. Add one above to keep it close at hand.")
                     .font(.caption)
@@ -1281,7 +1318,7 @@ public struct MenuBarCardView: View {
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
                     ForEach(allLinks) { link in
                         Button {
-                            bookmarkVM.openBookmark(link)
+                            bookmarkVM?.openBookmark(link)
                         } label: {
                             HStack(spacing: 8) {
                                 Image(systemName: link.iconName)
@@ -1313,7 +1350,7 @@ public struct MenuBarCardView: View {
                         .buttonStyle(SpringScaleButtonStyle())
                         .contextMenu {
                             Button {
-                                bookmarkVM.openBookmark(link)
+                                bookmarkVM?.openBookmark(link)
                             } label: {
                                 Label("Open in Browser", systemImage: "arrow.up.right")
                             }
@@ -1330,7 +1367,7 @@ public struct MenuBarCardView: View {
 
                             Button(role: .destructive) {
                                 withAnimation(.spring(response: 0.25)) {
-                                    bookmarkVM.deleteBookmark(link)
+                                    bookmarkVM?.deleteBookmark(link)
                                 }
                             } label: {
                                 Label("Delete Bookmark", systemImage: "trash")
@@ -1352,7 +1389,7 @@ public struct MenuBarCardView: View {
             urlStr = "https://" + urlStr
         }
 
-        bookmarkVM.addBookmark(title: title, url: urlStr, iconName: "link")
+        bookmarkVM?.addBookmark(title: title, url: urlStr, iconName: "link")
 
         newLinkTitle = ""
         newLinkUrl = ""
@@ -1362,13 +1399,13 @@ public struct MenuBarCardView: View {
     /// Kept as a source-compatible bridge for callers of the old menu bar
     /// quick-link API. The shared BookmarkViewModel is now the source of truth.
     public func deleteCustomLink(_ link: QuickLink) {
-        bookmarkVM.deleteBookmark(id: link.id)
+        bookmarkVM?.deleteBookmark(id: link.id)
     }
 
     /// Kept as a source-compatible bridge for callers of the old menu bar
     /// quick-link API. The shared BookmarkViewModel is now the source of truth.
     public func deleteCustomLink(id: UUID) {
-        bookmarkVM.deleteBookmark(id: id)
+        bookmarkVM?.deleteBookmark(id: id)
     }
 
     // MARK: - Footer Actions

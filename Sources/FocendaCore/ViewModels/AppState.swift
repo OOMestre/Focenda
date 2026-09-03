@@ -16,6 +16,7 @@ public enum AppTab: String, CaseIterable, Identifiable {
     case bookmarks = "Bookmarks"
     case profiles = "Profiles"
     case settings = "Settings"
+    case about = "About"
     case support = "Support"
 
     public var id: String { rawValue }
@@ -46,6 +47,7 @@ public enum AppTab: String, CaseIterable, Identifiable {
         case .bookmarks: return "bookmark.fill"
         case .profiles: return "rectangle.3.group"
         case .settings: return "gearshape"
+        case .about: return "info.circle"
         case .support: return "heart.fill"
         }
     }
@@ -58,10 +60,14 @@ public final class AppState {
     public static let onboardingCompletionKey = "focenda_onboarding_completed_v1"
     public static let reminderSoundRepeatUntilDoneKey = "reminderSoundRepeatUntilDone"
 
+    public var moduleManager: AppModuleManager
+
     public var selectedTab: AppTab = .dashboard {
         didSet {
-            guard !selectedTab.isAvailableInApp else { return }
-            selectedTab = oldValue.isAvailableInApp ? oldValue : .dashboard
+            guard isTabAvailable(selectedTab) else {
+                selectedTab = isTabAvailable(oldValue) ? oldValue : .dashboard
+                return
+            }
         }
     }
     public private(set) var hasCompletedOnboarding: Bool
@@ -160,8 +166,9 @@ public final class AppState {
     private let secureStore: SecureStore
     private var preferencesPersistenceReady = false
 
-    public init(secureStore: SecureStore = .shared) {
+    public init(secureStore: SecureStore = .shared, moduleManager: AppModuleManager? = nil) {
         self.secureStore = secureStore
+        self.moduleManager = moduleManager ?? AppModuleManager(secureStore: secureStore)
         self.hasCompletedOnboarding = secureStore.bool(forKey: Self.onboardingCompletionKey) ?? false
         let savedGoal = secureStore.integer(forKey: "dailyFocusGoalMinutes") ?? 0
         self.dailyFocusGoalMinutes = savedGoal == 0 ? 120 : savedGoal
@@ -245,6 +252,49 @@ public final class AppState {
         AppTheme.current = selectedTheme
     }
 
+    /// Checks whether a tab is available given app builds and user-installed modules.
+    public func isTabAvailable(_ tab: AppTab) -> Bool {
+        guard tab.isAvailableInApp else { return false }
+        return moduleManager.isTabAvailable(tab)
+    }
+
+    /// List of tabs currently available to the user in the sidebar.
+    public var availableTabs: [AppTab] {
+        AppTab.allCases.filter { isTabAvailable($0) }
+    }
+
+    /// Checks if a modular feature is installed.
+    public func isModuleInstalled(_ module: AppModule) -> Bool {
+        moduleManager.isInstalled(module)
+    }
+
+    /// Installs a modular feature, restoring its ViewModel and data.
+    public func installModule(_ module: AppModule) {
+        moduleManager.installModule(module)
+    }
+
+    /// Uninstalls a modular feature, freeing its ViewModel from RAM while preserving data on disk.
+    public func uninstallModule(_ module: AppModule) {
+        moduleManager.uninstallModule(module)
+        ensureValidSelectedTab()
+    }
+
+    /// Toggles a modular feature's installation status.
+    public func toggleModule(_ module: AppModule) {
+        if isModuleInstalled(module) {
+            uninstallModule(module)
+        } else {
+            installModule(module)
+        }
+    }
+
+    /// Ensures the currently selected tab is valid; otherwise redirects safely to Dashboard.
+    public func ensureValidSelectedTab() {
+        if !isTabAvailable(selectedTab) {
+            selectedTab = .dashboard
+        }
+    }
+
     private static func areStoredPreferencesReadable(in secureStore: SecureStore) -> Bool {
         let readableValues = [
             !secureStore.containsValue(forKey: "dailyFocusGoalMinutes") || secureStore.integer(forKey: "dailyFocusGoalMinutes") != nil,
@@ -261,7 +311,8 @@ public final class AppState {
             !secureStore.containsValue(forKey: "showShortcutFeedback") || secureStore.bool(forKey: "showShortcutFeedback") != nil,
             !secureStore.containsValue(forKey: AppUpdatePreferences.automaticChecksEnabledKey) || secureStore.bool(forKey: AppUpdatePreferences.automaticChecksEnabledKey) != nil,
             !secureStore.containsValue(forKey: AppTheme.storageKey) || secureStore.string(forKey: AppTheme.storageKey) != nil,
-            !secureStore.containsValue(forKey: Self.onboardingCompletionKey) || secureStore.bool(forKey: Self.onboardingCompletionKey) != nil
+            !secureStore.containsValue(forKey: Self.onboardingCompletionKey) || secureStore.bool(forKey: Self.onboardingCompletionKey) != nil,
+            !secureStore.containsValue(forKey: AppModuleManager.storageKey) || secureStore.stringArray(forKey: AppModuleManager.storageKey) != nil
         ]
         return readableValues.allSatisfy { $0 }
     }

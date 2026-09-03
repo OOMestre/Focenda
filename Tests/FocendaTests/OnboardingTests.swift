@@ -19,7 +19,7 @@ final class OnboardingTests: XCTestCase {
     }
 
     func testEveryOnboardingStepHasCompleteContent() {
-        XCTAssertEqual(OnboardingStep.allCases.count, 12)
+        XCTAssertEqual(OnboardingStep.allCases.count, 13)
 
         for step in OnboardingStep.allCases {
             XCTAssertFalse(step.eyebrow.isEmpty, "Missing eyebrow for \(step)")

@@ -73,8 +73,8 @@ public struct CalendarView: View {
     }
 
     public var timerVM: FocusTimerViewModel
-    public var taskVM: TaskListViewModel
-    public var recurringReminderVM: RecurringReminderViewModel
+    public var taskVM: TaskListViewModel?
+    public var recurringReminderVM: RecurringReminderViewModel?
 
     @State public var selectedDate: Date
     @State public var displayedMonth: Date
@@ -104,8 +104,8 @@ public struct CalendarView: View {
 
     public init(
         timerVM: FocusTimerViewModel,
-        taskVM: TaskListViewModel,
-        recurringReminderVM: RecurringReminderViewModel = RecurringReminderViewModel(),
+        taskVM: TaskListViewModel? = nil,
+        recurringReminderVM: RecurringReminderViewModel? = nil,
         initialDate: Date = Date()
     ) {
         self.timerVM = timerVM
@@ -524,7 +524,7 @@ public struct CalendarView: View {
     // MARK: - Day Hover Popover Preview Card
     private func dayHoverPreviewCard(for day: CalendarDay) -> some View {
         let dayTasks = tasks(for: day.date)
-        let dayReminders = recurringReminderVM.reminders(for: day.date, calendar: calendar)
+        let dayReminders = recurringReminderVM?.reminders(for: day.date, calendar: calendar) ?? []
         let daySessions = sessions(for: day.date)
         let completedTaskCount = dayTasks.filter(\.isCompleted).count
         let isPinned = keepsDayPopoverOpen(for: day.date, pinnedDate: pinnedPopoverDate)
@@ -977,7 +977,7 @@ public struct CalendarView: View {
             // Summary Metric Chips
             let dayFocusMinutes = focusMinutes(for: selectedDate)
             let dayTasks = tasks(for: selectedDate)
-            let dayReminders = recurringReminderVM.reminders(for: selectedDate, calendar: calendar)
+            let dayReminders = recurringReminderVM?.reminders(for: selectedDate, calendar: calendar) ?? []
 
             HStack(spacing: 6) {
                 agendaChip(
@@ -1256,7 +1256,7 @@ public struct CalendarView: View {
                 addRecurringReminderForm
             }
 
-            let dayReminders = recurringReminderVM.reminders(for: selectedDate, calendar: calendar)
+            let dayReminders = recurringReminderVM?.reminders(for: selectedDate, calendar: calendar) ?? []
             if dayReminders.isEmpty {
                 emptyAgendaCard(
                     icon: "bell.badge",
@@ -1269,7 +1269,7 @@ public struct CalendarView: View {
                         HStack(spacing: 8) {
                             Button {
                                 withAnimation(.spring(response: 0.28, dampingFraction: 0.7)) {
-                                    recurringReminderVM.toggleReminder(id: reminder.id)
+                                    recurringReminderVM?.toggleReminder(id: reminder.id)
                                 }
                             } label: {
                                 Image(systemName: reminder.isEnabled ? "checkmark.circle.fill" : "circle")
@@ -1381,7 +1381,7 @@ public struct CalendarView: View {
         let trimmed = newReminderTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
 
-        recurringReminderVM.addReminder(
+        recurringReminderVM?.addReminder(
             title: trimmed,
             time: newReminderTime,
             repeatFrequency: newReminderFrequency,
@@ -1536,7 +1536,7 @@ public struct CalendarView: View {
                         HStack(spacing: 8) {
                             Button {
                                 withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
-                                    taskVM.toggleTaskCompletion(task)
+                                    taskVM?.toggleTaskCompletion(task)
                                 }
                             } label: {
                                 Image(systemName: task.isCompleted ? "checkmark.circle.fill" : "circle")
@@ -1616,7 +1616,7 @@ public struct CalendarView: View {
         let trimmed = quickTaskTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
 
-        taskVM.addTask(
+        taskVM?.addTask(
             title: trimmed,
             priority: quickTaskPriority,
             dueDate: selectedDate
@@ -1665,7 +1665,7 @@ public struct CalendarView: View {
         let trimmed = quickTaskTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
 
-        taskVM.addTask(
+        taskVM?.addTask(
             title: trimmed,
             priority: quickTaskPriority,
             dueDate: calendar.startOfDay(for: selectedDate)
@@ -1747,7 +1747,7 @@ public struct CalendarView: View {
         var dueTasksCountByDate: [Date: Int] = [:]
         var hasTaskReminderByDate: [Date: Bool] = [:]
 
-        for task in taskVM.tasks {
+        for task in (taskVM?.tasks ?? []) {
             var matchedDays = Set<Date>()
 
             if let dueDate = task.dueDate {
@@ -1780,7 +1780,7 @@ public struct CalendarView: View {
         }
 
         // Pre-fetch active recurring reminders for fast matching
-        let activeReminders = recurringReminderVM.activeReminders
+        let activeReminders = recurringReminderVM?.activeReminders ?? []
         let selectedStart = calendar.startOfDay(for: selectedDate)
 
         var days: [CalendarDay] = []
@@ -1842,7 +1842,8 @@ public struct CalendarView: View {
     }
 
     public func tasks(for date: Date) -> [TaskItem] {
-        taskVM.tasks.filter { task in
+        guard let taskVM else { return [] }
+        return taskVM.tasks.filter { task in
             if let dueDate = task.dueDate, calendar.isDate(dueDate, inSameDayAs: date) {
                 return true
             }
@@ -1917,7 +1918,7 @@ public struct CalendarView: View {
             activeDateSet.insert(calendar.startOfDay(for: session.completedAt))
         }
 
-        let tasksCompleted = taskVM.tasks.filter { task in
+        let tasksCompleted = (taskVM?.tasks ?? []).filter { task in
             if let completedAt = task.completedAt {
                 return calendar.isDate(completedAt, equalTo: month, toGranularity: .month)
             }

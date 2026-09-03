@@ -13,10 +13,28 @@ public struct MainView: View {
 
     @Bindable var appState: AppState
     @State private var timerVM: FocusTimerViewModel
-    @State private var taskVM: TaskListViewModel
-    @State private var scratchpadVM: ScratchpadViewModel
-    @State private var bookmarkVM: BookmarkViewModel
-    @State private var recurringReminderVM: RecurringReminderViewModel
+    private var customTaskVM: TaskListViewModel?
+    private var customScratchpadVM: ScratchpadViewModel?
+    private var customBookmarkVM: BookmarkViewModel?
+    private var customRecurringReminderVM: RecurringReminderViewModel?
+
+    private var taskVM: TaskListViewModel? {
+        guard appState.isModuleInstalled(.kanban) else { return nil }
+        return customTaskVM ?? appState.moduleManager.taskVM
+    }
+    private var scratchpadVM: ScratchpadViewModel? {
+        guard appState.isModuleInstalled(.scratchpad) else { return nil }
+        return customScratchpadVM ?? appState.moduleManager.scratchpadVM
+    }
+    private var bookmarkVM: BookmarkViewModel? {
+        guard appState.isModuleInstalled(.bookmarks) else { return nil }
+        return customBookmarkVM ?? appState.moduleManager.bookmarkVM
+    }
+    private var recurringReminderVM: RecurringReminderViewModel? {
+        guard appState.isModuleInstalled(.reminders) else { return nil }
+        return customRecurringReminderVM ?? appState.moduleManager.recurringReminderVM
+    }
+
     @State private var productivityProfileVM: ProductivityProfileViewModel
     var updateManager: AppUpdateManager
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
@@ -24,24 +42,25 @@ public struct MainView: View {
     @State private var isShowingUpdateGuide = false
     @State private var isShowingOnboarding = false
     @State private var isPresentingInitialOnboarding = false
+    @State private var updatePendingConfirmation: AppUpdate?
 
     public init(
         appState: AppState = AppState(),
         timerVM: FocusTimerViewModel = FocusTimerViewModel(),
-        taskVM: TaskListViewModel = TaskListViewModel(),
-        scratchpadVM: ScratchpadViewModel = ScratchpadViewModel(),
-        bookmarkVM: BookmarkViewModel = BookmarkViewModel(),
-        recurringReminderVM: RecurringReminderViewModel = RecurringReminderViewModel(),
+        taskVM: TaskListViewModel? = nil,
+        scratchpadVM: ScratchpadViewModel? = nil,
+        bookmarkVM: BookmarkViewModel? = nil,
+        recurringReminderVM: RecurringReminderViewModel? = nil,
         productivityProfileVM: ProductivityProfileViewModel = ProductivityProfileViewModel(),
         updateManager: AppUpdateManager = AppUpdateManager()
     ) {
         self.appState = appState
         self.updateManager = updateManager
+        self.customTaskVM = taskVM
+        self.customScratchpadVM = scratchpadVM
+        self.customBookmarkVM = bookmarkVM
+        self.customRecurringReminderVM = recurringReminderVM
         _timerVM = State(initialValue: timerVM)
-        _taskVM = State(initialValue: taskVM)
-        _scratchpadVM = State(initialValue: scratchpadVM)
-        _bookmarkVM = State(initialValue: bookmarkVM)
-        _recurringReminderVM = State(initialValue: recurringReminderVM)
         _productivityProfileVM = State(initialValue: productivityProfileVM)
     }
 
@@ -71,7 +90,7 @@ public struct MainView: View {
                         AppUpdateBanner(
                             update: update,
                             isInstalling: updateManager.status == .installing,
-                            onInstall: updateManager.installAvailableUpdate,
+                            onInstall: { updatePendingConfirmation = update },
                             onDismiss: updateManager.dismissAvailableUpdate
                         )
                         .frame(maxWidth: 760)
@@ -95,22 +114,62 @@ public struct MainView: View {
                         case .timer:
                             FocusTimerView(timerVM: timerVM)
                         case .kanban:
-                            KanbanBoardView(taskVM: taskVM)
+                            if let taskVM {
+                                KanbanBoardView(taskVM: taskVM)
+                            } else {
+                                DashboardView(
+                                    appState: appState,
+                                    timerVM: timerVM,
+                                    taskVM: nil
+                                )
+                            }
                         case .calendar:
-                            CalendarView(
-                                timerVM: timerVM,
-                                taskVM: taskVM,
-                                recurringReminderVM: recurringReminderVM
-                            )
+                            if appState.isModuleInstalled(.calendar) {
+                                CalendarView(
+                                    timerVM: timerVM,
+                                    taskVM: taskVM,
+                                    recurringReminderVM: recurringReminderVM
+                                )
+                            } else {
+                                DashboardView(
+                                    appState: appState,
+                                    timerVM: timerVM,
+                                    taskVM: taskVM
+                                )
+                            }
                         case .reminders:
-                            RemindersView(
-                                recurringReminderVM: recurringReminderVM,
-                                taskVM: taskVM
-                            )
+                            if let recurringReminderVM {
+                                RemindersView(
+                                    recurringReminderVM: recurringReminderVM,
+                                    taskVM: taskVM
+                                )
+                            } else {
+                                DashboardView(
+                                    appState: appState,
+                                    timerVM: timerVM,
+                                    taskVM: taskVM
+                                )
+                            }
                         case .scratchpad:
-                            ScratchpadView(viewModel: scratchpadVM)
+                            if let scratchpadVM {
+                                ScratchpadView(viewModel: scratchpadVM, taskVM: taskVM)
+                            } else {
+                                DashboardView(
+                                    appState: appState,
+                                    timerVM: timerVM,
+                                    taskVM: taskVM
+                                )
+                            }
                         case .bookmarks:
-                            BookmarksView(viewModel: bookmarkVM)
+                            if let bookmarkVM {
+                                BookmarksView(viewModel: bookmarkVM)
+                            } else {
+                                DashboardView(
+                                    appState: appState,
+                                    timerVM: timerVM,
+                                    taskVM: taskVM
+                                )
+                            }
                         case .profiles:
                             if ProductivityProfilesFeature.isEnabled {
                                 ProductivityProfilesView(viewModel: productivityProfileVM)
@@ -124,7 +183,11 @@ public struct MainView: View {
                         case .settings:
                             SettingsView(
                                 appState: appState,
-                                timerVM: timerVM,
+                                timerVM: timerVM
+                            )
+                        case .about:
+                            AboutView(
+                                appState: appState,
                                 updateManager: updateManager
                             )
                         case .support:
@@ -293,6 +356,16 @@ public struct MainView: View {
             } else {
                 EmptyView()
             }
+        }
+        .alert(item: $updatePendingConfirmation) { update in
+            Alert(
+                title: Text(AppUpdateConfirmation.title),
+                message: Text(AppUpdateConfirmation.message(for: update)),
+                primaryButton: .default(Text(AppUpdateConfirmation.actionTitle)) {
+                    updateManager.installAvailableUpdate()
+                },
+                secondaryButton: .cancel()
+            )
         }
         .onReceive(NotificationCenter.default.publisher(for: NotificationManager.reminderAlertBannerNotification)) { notif in
             let title = notif.userInfo?["title"] as? String ?? "Reminder"
