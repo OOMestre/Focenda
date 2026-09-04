@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/OOMestre/Focenda/security/advisories/new
+    about: Please use a private security advisory for vulnerabilities instead of a public issue.

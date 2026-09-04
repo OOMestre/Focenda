@@ -6,12 +6,24 @@ Before reaching out, check the documentation listed below, as it covers most arc
 
 ---
 
+## Send Feedback from Focenda
+
+The fastest way to contact the project is built into the app:
+
+1. Open the **Support** tab.
+2. Choose **Report a Bug** or **Suggest an Improvement**.
+3. Fill in the short form, review the pre-filled GitHub issue, and select **Submit** on GitHub.
+
+Focenda adds the app version, macOS version, and hardware architecture automatically. When you continue, the browser sends the pre-filled text to GitHub to show the form. Focenda never publishes an issue in the background; the issue becomes public only after you review it and select **Submit** on GitHub. You may need to sign in to GitHub. Do not include passwords or other private information.
+
+---
+
 ## Report a Bug
 
 To report a bug or unexpected behavior:
 
-1. Open a bug report on the [GitHub Issues](https://github.com/OOMestre/Focenda/issues/new) page.
-2. Include the following details in your report:
+1. Use **Support → Report a Bug** in Focenda, or open the [bug report template](https://github.com/OOMestre/Focenda/issues/new?template=bug_report.md).
+2. Review the pre-filled issue and include the following details when relevant:
    - **Focenda Version:** Check under Settings > Support / About (e.g. `v1.0.0`).
    - **macOS Version:** Your macOS release (e.g. macOS 14.5 Sonoma, macOS 15.0 Sequoia).
    - **Hardware Architecture:** Apple Silicon (M1/M2/M3/M4) or Intel.
@@ -25,7 +37,7 @@ To report a bug or unexpected behavior:
 
 To propose a new feature, enhancement, or workflow addition:
 
-1. Open a feature request on [GitHub Issues](https://github.com/OOMestre/Focenda/issues/new).
+1. Use **Support → Suggest an Improvement** in Focenda, or open the [suggestion template](https://github.com/OOMestre/Focenda/issues/new?template=suggestion.md).
 2. Describe the problem you are trying to solve and how it fits your daily focus or organization flow.
 3. Focus on the use case and problem statement rather than only a single proposed implementation, as this helps design the most cohesive solution for macOS.
 4. You can also browse and participate in discussions on [existing open issues](https://github.com/OOMestre/Focenda/issues).
