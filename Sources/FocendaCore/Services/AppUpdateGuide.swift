@@ -60,11 +60,11 @@ public struct AppUpdateGuide: Codable, Equatable, Identifiable, Sendable {
                 AppUpdateGuideSection(
                     title: "What's New in Focenda",
                     items: [
-                        "Modular workspace management to install or uninstall individual feature modules and eliminate clutter.",
-                        "Direct task creation from scratchpad lines into the Kanban board with instant feedback.",
-                        "Dedicated About view featuring application details and direct update controls.",
-                        "Update relaunch confirmation prompt to ensure all unsaved work is preserved.",
-                        "Menu bar layout spacing polish to ensure all controls remain fully visible."
+                        "Custom Scratchpad folders with selectable symbols and folder organization.",
+                        "Safe folder renaming and deletion with automatic note reassignment to prevent data loss.",
+                        "In-app GitHub feedback flow for reporting bugs and suggesting improvements.",
+                        "Pre-filled system and architecture diagnostics for streamlined issue submissions.",
+                        "Privacy-preserving feedback that opens directly in your default browser."
                     ]
                 )
             ]
