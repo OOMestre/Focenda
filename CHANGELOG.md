@@ -4,6 +4,19 @@ All notable changes, new features, and bug fixes for **Focenda** are documented 
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-09-04
+
+### Summary
+Focenda v1.2.0 introduces custom Scratchpad folder management with icon customization, safe deletion with automatic note reassignment, an in-app GitHub issue reporting and suggestion flow with pre-filled device diagnostics, and privacy-preserving feedback submission.
+
+### Added
+- **Custom Scratchpad Folders:** Users can create custom folders in the Scratchpad and assign distinct SF Symbols icons from a curated palette.
+- **Folder Renaming & Safe Deletion:** Folders can be renamed with automatic cascading updates to all contained notes. Deleting a folder safely reallocates its notes to a fallback folder, preventing accidental data loss.
+- **In-App GitHub Feedback Flow:** Added dedicated actions in the Support tab to report bugs and suggest feature improvements with pre-filled templates, app version, macOS version, and CPU architecture.
+- **Privacy-Preserving Issue Reporting:** Feedback submissions open directly in the default browser without storing access tokens or making background network requests from the app.
+
+---
+
 ## [1.1.0] - 2026-09-03
 
 ### Summary

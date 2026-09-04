@@ -139,6 +139,9 @@ public struct MenuBarCardView: View {
                     }
                 }
             }
+            .onChange(of: scratchpadVM?.folders) { _, _ in
+                synchronizeQuickNoteFolder()
+            }
             .onReceive(NotificationCenter.default.publisher(for: .focusSessionCompleted)) { notification in
                 let mode = notification.userInfo?["mode"] as? FocusMode ?? timerVM.currentMode
                 withAnimation(.spring(response: 0.35, dampingFraction: 0.72)) {
@@ -793,7 +796,7 @@ public struct MenuBarCardView: View {
                                 }
                             } label: {
                                 HStack {
-                                    Label(folder, systemImage: ScratchpadViewModel.iconForFolder(folder))
+                                    Label(folder, systemImage: scratchpadFolderIcon(folder))
                                     if selectedNoteFolder.caseInsensitiveCompare(folder) == .orderedSame {
                                         Spacer()
                                         Image(systemName: "checkmark")
@@ -814,7 +817,7 @@ public struct MenuBarCardView: View {
                     }
                 } label: {
                     HStack(spacing: 6) {
-                        Image(systemName: ScratchpadViewModel.iconForFolder(selectedNoteFolder))
+                        Image(systemName: scratchpadFolderIcon(selectedNoteFolder))
                             .font(.system(size: 11, weight: .semibold))
                             .foregroundStyle(AppTheme.accent)
                         Text(selectedNoteFolder)
@@ -1048,6 +1051,10 @@ public struct MenuBarCardView: View {
             selectedNoteFolder = scratchpadVM.folders.first ?? "General"
         }
 
+    }
+
+    private func scratchpadFolderIcon(_ folder: String) -> String {
+        scratchpadVM?.iconName(for: folder) ?? ScratchpadViewModel.iconForFolder(folder)
     }
 
     private func resetQuickNoteDraft() {

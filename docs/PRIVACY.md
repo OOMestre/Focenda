@@ -41,10 +41,16 @@ account and Focenda's local Application Support files.
 
 ## Network communication
 
-Focenda only contacts GitHub's public release service when checking for or
-downloading an update. It sends no tasks, notes, reminders, bookmarks, or
-preferences to GitHub or to a Focenda service. Update timestamps and release
-state are local encrypted preferences.
+Focenda contacts GitHub's public release service when checking for or
+downloading an update. When you explicitly start a bug report or suggestion,
+Focenda also creates a pre-filled GitHub issue URL and opens it in your default
+browser. The browser sends that pre-filled text to GitHub so the form can be
+shown. Focenda does not publish the issue itself or send feedback in the
+background: the issue becomes public only after you review it and choose
+Submit there. Do not include passwords or other private information. Focenda
+sends no tasks, notes, reminders, bookmarks, or preferences to GitHub or to a
+Focenda service. Update timestamps and release state are local encrypted
+preferences.
 
 ## macOS notifications and selected files
 

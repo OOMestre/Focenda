@@ -12,12 +12,14 @@ final class ScratchpadViewModelTests: XCTestCase {
         testDefaults.removeObject(forKey: testKey)
         testDefaults.removeObject(forKey: ScratchpadViewModel.userDefaultsKey)
         testDefaults.removeObject(forKey: ScratchpadViewModel.foldersUserDefaultsKey)
+        testDefaults.removeObject(forKey: ScratchpadViewModel.folderIconsUserDefaultsKey)
     }
 
     override func tearDown() {
         testDefaults.removeObject(forKey: testKey)
         testDefaults.removeObject(forKey: ScratchpadViewModel.userDefaultsKey)
         testDefaults.removeObject(forKey: ScratchpadViewModel.foldersUserDefaultsKey)
+        testDefaults.removeObject(forKey: ScratchpadViewModel.folderIconsUserDefaultsKey)
         testDefaults = nil
         super.tearDown()
     }
@@ -414,6 +416,72 @@ final class ScratchpadViewModelTests: XCTestCase {
         let reassignedNote = viewModel.notes.first(where: { $0.id == note.id })
         XCTAssertEqual(reassignedNote?.folder, "General")
         XCTAssertEqual(viewModel.noteCount(for: "General"), 1)
+    }
+
+    func testDeleteGeneralFolderReassignsNotesAndPersists() {
+        let viewModel = ScratchpadViewModel(userDefaults: testDefaults)
+        let note = viewModel.createNote(title: "Inbox Note", folder: "General")
+        viewModel.selectFolder("General")
+
+        XCTAssertTrue(viewModel.canDeleteFolder("General"))
+        XCTAssertTrue(viewModel.deleteFolder("General"))
+        XCTAssertFalse(viewModel.folders.contains("General"))
+        XCTAssertEqual(viewModel.selectedFolder, ScratchpadViewModel.allNotesFolder)
+        XCTAssertEqual(viewModel.notes.first(where: { $0.id == note.id })?.folder, "Projects")
+
+        let reloaded = ScratchpadViewModel(userDefaults: testDefaults)
+        XCTAssertFalse(reloaded.folders.contains("General"))
+        XCTAssertEqual(reloaded.notes.first(where: { $0.id == note.id })?.folder, "Projects")
+    }
+
+    func testCannotDeleteTheLastFolder() {
+        let viewModel = ScratchpadViewModel(userDefaults: testDefaults)
+
+        for folder in ["Projects", "Work", "Personal", "Ideas"] {
+            XCTAssertTrue(viewModel.deleteFolder(folder))
+        }
+
+        XCTAssertEqual(viewModel.folders, ["General"])
+        XCTAssertFalse(viewModel.canDeleteFolder("General"))
+        XCTAssertFalse(viewModel.deleteFolder("General"))
+        XCTAssertEqual(viewModel.folders, ["General"])
+    }
+
+    func testRenameFolderAndChangeIconUpdatesNotesAndPersists() {
+        let viewModel = ScratchpadViewModel(userDefaults: testDefaults)
+        let note = viewModel.createNote(title: "Planning Note", folder: "General")
+        viewModel.selectFolder("General")
+
+        XCTAssertTrue(viewModel.setFolderIcon("calendar", for: "General"))
+        XCTAssertTrue(viewModel.renameFolder("General", to: "Planning"))
+        XCTAssertEqual(viewModel.selectedFolder, "Planning")
+        XCTAssertEqual(viewModel.notes.first(where: { $0.id == note.id })?.folder, "Planning")
+        XCTAssertEqual(viewModel.iconName(for: "Planning"), "calendar")
+
+        let reloaded = ScratchpadViewModel(userDefaults: testDefaults)
+        XCTAssertTrue(reloaded.folders.contains("Planning"))
+        XCTAssertFalse(reloaded.folders.contains("General"))
+        XCTAssertEqual(reloaded.notes.first(where: { $0.id == note.id })?.folder, "Planning")
+        XCTAssertEqual(reloaded.iconName(for: "Planning"), "calendar")
+    }
+
+    func testFolderUpdateRejectsReservedDuplicateAndUnknownIcons() {
+        let viewModel = ScratchpadViewModel(userDefaults: testDefaults)
+
+        XCTAssertFalse(viewModel.renameFolder("General", to: "Projects"))
+        XCTAssertFalse(viewModel.renameFolder("General", to: "All Notes"))
+        XCTAssertFalse(viewModel.setFolderIcon("not-a-real-symbol", for: "General"))
+        XCTAssertEqual(viewModel.folders, ScratchpadViewModel.defaultFolders)
+        XCTAssertEqual(viewModel.iconName(for: "General"), "doc.text")
+    }
+
+    func testCreateFolderWithCustomIconPersists() {
+        let viewModel = ScratchpadViewModel(userDefaults: testDefaults)
+        XCTAssertTrue(viewModel.createFolder("Research", icon: "book.closed"))
+        XCTAssertEqual(viewModel.iconName(for: "Research"), "book.closed")
+
+        let reloaded = ScratchpadViewModel(userDefaults: testDefaults)
+        XCTAssertEqual(reloaded.iconName(for: "Research"), "book.closed")
     }
 
     func testMoveNoteToFolder() {

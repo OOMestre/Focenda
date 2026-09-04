@@ -87,7 +87,7 @@ Dedicated scheduler for daily, weekday, weekly, and monthly recurring tasks with
 ---
 
 ### Multi-Notebook Scratchpad
-Master-detail quick notes system organized into custom folders (General, Projects, Work, Personal, Ideas) with live character/word counters, search, and keystroke persistence.
+Master-detail quick notes system organized into custom folders (General, Projects, Work, Personal, Ideas) with folder creation, renaming, deletion, customizable icons, live character/word counters, search, and keystroke persistence.
 
 <p align="center">
   <img src="assets/gifs/scratchpad.gif" alt="Multi-Notebook Scratchpad" width="650" />
@@ -128,8 +128,8 @@ The dedicated About area shows the app identity and version, checks GitHub Relea
 ### About Focenda
 The About area keeps Focenda's logo, version, open-source project link, license, privacy details, and update controls together in one easy-to-find place.
 
-### Native Support & Diagnostic Hub
-Dedicated in-app support space featuring system diagnostics information, one-click diagnostic report copying, and direct links to community feedback and project support.
+### Native Support & Feedback Hub
+Dedicated in-app support space with accessible actions for reporting bugs or suggesting improvements. Focenda pre-fills the correct GitHub issue template, label, app version, macOS version, and hardware architecture for review before submission.
 
 ### 100% Local, Private & Secure
 Tasks, notes, reminders, bookmarks, and preferences stay on device in authenticated encrypted local storage. Zero telemetry, no third-party accounts, and zero cloud tracking.
