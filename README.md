@@ -87,7 +87,7 @@ Dedicated scheduler for daily, weekday, weekly, and monthly recurring tasks with
 ---
 
 ### Multi-Notebook Scratchpad
-Master-detail quick notes system organized into custom folders (General, Projects, Work, Personal, Ideas) with live character/word counters, search, and keystroke persistence.
+Master-detail quick notes system organized into custom folders (General, Projects, Work, Personal, Ideas) with folder creation, renaming, deletion, customizable icons, live character/word counters, search, and keystroke persistence.
 
 <p align="center">
   <img src="assets/gifs/scratchpad.gif" alt="Multi-Notebook Scratchpad" width="650" />

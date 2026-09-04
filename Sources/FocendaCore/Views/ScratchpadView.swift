@@ -11,10 +11,14 @@ public struct ScratchpadView: View {
     @State private var taskCreatedFeedback = false
     @State private var selectedLine: String?
     @State private var showingNewFolderSheet = false
+    @State private var showingFolderDeleteConfirmation = false
     @State private var showingCompactFolderPicker = false
     @State private var showingSidebarFolderPicker = false
     @State private var isCompactWorkspace = false
     @State private var newFolderName = ""
+    @State private var folderEditorIcon = "folder"
+    @State private var editingFolderName: String?
+    @State private var folderNameToDelete = ""
     @State private var isEditorFocused = false
     @FocusState private var isTitleFocused: Bool
 
@@ -90,6 +94,22 @@ public struct ScratchpadView: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("Are you sure you want to delete \"\(viewModel.currentNote.displayTitle)\"? This action cannot be undone.")
+        }
+        .confirmationDialog(
+            "Delete Folder?",
+            isPresented: $showingFolderDeleteConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Delete Folder", role: .destructive) {
+                let folder = folderNameToDelete
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+                    _ = viewModel.deleteFolder(folder)
+                }
+                folderNameToDelete = ""
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Notes in \"\(folderNameToDelete)\" will be moved to another folder. This action cannot be undone.")
         }
         .sheet(isPresented: $showingNewFolderSheet) {
             newFolderSheet
@@ -261,7 +281,8 @@ public struct ScratchpadView: View {
                         name: ScratchpadViewModel.allNotesFolder,
                         icon: "tray.full",
                         count: viewModel.noteCount(for: ScratchpadViewModel.allNotesFolder),
-                        isDeletable: false
+                        isDeletable: false,
+                        isEditable: false
                     )
 
                     Divider()
@@ -271,9 +292,10 @@ public struct ScratchpadView: View {
                     ForEach(viewModel.folders, id: \.self) { folder in
                         folderRowItem(
                             name: folder,
-                            icon: ScratchpadViewModel.iconForFolder(folder),
+                            icon: viewModel.iconName(for: folder),
                             count: viewModel.noteCount(for: folder),
-                            isDeletable: folder != "General"
+                            isDeletable: viewModel.canDeleteFolder(folder),
+                            isEditable: true
                         )
                     }
                 }
@@ -306,7 +328,13 @@ public struct ScratchpadView: View {
         .background(AppTheme.sidebarBackground)
     }
 
-    private func folderRowItem(name: String, icon: String, count: Int, isDeletable: Bool) -> some View {
+    private func folderRowItem(
+        name: String,
+        icon: String,
+        count: Int,
+        isDeletable: Bool,
+        isEditable: Bool
+    ) -> some View {
         let isSelected = viewModel.selectedFolder.caseInsensitiveCompare(name) == .orderedSame
 
         return Button {
@@ -352,11 +380,19 @@ public struct ScratchpadView: View {
         }
         .buttonStyle(.plain)
         .contextMenu {
-            if isDeletable {
+            if isEditable {
+                Button {
+                    presentFolderEditor(for: name)
+                } label: {
+                    Label("Edit Folder", systemImage: "pencil")
+                }
+            }
+
+            if isEditable && isDeletable {
+                Divider()
+
                 Button(role: .destructive) {
-                    withAnimation(.spring(response: 0.25)) {
-                        viewModel.deleteFolder(name)
-                    }
+                    requestDeleteFolder(name)
                 } label: {
                     Label("Delete Folder", systemImage: "trash")
                 }
@@ -442,7 +478,7 @@ public struct ScratchpadView: View {
 
     private var selectedFolderLabel: some View {
         HStack(spacing: 7) {
-            Image(systemName: ScratchpadViewModel.iconForFolder(viewModel.selectedFolder))
+            Image(systemName: viewModel.iconName(for: viewModel.selectedFolder))
                 .font(.system(size: 13))
                 .foregroundStyle(AppTheme.accent)
 
@@ -459,7 +495,7 @@ public struct ScratchpadView: View {
             showingCompactFolderPicker.toggle()
         } label: {
             HStack(spacing: 5) {
-                Image(systemName: ScratchpadViewModel.iconForFolder(viewModel.selectedFolder))
+                Image(systemName: viewModel.iconName(for: viewModel.selectedFolder))
                     .font(.system(size: 12))
                     .foregroundStyle(AppTheme.accent)
                 Text(viewModel.selectedFolder)
@@ -501,7 +537,7 @@ public struct ScratchpadView: View {
                     ForEach(viewModel.folders, id: \.self) { folder in
                         compactFolderPickerRow(
                             name: folder,
-                            icon: ScratchpadViewModel.iconForFolder(folder)
+                            icon: viewModel.iconName(for: folder)
                         )
                     }
                 }
@@ -565,6 +601,25 @@ public struct ScratchpadView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .contextMenu {
+            if name.caseInsensitiveCompare(ScratchpadViewModel.allNotesFolder) != .orderedSame {
+                Button {
+                    presentFolderEditor(for: name)
+                } label: {
+                    Label("Edit Folder", systemImage: "pencil")
+                }
+
+                if viewModel.canDeleteFolder(name) {
+                    Divider()
+
+                    Button(role: .destructive) {
+                        requestDeleteFolder(name)
+                    } label: {
+                        Label("Delete Folder", systemImage: "trash")
+                    }
+                }
+            }
+        }
     }
 
     // MARK: - Note Card Row
@@ -601,7 +656,7 @@ public struct ScratchpadView: View {
                 // Folder tag if viewing All Notes
                 if viewModel.selectedFolder == ScratchpadViewModel.allNotesFolder {
                     HStack(spacing: 4) {
-                        Image(systemName: ScratchpadViewModel.iconForFolder(note.folder))
+                        Image(systemName: viewModel.iconName(for: note.folder))
                             .font(.system(size: 10))
                         Text(note.folder)
                             .font(.system(size: 11, weight: .medium))
@@ -659,7 +714,7 @@ public struct ScratchpadView: View {
                     Button {
                         viewModel.moveNote(note, to: folder)
                     } label: {
-                        Label(folder, systemImage: ScratchpadViewModel.iconForFolder(folder))
+                        Label(folder, systemImage: viewModel.iconName(for: folder))
                     }
                 }
             }
@@ -782,12 +837,12 @@ public struct ScratchpadView: View {
                         viewModel.moveCurrentNote(to: folder)
                     }
                 } label: {
-                    Label(folder, systemImage: ScratchpadViewModel.iconForFolder(folder))
+                    Label(folder, systemImage: viewModel.iconName(for: folder))
                 }
             }
         } label: {
             HStack(spacing: 5) {
-                Image(systemName: ScratchpadViewModel.iconForFolder(viewModel.currentNote.folder))
+                Image(systemName: viewModel.iconName(for: viewModel.currentNote.folder))
                     .font(.system(size: 11))
                     .foregroundStyle(AppTheme.accent)
                 Text(viewModel.currentNote.folder)
@@ -820,11 +875,11 @@ public struct ScratchpadView: View {
                         viewModel.moveCurrentNote(to: folder)
                     }
                 } label: {
-                    Label(folder, systemImage: ScratchpadViewModel.iconForFolder(folder))
+                    Label(folder, systemImage: viewModel.iconName(for: folder))
                 }
             }
         } label: {
-            Image(systemName: ScratchpadViewModel.iconForFolder(viewModel.currentNote.folder))
+            Image(systemName: viewModel.iconName(for: viewModel.currentNote.folder))
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(AppTheme.accent)
                 .frame(width: 28, height: 28)
@@ -1067,7 +1122,7 @@ public struct ScratchpadView: View {
 
     private var folderBadge: some View {
         HStack(spacing: 5) {
-            Image(systemName: ScratchpadViewModel.iconForFolder(viewModel.currentNote.folder))
+            Image(systemName: viewModel.iconName(for: viewModel.currentNote.folder))
                 .font(.system(size: 10))
                 .foregroundStyle(AppTheme.accent)
 
@@ -1141,26 +1196,140 @@ public struct ScratchpadView: View {
         .animation(.easeInOut(duration: 0.2), value: viewModel.hasPendingSaves)
     }
 
-    // MARK: - New Folder Sheet
+    // MARK: - Folder Management
     private func presentNewFolderSheet() {
         newFolderName = ""
+        folderEditorIcon = "folder"
+        editingFolderName = nil
         showingCompactFolderPicker = false
         showingSidebarFolderPicker = false
         showingNewFolderSheet = true
     }
 
+    private func presentFolderEditor(for folder: String) {
+        newFolderName = folder
+        folderEditorIcon = viewModel.iconName(for: folder)
+        editingFolderName = folder
+        showingCompactFolderPicker = false
+        showingSidebarFolderPicker = false
+        showingNewFolderSheet = true
+    }
+
+    private func requestDeleteFolder(_ folder: String) {
+        folderNameToDelete = folder
+        showingCompactFolderPicker = false
+        showingSidebarFolderPicker = false
+        showingFolderDeleteConfirmation = true
+    }
+
+    private var trimmedFolderName: String {
+        newFolderName.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var isFolderNameValid: Bool {
+        guard !trimmedFolderName.isEmpty,
+              trimmedFolderName.caseInsensitiveCompare(ScratchpadViewModel.allNotesFolder) != .orderedSame else {
+            return false
+        }
+
+        return !viewModel.folders.contains { folder in
+            let isCurrentFolder = editingFolderName?.caseInsensitiveCompare(folder) == .orderedSame
+            return !isCurrentFolder && folder.caseInsensitiveCompare(trimmedFolderName) == .orderedSame
+        }
+    }
+
+    private var folderNameValidationMessage: String? {
+        guard !trimmedFolderName.isEmpty else { return nil }
+        if trimmedFolderName.caseInsensitiveCompare(ScratchpadViewModel.allNotesFolder) == .orderedSame {
+            return "All Notes is reserved for the combined notes view."
+        }
+
+        let conflictsWithExistingFolder = viewModel.folders.contains { folder in
+            let isCurrentFolder = editingFolderName?.caseInsensitiveCompare(folder) == .orderedSame
+            return !isCurrentFolder && folder.caseInsensitiveCompare(trimmedFolderName) == .orderedSame
+        }
+        return conflictsWithExistingFolder ? "A folder with this name already exists." : nil
+    }
+
+    private func saveFolderEditor() {
+        let saved: Bool
+        if let editingFolderName {
+            saved = viewModel.updateFolder(
+                editingFolderName,
+                to: trimmedFolderName,
+                icon: folderEditorIcon
+            )
+        } else {
+            saved = viewModel.createFolder(trimmedFolderName, icon: folderEditorIcon)
+        }
+
+        guard saved else { return }
+        showingNewFolderSheet = false
+        editingFolderName = nil
+    }
+
     private var newFolderSheet: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Create New Folder")
+            Text(editingFolderName == nil ? "Create New Folder" : "Edit Folder")
                 .font(.system(size: 17, weight: .bold, design: .rounded))
                 .foregroundStyle(AppTheme.textPrimary)
 
-            Text("Organize your scratchpad notes by project, client, or topic.")
+            Text(editingFolderName == nil
+                 ? "Organize your scratchpad notes by project, client, or topic."
+                 : "Rename this folder or choose a new icon for it.")
                 .font(.caption)
                 .foregroundStyle(AppTheme.textSecondary)
 
             TextField("Folder name (e.g. Design System, Research)", text: $newFolderName)
                 .textFieldStyle(.roundedBorder)
+
+            if let folderNameValidationMessage {
+                Text(folderNameValidationMessage)
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.terracotta)
+            }
+
+            VStack(alignment: .leading, spacing: 7) {
+                Text("Icon")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(AppTheme.textSecondary)
+
+                ScrollView {
+                    LazyVGrid(
+                        columns: [GridItem(.adaptive(minimum: 38, maximum: 52), spacing: 8)],
+                        spacing: 8
+                    ) {
+                        ForEach(ScratchpadViewModel.availableFolderIcons, id: \.self) { icon in
+                            Button {
+                                folderEditorIcon = icon
+                            } label: {
+                                Image(systemName: icon)
+                                    .font(.system(size: 15))
+                                    .foregroundStyle(folderEditorIcon == icon ? AppTheme.accent : AppTheme.textSecondary)
+                                    .frame(width: 34, height: 30)
+                                    .background(
+                                        folderEditorIcon == icon
+                                            ? AppTheme.accent.opacity(0.15)
+                                            : AppTheme.cardBackgroundSubtle
+                                    )
+                                    .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                            .stroke(
+                                                folderEditorIcon == icon ? AppTheme.accent : AppTheme.subtleBorder,
+                                                lineWidth: 1
+                                            )
+                                    )
+                            }
+                            .buttonStyle(.plain)
+                            .help(icon)
+                            .accessibilityLabel("Folder icon \(icon)")
+                        }
+                    }
+                    .padding(.vertical, 2)
+                }
+                .frame(maxHeight: 124)
+            }
 
             HStack {
                 Spacer()
@@ -1171,17 +1340,13 @@ public struct ScratchpadView: View {
                 .buttonStyle(.bordered)
                 .keyboardShortcut(.cancelAction)
 
-                Button("Create Folder") {
-                    let trimmed = newFolderName.trimmingCharacters(in: .whitespacesAndNewlines)
-                    if !trimmed.isEmpty {
-                        viewModel.createFolder(trimmed)
-                    }
-                    showingNewFolderSheet = false
+                Button(editingFolderName == nil ? "Create Folder" : "Save Changes") {
+                    saveFolderEditor()
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(AppTheme.deepFocus)
                 .keyboardShortcut(.defaultAction)
-                .disabled(newFolderName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .disabled(!isFolderNameValid)
             }
         }
         .padding(20)

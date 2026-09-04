@@ -128,15 +128,25 @@ public struct ScratchpadNote: Identifiable, Codable, Equatable, Sendable {
     }
 }
 
+
 /// Manages quick distraction-free scratchpads with folders/notebooks and multi-note persistence.
 @Observable
 public final class ScratchpadViewModel {
     public static let userDefaultsKey = "focenda_scratchpads"
     public static let foldersUserDefaultsKey = "focenda_scratchpad_folders"
+    public static let folderIconsUserDefaultsKey = "focenda_scratchpad_folder_icons"
 
     public static let defaultFolders = ["General", "Projects", "Work", "Personal", "Ideas"]
     public static let allNotesFolder = "All Notes"
     public static let defaultDebounceInterval: TimeInterval = 0.4
+    public static let availableFolderIcons = [
+        "folder", "folder.fill", "doc.text", "doc.plaintext",
+        "tray", "archivebox", "book", "book.closed", "briefcase",
+        "building.2", "person", "person.2", "lightbulb", "star",
+        "heart", "bolt", "calendar", "tag", "paperclip", "house",
+        "globe", "hammer", "graduationcap", "cart", "gamecontroller",
+        "music.note", "paintpalette", "terminal", "sparkles"
+    ]
     private static let legacyGeneratedTitles = [
         "Amber Scratchpad",
         "Lavender Scratchpad",
@@ -146,6 +156,7 @@ public final class ScratchpadViewModel {
     ]
 
     public var folders: [String] = ScratchpadViewModel.defaultFolders
+    public var folderIcons: [String: String] = [:]
     public var selectedFolder: String = ScratchpadViewModel.allNotesFolder
     public var notes: [ScratchpadNote] = []
     public var selectedNoteId: UUID?
@@ -159,6 +170,7 @@ public final class ScratchpadViewModel {
     private let secureStore: SecureStore
     private var notesPersistenceReady = false
     private var foldersPersistenceReady = false
+    private var folderIconsPersistenceReady = false
     private var saveWorkItem: DispatchWorkItem?
 
     #if os(macOS)
@@ -198,7 +210,7 @@ public final class ScratchpadViewModel {
         }
     }
 
-    /// SF Symbol icon associated with folder name
+    /// Default SF Symbol icon associated with a folder name.
     public static func iconForFolder(_ folder: String) -> String {
         switch folder.lowercased() {
         case "all notes": return "tray.full"
@@ -212,6 +224,18 @@ public final class ScratchpadViewModel {
         case "journal": return "book.closed"
         default: return "folder"
         }
+    }
+
+    /// Returns the user-selected icon for a folder, or its default icon when no
+    /// custom icon has been saved.
+    public func iconName(for folder: String) -> String {
+        if folder.caseInsensitiveCompare(Self.allNotesFolder) == .orderedSame {
+            return Self.iconForFolder(folder)
+        }
+
+        return folderIcons.first(where: {
+            $0.key.caseInsensitiveCompare(folder) == .orderedSame
+        })?.value ?? Self.iconForFolder(folder)
     }
 
     /// Number of notes inside a specific folder
@@ -262,7 +286,9 @@ public final class ScratchpadViewModel {
             if let firstFiltered = filteredNotes.first {
                 return firstFiltered
             }
-            let activeFolder = selectedFolder == Self.allNotesFolder ? "General" : selectedFolder
+            let activeFolder = selectedFolder == Self.allNotesFolder
+                ? (folders.first ?? "General")
+                : selectedFolder
             return ScratchpadNote(folder: activeFolder)
         }
         set {
@@ -322,51 +348,153 @@ public final class ScratchpadViewModel {
     }
 
     @discardableResult
-    public func createFolder(_ name: String) -> Bool {
+    public func createFolder(_ name: String, icon: String? = nil) -> Bool {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return false }
         if trimmed.caseInsensitiveCompare(Self.allNotesFolder) == .orderedSame { return false }
+        if let icon, !Self.availableFolderIcons.contains(icon) { return false }
         if folders.contains(where: { $0.caseInsensitiveCompare(trimmed) == .orderedSame }) {
-            selectedFolder = trimmed
+            selectedFolder = folders.first(where: {
+                $0.caseInsensitiveCompare(trimmed) == .orderedSame
+            }) ?? trimmed
             return true
         }
 
         folders.append(trimmed)
         selectedFolder = trimmed
+        if let icon {
+            folderIcons[trimmed] = icon
+            saveFolderIconsToUserDefaults()
+        }
         saveFoldersToUserDefaults()
         return true
     }
 
-    public func deleteFolder(_ name: String) {
+    /// Whether a folder can be removed without leaving notes without a valid
+    /// destination folder. `General` is a normal user folder and is deletable
+    /// whenever another folder is available.
+    public func canDeleteFolder(_ name: String) -> Bool {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty,
+              trimmed.caseInsensitiveCompare(Self.allNotesFolder) != .orderedSame,
+              folders.count > 1 else {
+            return false
+        }
+
+        return folders.contains(where: {
+            $0.caseInsensitiveCompare(trimmed) == .orderedSame
+        })
+    }
+
+    @discardableResult
+    public func deleteFolder(_ name: String) -> Bool {
         flushPendingSaves()
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard trimmed.caseInsensitiveCompare(Self.allNotesFolder) != .orderedSame else { return }
+        guard canDeleteFolder(trimmed),
+              let folderIndex = folders.firstIndex(where: {
+                  $0.caseInsensitiveCompare(trimmed) == .orderedSame
+              }) else {
+            return false
+        }
 
-        // Reassign any notes in this folder to General
-        let fallbackFolder = folders.first(where: { $0 != trimmed }) ?? "General"
+        let folderName = folders[folderIndex]
+
+        // Keep notes safe by moving them to the first remaining folder. This
+        // also makes deleting General behave like deleting any other folder.
+        let fallbackFolder = folders.first(where: {
+            $0.caseInsensitiveCompare(folderName) != .orderedSame
+        })!
         for i in 0..<notes.count {
-            if notes[i].folder.caseInsensitiveCompare(trimmed) == .orderedSame {
+            if notes[i].folder.caseInsensitiveCompare(folderName) == .orderedSame {
                 notes[i].folder = fallbackFolder
                 notes[i].updatedAt = Date()
             }
         }
 
-        folders.removeAll(where: { $0.caseInsensitiveCompare(trimmed) == .orderedSame })
-        if folders.isEmpty {
-            folders = ["General"]
-        }
+        folders.remove(at: folderIndex)
+        removeFolderIcon(for: folderName)
 
         if selectedFolder.caseInsensitiveCompare(trimmed) == .orderedSame {
             selectedFolder = Self.allNotesFolder
+            selectedNoteId = filteredNotes.first?.id
         }
 
         saveToUserDefaults()
         saveFoldersToUserDefaults()
+        saveFolderIconsToUserDefaults()
+        return true
+    }
+
+    /// Renames a folder and updates every note assigned to it.
+    @discardableResult
+    public func renameFolder(_ name: String, to newName: String) -> Bool {
+        updateFolder(name, to: newName)
+    }
+
+    /// Changes a folder's SF Symbol while keeping its current name.
+    @discardableResult
+    public func setFolderIcon(_ icon: String, for folder: String) -> Bool {
+        guard Self.availableFolderIcons.contains(icon) else { return false }
+        return updateFolder(folder, to: folder, icon: icon)
+    }
+
+    /// Updates a folder's name and icon atomically so the UI can save both
+    /// changes with one persistence operation.
+    @discardableResult
+    public func updateFolder(_ name: String, to newName: String, icon: String? = nil) -> Bool {
+        let oldName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedName = newName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !oldName.isEmpty,
+              !trimmedName.isEmpty,
+              oldName.caseInsensitiveCompare(Self.allNotesFolder) != .orderedSame,
+              trimmedName.caseInsensitiveCompare(Self.allNotesFolder) != .orderedSame,
+              let folderIndex = folders.firstIndex(where: {
+                  $0.caseInsensitiveCompare(oldName) == .orderedSame
+              }) else {
+            return false
+        }
+
+        if let icon, !Self.availableFolderIcons.contains(icon) {
+            return false
+        }
+
+        let actualOldName = folders[folderIndex]
+        let hasNameConflict = folders.enumerated().contains { index, folder in
+            index != folderIndex && folder.caseInsensitiveCompare(trimmedName) == .orderedSame
+        }
+        guard !hasNameConflict else { return false }
+
+        let inheritedIcon = iconName(for: actualOldName)
+        let iconToSave = icon ?? inheritedIcon
+
+        flushPendingSaves()
+        folders[folderIndex] = trimmedName
+        for index in notes.indices {
+            if notes[index].folder.caseInsensitiveCompare(actualOldName) == .orderedSame {
+                notes[index].folder = trimmedName
+            }
+        }
+
+        if selectedFolder.caseInsensitiveCompare(actualOldName) == .orderedSame {
+            selectedFolder = trimmedName
+        }
+
+        replaceFolderIcon(from: actualOldName, to: trimmedName, icon: iconToSave)
+        saveToUserDefaults()
+        saveFoldersToUserDefaults()
+        saveFolderIconsToUserDefaults()
+        return true
     }
 
     public func moveNote(id: UUID, to folder: String) {
-        let targetFolder = folder.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !targetFolder.isEmpty && targetFolder != Self.allNotesFolder else { return }
+        let requestedFolder = folder.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !requestedFolder.isEmpty,
+              requestedFolder.caseInsensitiveCompare(Self.allNotesFolder) != .orderedSame,
+              let targetFolder = folders.first(where: {
+                  $0.caseInsensitiveCompare(requestedFolder) == .orderedSame
+              }) else {
+            return
+        }
 
         flushPendingSaves()
         if let index = notes.firstIndex(where: { $0.id == id }) {
@@ -406,11 +534,14 @@ public final class ScratchpadViewModel {
         flushPendingSaves()
         let targetFolder: String
         if let folder = folder, !folder.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            targetFolder = folder
+            let requestedFolder = folder.trimmingCharacters(in: .whitespacesAndNewlines)
+            targetFolder = folders.first(where: {
+                $0.caseInsensitiveCompare(requestedFolder) == .orderedSame
+            }) ?? (folders.first ?? "General")
         } else if selectedFolder != Self.allNotesFolder {
             targetFolder = selectedFolder
         } else {
-            targetFolder = "General"
+            targetFolder = folders.first ?? "General"
         }
 
         let newTitle = title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "" : title
@@ -463,7 +594,9 @@ public final class ScratchpadViewModel {
                 saveToUserDefaults()
             }
         } else {
-            let activeFolder = selectedFolder == Self.allNotesFolder ? "General" : selectedFolder
+            let activeFolder = selectedFolder == Self.allNotesFolder
+                ? (folders.first ?? "General")
+                : selectedFolder
             var newNote = ScratchpadNote(
                 content: text,
                 folder: activeFolder
@@ -491,7 +624,9 @@ public final class ScratchpadViewModel {
                 saveToUserDefaults()
             }
         } else {
-            let activeFolder = selectedFolder == Self.allNotesFolder ? "General" : selectedFolder
+            let activeFolder = selectedFolder == Self.allNotesFolder
+                ? (folders.first ?? "General")
+                : selectedFolder
             var newNote = ScratchpadNote(title: title, folder: activeFolder)
             newNote.updatedAt = Date()
             notes.insert(newNote, at: 0)
@@ -561,6 +696,20 @@ public final class ScratchpadViewModel {
             foldersPersistenceReady = false
         }
 
+        // Icon metadata was added after folder names had already shipped. An
+        // absent payload is therefore a valid legacy state and simply means
+        // that every folder should use its default icon.
+        if !secureStore.containsValue(forKey: Self.folderIconsUserDefaultsKey) {
+            self.folderIcons = [:]
+            folderIconsPersistenceReady = true
+        } else if let savedIcons = secureStore.value([String: String].self, forKey: Self.folderIconsUserDefaultsKey) {
+            self.folderIcons = savedIcons
+            folderIconsPersistenceReady = true
+        } else {
+            self.folderIcons = [:]
+            folderIconsPersistenceReady = false
+        }
+
         // Load notes. An explicitly saved empty array is a valid state: the
         // Scratchpad should remain empty until the user creates a note.
         if !secureStore.containsValue(forKey: Self.userDefaultsKey) {
@@ -624,6 +773,34 @@ public final class ScratchpadViewModel {
         secureStore.set(folders, forKey: Self.foldersUserDefaultsKey)
     }
 
+    public func saveFolderIconsToUserDefaults() {
+        guard folderIconsPersistenceReady else { return }
+        secureStore.set(folderIcons, forKey: Self.folderIconsUserDefaultsKey)
+    }
+
+    private func replaceFolderIcon(from oldName: String, to newName: String, icon: String) {
+        var updatedIcons = folderIcons
+        let keysToRemove = updatedIcons.keys.filter {
+            $0.caseInsensitiveCompare(oldName) == .orderedSame ||
+                $0.caseInsensitiveCompare(newName) == .orderedSame
+        }
+        for key in keysToRemove {
+            updatedIcons.removeValue(forKey: key)
+        }
+        updatedIcons[newName] = icon
+        folderIcons = updatedIcons
+    }
+
+    private func removeFolderIcon(for folder: String) {
+        var updatedIcons = folderIcons
+        for key in updatedIcons.keys.filter({
+            $0.caseInsensitiveCompare(folder) == .orderedSame
+        }) {
+            updatedIcons.removeValue(forKey: key)
+        }
+        folderIcons = updatedIcons
+    }
+
     // MARK: - App Lifecycle Observers
 
     private func setupLifecycleObservers() {
@@ -666,4 +843,3 @@ public final class ScratchpadViewModel {
         #endif
     }
 }
-
