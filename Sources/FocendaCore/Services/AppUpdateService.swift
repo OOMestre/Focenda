@@ -244,6 +244,7 @@ public enum AppUpdatePreferences {
     public static let pendingUpdateTagKey = "appUpdatePendingTag"
     public static let pendingUpdateGuideKey = "appUpdatePendingGuide"
     public static let lastUpdateGuideKey = "appUpdateLastGuide"
+    public static let lastAcknowledgedVersionKey = "appUpdateLastAcknowledgedVersion"
 }
 
 public enum AppRuntime {
@@ -605,6 +606,7 @@ public final class AppUpdateManager {
     public func dismissCompletedUpdateGuide() {
         completedUpdateGuide = nil
         secureStore.removeObject(forKey: AppUpdatePreferences.pendingUpdateGuideKey)
+        secureStore.set(currentReleaseIdentifier, forKey: AppUpdatePreferences.lastAcknowledgedVersionKey)
     }
 
     public func dismissAvailableUpdate() {
@@ -668,30 +670,51 @@ public final class AppUpdateManager {
         currentReleaseIdentifier: String,
         secureStore: SecureStore
     ) -> AppUpdateGuide? {
-        guard let guide = secureStore.value(
+        if let guide = secureStore.value(
             AppUpdateGuide.self,
             forKey: AppUpdatePreferences.pendingUpdateGuideKey
-        ) else {
+        ) {
+            guard let installedVersion = AppVersion(currentReleaseIdentifier),
+                  let guideVersion = AppVersion(guide.releaseTag) else {
+                secureStore.removeObject(forKey: AppUpdatePreferences.pendingUpdateGuideKey)
+                return nil
+            }
+
+            if installedVersion == guideVersion {
+                return guide
+            }
+
+            // A newer manual update may have superseded this guide. Do not show
+            // notes for an older release, but keep a guide for a not-yet-installed
+            // update so an in-progress relaunch can still complete normally.
+            if installedVersion > guideVersion {
+                secureStore.removeObject(forKey: AppUpdatePreferences.pendingUpdateGuideKey)
+            }
+        }
+
+        guard let installedVersion = AppVersion(currentReleaseIdentifier) else {
             return nil
         }
 
-        guard let installedVersion = AppVersion(currentReleaseIdentifier),
-              let guideVersion = AppVersion(guide.releaseTag) else {
-            secureStore.removeObject(forKey: AppUpdatePreferences.pendingUpdateGuideKey)
+        let hasCompletedOnboarding = secureStore.bool(forKey: AppState.onboardingCompletionKey) ?? false
+        let lastAcknowledgedVersionString = secureStore.string(forKey: AppUpdatePreferences.lastAcknowledgedVersionKey)
+
+        if let lastAcknowledgedVersionString,
+           let lastAcknowledgedVersion = AppVersion(lastAcknowledgedVersionString) {
+            if installedVersion > lastAcknowledgedVersion {
+                return AppUpdateGuide.defaultGuide(for: currentReleaseIdentifier)
+            }
             return nil
         }
 
-        if installedVersion == guideVersion {
-            return guide
+        if hasCompletedOnboarding {
+            // Existing user upgrading from an earlier release where acknowledged version was not recorded.
+            return AppUpdateGuide.defaultGuide(for: currentReleaseIdentifier)
+        } else {
+            // Fresh installation: acknowledge current version so the first launch presents onboarding, not release notes.
+            secureStore.set(currentReleaseIdentifier, forKey: AppUpdatePreferences.lastAcknowledgedVersionKey)
+            return nil
         }
-
-        // A newer manual update may have superseded this guide. Do not show
-        // notes for an older release, but keep a guide for a not-yet-installed
-        // update so an in-progress relaunch can still complete normally.
-        if installedVersion > guideVersion {
-            secureStore.removeObject(forKey: AppUpdatePreferences.pendingUpdateGuideKey)
-        }
-        return nil
     }
 
     private var isAutomaticCheckDue: Bool {

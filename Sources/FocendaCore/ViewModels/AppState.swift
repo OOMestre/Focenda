@@ -221,6 +221,9 @@ public final class AppState {
         guard !hasCompletedOnboarding else { return }
         hasCompletedOnboarding = true
         secureStore.set(true, forKey: Self.onboardingCompletionKey)
+        if secureStore.string(forKey: AppUpdatePreferences.lastAcknowledgedVersionKey) == nil {
+            secureStore.set(AppRuntime.currentReleaseIdentifier, forKey: AppUpdatePreferences.lastAcknowledgedVersionKey)
+        }
     }
 
     /// Resets the tour state for an explicit replay or a future reset action.

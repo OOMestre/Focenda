@@ -106,7 +106,7 @@ final class SettingsViewTests: XCTestCase {
         )
 
         XCTAssertEqual(updateManager.lastUpdateGuide, guide)
-        XCTAssertFalse(AppUpdateGuide.isEnabled)
+        XCTAssertTrue(AppUpdateGuide.isEnabled)
         XCTAssertNotNil(settingsView.body)
     }
 

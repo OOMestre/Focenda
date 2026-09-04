@@ -15,9 +15,8 @@ public struct AppUpdateGuideSection: Codable, Equatable, Identifiable, Sendable 
 
 /// Release notes prepared for the first launch after an in-app update.
 public struct AppUpdateGuide: Codable, Equatable, Identifiable, Sendable {
-    /// Temporarily hides the update guide UI while the experience is refined.
-    /// Keep the implementation and persisted guides available for reactivation.
-    public static let isEnabled = false
+    /// Determines whether the post-update guide and About review flow are enabled.
+    public static let isEnabled = true
 
     public let releaseTag: String
     public let version: String
@@ -58,10 +57,15 @@ public struct AppUpdateGuide: Codable, Equatable, Identifiable, Sendable {
             title: "Focenda \(versionDescription)",
             sections: [
                 AppUpdateGuideSection(
-                    title: "What's New in Focenda",
+                    title: "Custom Scratchpad Folders",
                     items: [
-                        "Custom Scratchpad folders with selectable symbols and folder organization.",
-                        "Safe folder renaming and deletion with automatic note reassignment to prevent data loss.",
+                        "Create custom folders with selectable SF Symbols and folder organization.",
+                        "Safe folder renaming and deletion with automatic note reassignment to prevent data loss."
+                    ]
+                ),
+                AppUpdateGuideSection(
+                    title: "GitHub Feedback & Diagnostics",
+                    items: [
                         "In-app GitHub feedback flow for reporting bugs and suggesting improvements.",
                         "Pre-filled system and architecture diagnostics for streamlined issue submissions.",
                         "Privacy-preserving feedback that opens directly in your default browser."

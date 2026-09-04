@@ -2,8 +2,8 @@ import XCTest
 @testable import FocendaCore
 
 final class AppUpdateTests: XCTestCase {
-    func testUpdateGuideIsTemporarilyHiddenWithoutRemovingItsImplementation() {
-        XCTAssertFalse(AppUpdateGuide.isEnabled)
+    func testUpdateGuideIsEnabled() {
+        XCTAssertTrue(AppUpdateGuide.isEnabled)
     }
 
     func testAppVersionComparisonFollowsReleasePrecedence() throws {
@@ -355,6 +355,80 @@ final class AppUpdateTests: XCTestCase {
         )
         XCTAssertNil(replayManager.completedUpdateGuide)
         XCTAssertEqual(replayManager.lastUpdateGuide, guide)
+    }
+
+    @MainActor
+    func testUpdateManagerShowsDefaultGuideWhenExistingUserUpdatesWithoutPendingGuide() throws {
+        let suiteName = "Focenda.AppUpdateExistingUserTests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let secureStore = SecureStore(defaults: defaults)
+        // User already completed onboarding in v1.1.0, but lastAcknowledgedVersionKey was not set yet
+        secureStore.set(true, forKey: AppState.onboardingCompletionKey)
+
+        let manager = AppUpdateManager(
+            currentReleaseIdentifier: "1.2.0",
+            secureStore: secureStore
+        )
+
+        // Guide should be presented upon detecting upgrade
+        XCTAssertNotNil(manager.completedUpdateGuide)
+        XCTAssertEqual(manager.completedUpdateGuide?.version, "1.2.0")
+        XCTAssertEqual(manager.lastUpdateGuide?.version, "1.2.0")
+
+        // Dismissing the guide acknowledges the version
+        manager.dismissCompletedUpdateGuide()
+        XCTAssertNil(manager.completedUpdateGuide)
+        XCTAssertEqual(
+            secureStore.string(forKey: AppUpdatePreferences.lastAcknowledgedVersionKey),
+            "1.2.0"
+        )
+
+        // Subsequent launch on same version does not present the guide again
+        let nextLaunchManager = AppUpdateManager(
+            currentReleaseIdentifier: "1.2.0",
+            secureStore: secureStore
+        )
+        XCTAssertNil(nextLaunchManager.completedUpdateGuide)
+        XCTAssertEqual(nextLaunchManager.lastUpdateGuide?.version, "1.2.0")
+
+        // Future update to 1.3.0 without pending guide (e.g. Homebrew / DMG) presents new guide
+        let futureUpgradeManager = AppUpdateManager(
+            currentReleaseIdentifier: "1.3.0",
+            secureStore: secureStore
+        )
+        XCTAssertNotNil(futureUpgradeManager.completedUpdateGuide)
+        XCTAssertEqual(futureUpgradeManager.completedUpdateGuide?.version, "1.3.0")
+    }
+
+    @MainActor
+    func testUpdateManagerDoesNotShowGuideForFreshInstall() throws {
+        let suiteName = "Focenda.AppUpdateFreshInstallTests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let secureStore = SecureStore(defaults: defaults)
+        // Fresh install: onboarding not yet completed, no acknowledged version
+
+        let manager = AppUpdateManager(
+            currentReleaseIdentifier: "1.2.0",
+            secureStore: secureStore
+        )
+
+        // Brand new user should not see update guide (they will see Onboarding instead)
+        XCTAssertNil(manager.completedUpdateGuide)
+        XCTAssertEqual(
+            secureStore.string(forKey: AppUpdatePreferences.lastAcknowledgedVersionKey),
+            "1.2.0"
+        )
+
+        // Second launch on 1.2.0 also has no guide
+        let secondLaunchManager = AppUpdateManager(
+            currentReleaseIdentifier: "1.2.0",
+            secureStore: secureStore
+        )
+        XCTAssertNil(secondLaunchManager.completedUpdateGuide)
     }
 
     func testInstallerReplacesOnlyTheCompatibleAppBundle() throws {
